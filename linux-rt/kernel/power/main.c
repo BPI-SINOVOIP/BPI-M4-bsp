@@ -15,10 +15,39 @@
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/delay.h>
 
 #include "power.h"
 
 DEFINE_MUTEX(pm_mutex);
+
+#ifdef CONFIG_GLINUX_CURRENT
+#include <linux/delay.h>
+static char current_power[32]="none";//none->mem->ok->none
+
+static ssize_t mycurrent_show(struct kobject *kobj,
+                                      struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%s\n", current_power);
+}
+
+/* set ok to quit suspend waiting*/
+static ssize_t mycurrent_store(struct kobject *kobj,
+                                       struct kobj_attribute *attr,
+                                       const char *buf, size_t n)
+{
+    if (n < 32) {
+        snprintf(current_power,n, "%s\n", buf);
+        return n;
+    }
+    else {
+        return -EINVAL;
+    }
+}
+
+power_attr(mycurrent);
+
+#endif  /* CONFIG_GLINUX_CURRENT */
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -367,6 +396,23 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		goto out;
 	}
 
+#ifdef CONFIG_GLINUX_CURRENT
+    {
+        int wait_count = 0;
+        if (n < 32) {
+            strcpy(current_power, buf);
+            for (wait_count = 0; wait_count < 5000; wait_count++) {
+                if (!strncmp("ok", current_power, 2)) {
+                    break;
+                }
+                else {
+                    udelay(1000);
+                }
+            }
+            strcpy(current_power, "none");
+        }
+    }
+#endif
 	state = decode_state(buf, n);
 	if (state < PM_SUSPEND_MAX)
 		error = pm_suspend(state);
@@ -411,11 +457,33 @@ power_attr(state);
  * are any wakeup events detected after 'wakeup_count' was written to.
  */
 
+#ifdef CONFIG_RTK_PLATFORM
+extern unsigned int pm_wakelock_mode;
+extern unsigned int pm_block_wakelock;
+#endif /* CONFIG_RTK_PLATFORM */
+
 static ssize_t wakeup_count_show(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
 {
 	unsigned int val;
+
+#ifdef CONFIG_RTK_PLATFORM
+
+#if 0
+    if(pm_wakelock_mode == 1) {
+        int count = 0;
+        while(pm_block_wakelock == 1) {
+            msleep(1); //udelay(1);
+            count++;
+        }
+        pr_err("[%s] count %d\n",__func__,count);
+        val = 0;
+        return sprintf(buf,"%u\n",val);
+    }
+#endif
+
+#endif /* CONFIG_RTK_PLATFORM */
 
 	return pm_get_wakeup_count(&val, true) ?
 		sprintf(buf, "%u\n", val) : -EINTR;
@@ -427,6 +495,16 @@ static ssize_t wakeup_count_store(struct kobject *kobj,
 {
 	unsigned int val;
 	int error;
+
+#ifdef CONFIG_RTK_PLATFORM
+
+#if 0
+	if(pm_wakelock_mode == 1) {
+		return n;
+	}
+#endif
+
+#endif /* CONFIG_RTK_PLATFORM */
 
 	error = pm_autosleep_lock();
 	if (error)
@@ -504,6 +582,7 @@ static ssize_t wake_lock_store(struct kobject *kobj,
 			       struct kobj_attribute *attr,
 			       const char *buf, size_t n)
 {
+    //pr_info("wake_lock:%s\n", buf);
 	int error = pm_wake_lock(buf);
 	return error ? error : n;
 }
@@ -521,6 +600,7 @@ static ssize_t wake_unlock_store(struct kobject *kobj,
 				 struct kobj_attribute *attr,
 				 const char *buf, size_t n)
 {
+    //pr_info("wake_unlock:%s\n", buf);
 	int error = pm_wake_unlock(buf);
 	return error ? error : n;
 }
@@ -620,6 +700,9 @@ static struct attribute * g[] = {
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
 #endif
+#ifdef CONFIG_GLINUX_CURRENT
+	&mycurrent_attr.attr,
+#endif
 	NULL,
 };
 
@@ -652,6 +735,9 @@ static int __init pm_init(void)
 	if (error)
 		return error;
 	pm_print_times_init();
+#ifdef CONFIG_RTK_PLATFORM //FIXME: acquire wakelock to prevent system from entering suspend state
+    pm_wake_lock("rtk_awake");
+#endif
 	return pm_autosleep_init();
 }
 

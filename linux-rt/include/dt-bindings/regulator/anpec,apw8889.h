@@ -1,0 +1,9 @@
+#ifndef __DT_BINDINGS_REGULATOR_ANPEC_APW8889_H
+#define __DT_BINDINGS_REGULATOR_ANPEC_APW8889_H
+
+#define APW8889_DC_MODE_AUTO              (0x0)
+#define APW8889_DC_MODE_FORCE_PWM         (0x1)
+#define APW8889_LDO_MODE_NORMAL           (APW8889_DC_MODE_AUTO)
+#define APW8889_LDO_MODE_ECO              (0x2)
+
+#endif

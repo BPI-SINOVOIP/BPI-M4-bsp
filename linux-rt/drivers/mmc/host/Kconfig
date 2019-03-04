@@ -4,6 +4,47 @@
 
 comment "MMC/SD/SDIO Host Controller Drivers"
 
+menuconfig MMC_RTK_EMMC
+    tristate "Realtek EMMC host driver"
+        help
+          Support RealTek EMMC for Kylin.
+
+config MMC_RTK_EMMC_HW_SEMAPHORE
+    bool  "Enable Realtek EMMC host driver hardware semaphore."
+    depends on MMC_RTK_EMMC
+    default n
+        help
+          Enable Realtek EMMC host driver hardware semaphore.
+
+menuconfig MMC_RTK_EMMC_CMDQ
+    bool "Realtek EMMC host driver with cmdq function"
+	depends on MMC_RTK_EMMC
+	depends on ARCH_RTD13xx
+	depends on HAS_DMA
+	default n
+        help
+          Support RealTek EMMC for Hank cqe function.
+
+menuconfig MMC_RTK_EMMC_PON
+    bool "Realtek EMMC host driver with pon function"
+	depends on MMC_RTK_EMMC
+	depends on ARCH_RTD13xx
+	default n
+        help
+          Support RealTek EMMC for Hank PON function.
+
+menuconfig MMC_RTK_SDMMC
+    tristate "Realtek SD/MMC host driver"
+    help
+      Realtek SD/MMC host support.
+ 
+config MMC_RTK_SDMMC_DEBUG
+    bool  "Enable Realtek SD/MMC host driver debug message."
+    depends on MMC_RTK_SDMMC
+    default n
+        help
+          Enable Realtek SD/MMC host driver debug message.
+
 config MMC_ARMMMCI
 	tristate "ARM AMBA Multimedia Card Interface support"
 	depends on ARM_AMBA
@@ -342,6 +383,24 @@ config MMC_SDHCI_ST
 
 	  If you have a controller with this interface, say Y or M here.
 	  If unsure, say N.
+
+menuconfig MMC_SDHCI_RTK
+    tristate "SDHCI support for Realtek SoC"
+    depends on RTK_PLATFORM
+    depends on MMC_SDHCI_PLTFM
+    select MMC_SDHCI_IO_ACCESSORS
+    help
+      This selects the Secure Digital Host Controller Interface in
+      Realtek SoCs.
+
+      If you have a controller with this interface, say Y or M here.
+      If unsure, say N.
+      
+config RTK_SDIO_CLK_ADJUST
+    bool "Dynamic SDIO clock adjust support"
+    depends on MMC_SDHCI_RTK
+        help
+          SDIO clock adjusting API for WIFI driver
 
 config MMC_OMAP
 	tristate "TI OMAP Multimedia Card Interface support"

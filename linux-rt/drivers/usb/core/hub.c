@@ -26,6 +26,11 @@
 #include <linux/mutex.h>
 #include <linux/random.h>
 #include <linux/pm_qos.h>
+#ifdef CONFIG_USB_PATCH_ON_RTK
+#include <linux/platform_device.h>
+#include <linux/timer.h>
+#include <linux/syscalls.h>
+#endif
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
@@ -35,6 +40,13 @@
 
 #define USB_VENDOR_GENESYS_LOGIC		0x05e3
 #define HUB_QUIRK_CHECK_PORT_AUTOSUSPEND	0x01
+
+#ifdef CONFIG_USB_PATCH_ON_RTK
+#ifdef CONFIG_USB_RTK_CTRL_MANAGER
+extern int RTK_usb_reprobe_usb_storage(struct usb_device *udev);
+extern bool RTK_usb_disable_hub_autosuspend(void);
+#endif
+#endif
 
 /* Protect struct usb_device->state and ->children members
  * Note: Both are also protected by ->dev.sem, except that ->state can
@@ -392,6 +404,26 @@ static int get_hub_descriptor(struct usb_device *hdev,
 	}
 	return -EINVAL;
 }
+
+#ifdef CONFIG_USB_RTK_HCD_TEST_MODE
+int get_hub_descriptor_port(struct usb_device *hdev, void *data, int size, int port1)
+{
+	struct usb_hub *hub = usb_hub_to_struct_hub(hdev);
+	struct usb_device *dev = hub->ports[port1 - 1]->child;
+
+	if (dev) {
+		memset(data, 0, size);
+
+		return usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
+				USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+				(USB_DT_DEVICE << 8), 0, data, size,
+				USB_CTRL_GET_TIMEOUT);
+
+	} else
+		return 0;
+}
+EXPORT_SYMBOL_GPL(get_hub_descriptor_port);
+#endif //CONFIG_USB_RTK_HCD_TEST_MODE
 
 /*
  * USB 2.0 spec Section 11.24.2.1
@@ -1726,6 +1758,14 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	 */
 	if (hdev->parent) {		/* normal device */
 		usb_enable_autosuspend(hdev);
+#ifdef CONFIG_USB_PATCH_ON_RTK
+#ifdef CONFIG_USB_RTK_CTRL_MANAGER
+		if (RTK_usb_disable_hub_autosuspend()) {
+			dev_warn(&intf->dev, "disable hub autosuspend\n");
+			usb_disable_autosuspend(hdev);
+		}
+#endif
+#endif
 	} else {			/* root hub */
 		const struct hc_driver *drv = bus_to_hcd(hdev->bus)->driver;
 
@@ -3480,6 +3520,39 @@ int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 
 	status = check_port_resume_type(udev,
 			hub, port1, status, portchange, portstatus);
+
+#ifdef CONFIG_USB_PATCH_ON_RTK
+	/* [DEV_FIX] Disconnect usb port at resume.
+	 * commit 1a50dacafca108bd258f28755e2f4ad9ba4bc8d4
+	 * [BUG_FIX]: ID 46792 [ROOT_CAUSE]: can't recognize usb hub
+	 * commit cd7a079f0a82876abcdbe3e6a0b9409441c94294
+	 * [DEV_FIX]check udev reset_resume flag to disconnect
+	 * the device while resume back .
+	 * commit 8185a91ad51e2fe115d8d7a60d8b1ed4b8eb6c9f
+	 * [DEV_FIX]cant recognize hub after unplug/plug & suspend/resume
+	 * commit 3bbc65af52a4b27ac41114a998ad942aa613c078
+	 * [DEV_FIX]2. force  CONFIG_USB_HUB_DISCONNECT_AT_RESUME
+	 * commit 3e6a470b06ea6e37edded163aa814c8c24f04ced
+	 */
+	if (udev->reset_resume) {
+		int i;
+		if (udev->descriptor.bDeviceClass == USB_CLASS_MASS_STORAGE)
+			status = -1;
+		else
+			for (i = 0; i < udev->actconfig->desc.bNumInterfaces; i++) {
+				struct usb_host_config *config = udev->actconfig;
+				struct usb_interface *intf = config->interface[i];
+				struct usb_interface_descriptor *desc;
+				desc = &intf->cur_altsetting->desc;
+
+				dev_notice(&udev->dev , "%s bInterfaceClass = %d \n", __func__, desc->bInterfaceClass);//hcy test
+				if (desc->bInterfaceClass == USB_CLASS_MASS_STORAGE){
+					status = -1;
+					break;
+				}
+			}
+	}
+#endif
 	if (status == 0)
 		status = finish_port_resume(udev);
 	if (status < 0) {
@@ -4431,11 +4504,31 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	else
 		speed = usb_speed_string(udev->speed);
 
+#ifdef CONFIG_USB_PATCH_ON_RTK
+	if (udev->speed < USB_SPEED_SUPER)
+		dev_notice(&udev->dev,
+				"%s %s USB device number %d using %s\n",
+				(udev->config) ? "reset" : "new", speed,
+				devnum, udev->bus->controller->driver->name);
+
+	/* add for debug reset*/
+	if (udev->speed < USB_SPEED_SUPER && udev->config) {
+		dev_dbg(&udev->dev,
+			    "Start print dump_stack for %s %s USB device number %d "
+			    "using %s (%s)\n",
+			    (udev->config) ? "reset" : "new", speed,
+			    devnum, udev->bus->controller->driver->name,
+			    dev_name(udev->bus->controller->parent));
+		dev_dbg(&udev->dev, "End print dump_stack for USB dev number %d",
+			    ({dump_stack(); devnum;}));
+	}
+#else
 	if (udev->speed < USB_SPEED_SUPER)
 		dev_info(&udev->dev,
 				"%s %s USB device number %d using %s\n",
 				(udev->config) ? "reset" : "new", speed,
 				devnum, udev->bus->controller->driver->name);
+#endif
 
 	/* Set up TT records, if needed  */
 	if (hdev->tt) {
@@ -4565,11 +4658,34 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 			}
 			if (udev->speed >= USB_SPEED_SUPER) {
 				devnum = udev->devnum;
+#ifdef CONFIG_USB_PATCH_ON_RTK
+				dev_notice(&udev->dev,
+						"%s SuperSpeed%s USB device number %d using %s\n",
+						(udev->config) ? "reset" : "new",
+					 (udev->speed == USB_SPEED_SUPER_PLUS) ? "Plus" : "",
+						devnum, udev->bus->controller->driver->name);
+
+				/* add for debug reset*/
+				if (udev->config) {
+					dev_dbg(&udev->dev,
+					    "Start print dump_stack for %s SuperSpeed%s "
+					    "USB device number %d "
+					    "using %s (%s)\n",
+					    (udev->config) ? "reset" : "new",
+					    (udev->speed == USB_SPEED_SUPER_PLUS) ? "Plus" : "",
+					    devnum, udev->bus->controller->driver->name,
+					    dev_name(udev->bus->controller->parent));
+					dev_dbg(&udev->dev,
+					    "End print dump_stack for USB dev number %d",
+					    ({dump_stack(); devnum;}));
+				}
+#else
 				dev_info(&udev->dev,
 						"%s SuperSpeed%s USB device number %d using %s\n",
 						(udev->config) ? "reset" : "new",
 					 (udev->speed == USB_SPEED_SUPER_PLUS) ? "Plus" : "",
 						devnum, udev->bus->controller->driver->name);
+#endif
 			}
 
 			/* cope with hardware quirkiness:
@@ -4912,6 +5028,12 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 		/* Run it through the hoops (find a driver, etc) */
 		if (!status) {
 			status = usb_new_device(udev);
+#ifdef CONFIG_USB_PATCH_ON_RTK
+#ifdef CONFIG_USB_RTK_CTRL_MANAGER
+			if (!status)
+				RTK_usb_reprobe_usb_storage(udev);
+#endif
+#endif
 			if (status) {
 				mutex_lock(&usb_port_peer_mutex);
 				spin_lock_irq(&device_state_lock);
@@ -4985,8 +5107,13 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
 	struct usb_device *udev = port_dev->child;
 	int status = -ENODEV;
 
+#ifdef CONFIG_USB_PATCH_ON_RTK
+	dev_notice(&port_dev->dev, "port %d, status %04x, change %04x, %s\n",
+			port1, portstatus, portchange, portspeed(hub, portstatus));
+#else
 	dev_dbg(&port_dev->dev, "status %04x, change %04x, %s\n", portstatus,
 			portchange, portspeed(hub, portstatus));
+#endif
 
 	if (hub->has_indicators) {
 		set_port_led(hub, port1, HUB_LED_AUTO);

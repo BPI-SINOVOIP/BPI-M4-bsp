@@ -21,6 +21,10 @@
 #include "base.h"
 
 static DEFINE_PER_CPU(struct device *, cpu_sys_devices);
+#ifdef CONFIG_RTK_PLATFORM
+extern void rtk_cpu_power_down(int cpu);
+extern void rtk_cpu_power_up(int cpu);
+#endif /* CONFIG_RTK_PLATFORM */
 
 static int cpu_subsys_match(struct device *dev, struct device_driver *drv)
 {
@@ -52,6 +56,10 @@ static int cpu_subsys_online(struct device *dev)
 	if (from_nid == NUMA_NO_NODE)
 		return -ENODEV;
 
+#if defined(CONFIG_RTK_PLATFORM) && !defined(CONFIG_RTK_PSCI_BOOT)
+	rtk_cpu_power_up(cpuid);
+#endif /* CONFIG_RTK_PLATFORM */
+
 	ret = cpu_up(cpuid);
 	/*
 	 * When hot adding memory to memoryless node and enabling a cpu
@@ -66,7 +74,14 @@ static int cpu_subsys_online(struct device *dev)
 
 static int cpu_subsys_offline(struct device *dev)
 {
+#if defined(CONFIG_RTK_PLATFORM) && !defined(CONFIG_RTK_PSCI_BOOT)
+	int ret = 0;
+	ret = cpu_down(dev->id);
+	rtk_cpu_power_down(dev->id);
+	return ret;
+#else
 	return cpu_down(dev->id);
+#endif /* CONFIG_RTK_PLATFORM */
 }
 
 void unregister_cpu(struct cpu *cpu)

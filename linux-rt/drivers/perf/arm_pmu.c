@@ -27,6 +27,18 @@
 #include <asm/cputype.h>
 #include <asm/irq_regs.h>
 
+#ifdef CONFIG_RTK_WORKAROUND_ARM_PMUV3
+void armpmu_wxt_cancel_hrtimer(struct perf_event *event);
+void armpmu_wxt_start_hrtimer(struct perf_event *event);
+void armpmu_wxt_init_hrtimer(struct perf_event *event);
+void armpmu_wxt_fini_hrtimer(struct perf_event *event);
+#else
+void armpmu_wxt_cancel_hrtimer(struct perf_event *event) {}
+void armpmu_wxt_start_hrtimer(struct perf_event *event) {}
+void armpmu_wxt_init_hrtimer(struct perf_event *event) {}
+void armpmu_wxt_fini_hrtimer(struct perf_event *event) {}
+#endif
+
 static int
 armpmu_map_cache_event(const unsigned (*cache_map)
 				      [PERF_COUNT_HW_CACHE_MAX]
@@ -175,6 +187,8 @@ armpmu_stop(struct perf_event *event, int flags)
 	struct arm_pmu *armpmu = to_arm_pmu(event->pmu);
 	struct hw_perf_event *hwc = &event->hw;
 
+	armpmu_wxt_cancel_hrtimer(event);
+
 	/*
 	 * ARM pmu always has to update the counter, so ignore
 	 * PERF_EF_UPDATE, see comments in armpmu_start().
@@ -208,6 +222,8 @@ static void armpmu_start(struct perf_event *event, int flags)
 	 */
 	armpmu_event_set_period(event);
 	armpmu->enable(event);
+
+	armpmu_wxt_start_hrtimer(event);
 }
 
 static void
@@ -386,6 +402,7 @@ hw_perf_event_destroy(struct perf_event *event)
 		armpmu_release_hardware(armpmu);
 		mutex_unlock(pmu_reserve_mutex);
 	}
+	armpmu_wxt_fini_hrtimer(event);
 }
 
 static int
@@ -453,6 +470,8 @@ __hw_perf_event_init(struct perf_event *event)
 		if (validate_group(event) != 0)
 			return -EINVAL;
 	}
+
+	armpmu_wxt_init_hrtimer(event);
 
 	return 0;
 }
@@ -1018,7 +1037,7 @@ int arm_pmu_device_probe(struct platform_device *pdev,
 			 const struct pmu_probe_info *probe_table)
 {
 	const struct of_device_id *of_id;
-	const int (*init_fn)(struct arm_pmu *);
+	int (*init_fn)(struct arm_pmu *);
 	struct device_node *node = pdev->dev.of_node;
 	struct arm_pmu *pmu;
 	int ret = -ENODEV;
