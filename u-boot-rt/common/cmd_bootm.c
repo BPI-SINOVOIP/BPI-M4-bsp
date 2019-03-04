@@ -112,6 +112,17 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	/* determine if we have a sub command */
 	argc--; argv++;
+	
+	/* do bootm start fisrt and find whether uImage */
+	/*BOOTM_STATE_FINDOS and BOOTM_STATE_LOADOS flags are for uImage loading */
+	do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START |
+					BOOTM_STATE_FINDOS | BOOTM_STATE_FINDOTHER |
+					BOOTM_STATE_LOADOS,
+					&images, 1);
+
+	if (bootm_find_images(flag, argc, argv))
+		return 1;
+
 	if (argc > 0) {
 		char *endp;
 
@@ -128,9 +139,14 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			return do_bootm_subcommand(cmdtp, flag, argc, argv);
 	}
 
-	return do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START |
-		BOOTM_STATE_FINDOS | BOOTM_STATE_FINDOTHER |
-		BOOTM_STATE_LOADOS |
+	images.ep = simple_strtoul(argv[0], NULL, 16);
+	images.ft_addr = (void *)(uintptr_t)simple_strtoul(argv[2], NULL, 16);
+	images.os.os = IH_OS_LINUX;
+	images.os.arch = IH_ARCH_ARM;
+	return do_bootm_states(cmdtp, flag, argc, argv,
+#ifdef CONFIG_SYS_BOOT_RAMDISK_HIGH
+		BOOTM_STATE_RAMDISK |
+#endif
 #if defined(CONFIG_PPC) || defined(CONFIG_MIPS)
 		BOOTM_STATE_OS_CMDLINE |
 #endif
@@ -635,6 +651,18 @@ U_BOOT_CMD(
 #endif	/* CONFIG_CMD_BOOTZ */
 
 #ifdef CONFIG_CMD_BOOTI
+#ifdef CONFIG_ARM64_IMAGE_LEGACY
+/* ARM64 kernel Image header head changed at 3.12 -> 3.13 */
+struct Image_header {
+	uint32_t	code0;		/* Executable code */
+	uint32_t	res_code;	/* reseved code */
+	uint64_t	text_offset;	/* Image load offset, LE */
+	uint64_t	res0;		/* reserved */
+	uint64_t	res1;		/* reserved */
+};
+
+#define DEFAULT_IMAGE_SIZE	(6 << 20)
+#else //CONFIG_ARM64_IMAGE_LEGACY
 /* See Documentation/arm64/booting.txt in the Linux kernel */
 struct Image_header {
 	uint32_t	code0;		/* Executable code */
@@ -651,22 +679,53 @@ struct Image_header {
 
 #define LINUX_ARM64_IMAGE_MAGIC	0x644d5241
 
+#endif //CONFIG_ARM64_IMAGE_LEGACY
+
+static unsigned Image_Size = 0;
+
 static int booti_setup(bootm_headers_t *images)
 {
 	struct Image_header *ih;
-	uint64_t dst;
+	ulong dst;
+	unsigned long len = CONFIG_GZIP_KERNEL_MAX_LEN;
+	void *decompress_addr = (void*)CONFIG_GZIP_DECOMPRESS_KERNEL_ADDR;
 
 	ih = (struct Image_header *)map_sysmem(images->ep, 0);
 
+#ifdef CONFIG_ARM64_IMAGE_LEGACY
+	printf("Use ARM64 legacy Image, no MAGIC check\n");
+	printf("FIXME : should identify image size from RTK partition info, use default 0x%08x\n", DEFAULT_IMAGE_SIZE);
+	Image_Size = DEFAULT_IMAGE_SIZE;
+#else
 	if (ih->magic != le32_to_cpu(LINUX_ARM64_IMAGE_MAGIC)) {
-		puts("Bad Linux ARM64 Image magic!\n");
-		return 1;
+		printf("Not raw Image, Starting Decompress Image.gz...\n\n\n");
+
+		if (gunzip(decompress_addr, CONFIG_GZIP_KERNEL_MAX_LEN, (unsigned char *)images->ep, &len)) {
+			printf("Decompress FAIL!!\n");
+			return 1;
+		}
+
+		if (len == CONFIG_GZIP_KERNEL_MAX_LEN) {
+			printf("Kernel Image maybe truncated, Please increase CONFIG_GZIP_KERNEL_MAX_LEN size\n");
+			return 1;
+		}
+
+		images->ep = CONFIG_GZIP_DECOMPRESS_KERNEL_ADDR;
+		ih = (struct Image_header *)map_sysmem(images->ep, 0);
+
+		if (ih->magic != le32_to_cpu(LINUX_ARM64_IMAGE_MAGIC)) {
+			puts("Bad Linux ARM64 Image magic!\n");
+			return 1;
+		}
 	}
 	
 	if (ih->image_size == 0) {
 		puts("Image lacks image_size field, assuming 16MiB\n");
 		ih->image_size = (16 << 20);
 	}
+
+	Image_Size = ih->image_size;
+#endif
 
 	/*
 	 * If we are not at the correct run-time location, set the new
@@ -676,11 +735,11 @@ static int booti_setup(bootm_headers_t *images)
 	if (images->ep != dst) {
 		void *src;
 
-		debug("Moving Image from 0x%lx to 0x%llx\n", images->ep, dst);
+		debug("Moving Image from 0x%lx to 0x%lx\n", images->ep, dst);
 
 		src = (void *)images->ep;
 		images->ep = dst;
-		memmove((void *)dst, src, le32_to_cpu(ih->image_size));
+		memmove((void *)dst, src, le32_to_cpu(Image_Size));
 	}
 
 	return 0;
@@ -693,10 +752,11 @@ static int booti_start(cmd_tbl_t *cmdtp, int flag, int argc,
 			char * const argv[], bootm_headers_t *images)
 {
 	int ret;
-	struct Image_header *ih;
 
-	ret = do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START,
-			      images, 1);
+	ret = do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START | 
+				BOOTM_STATE_FINDOS | BOOTM_STATE_LOADOS,
+			    images, 1);
+	/*BOOTM_STATE_FINDOS and BOOTM_STATE_LOADOS flags are for uImage loading */
 
 	/* Setup Linux kernel Image entry point */
 	if (!argc) {
@@ -713,9 +773,7 @@ static int booti_start(cmd_tbl_t *cmdtp, int flag, int argc,
 	if (ret != 0)
 		return 1;
 
-	ih = (struct Image_header *)map_sysmem(images->ep, 0);
-
-	lmb_reserve(&images->lmb, images->ep, le32_to_cpu(ih->image_size));
+	lmb_reserve(&images->lmb, images->ep, le32_to_cpu(Image_Size));
 
 	/*
 	 * Handle the BOOTM_STATE_FINDOTHER state ourselves as we do not

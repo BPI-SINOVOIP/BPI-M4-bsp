@@ -32,14 +32,19 @@ obj-$(CONFIG_DISPLAY_BOARDINFO_LATE) += board_info.o
 
 # core command
 obj-y += cmd_boot.o
+# cmd_boot_md.c was colned from cmd_boot.c
+obj-$(CONFIG_BOOT_FOR_WD) += cmd_boot_wd.o
+obj-$(CONFIG_CMD_WDPP) += cmd_wdpp.o
 obj-$(CONFIG_CMD_BOOTM) += cmd_bootm.o bootm.o bootm_os.o
 obj-y += cmd_help.o
 obj-y += cmd_version.o
+obj-$(CONFIG_CMD_BOOTR) += cmd_bootr.o rtk/boot.o
 
 # environment
 obj-y += env_attr.o
 obj-y += env_callback.o
 obj-y += env_flags.o
+obj-$(CONFIG_ENV_IS_IN_FACTORY) += env_factory.o
 obj-$(CONFIG_ENV_IS_IN_DATAFLASH) += env_dataflash.o
 obj-$(CONFIG_ENV_IS_IN_EEPROM) += env_eeprom.o
 extra-$(CONFIG_ENV_IS_EMBEDDED) += env_embedded.o
@@ -53,7 +58,8 @@ obj-$(CONFIG_ENV_IS_IN_NAND) += env_nand.o
 obj-$(CONFIG_ENV_IS_IN_NVRAM) += env_nvram.o
 obj-$(CONFIG_ENV_IS_IN_ONENAND) += env_onenand.o
 obj-$(CONFIG_ENV_IS_IN_SPI_FLASH) += env_sf.o
-obj-$(CONFIG_ENV_IS_IN_REMOTE) += env_remote.o
+obj-$(CONFIG_ENV_IS_IN_SPI) += env_spi.o
+#obj-$(CONFIG_ENV_IS_IN_REMOTE) += env_remote.o
 obj-$(CONFIG_ENV_IS_IN_UBI) += env_ubi.o
 obj-$(CONFIG_ENV_IS_NOWHERE) += env_nowhere.o
 
@@ -63,7 +69,15 @@ obj-$(CONFIG_CMD_AMBAPP) += cmd_ambapp.o
 obj-$(CONFIG_CMD_ARMFLASH) += cmd_armflash.o
 obj-$(CONFIG_SOURCE) += cmd_source.o
 obj-$(CONFIG_CMD_SOURCE) += cmd_source.o
+ifdef CONFIG_RTD161x
+obj-$(CONFIG_CMD_BDI) += cmd_bdinfo_rtd161x.o
+endif
+ifdef CONFIG_RTD1395
+obj-$(CONFIG_CMD_BDI) += cmd_bdinfo_rtd1395.o
+endif
+ifdef CONFIG_RTD1295
 obj-$(CONFIG_CMD_BDI) += cmd_bdinfo.o
+endif
 obj-$(CONFIG_CMD_BEDBUG) += bedbug.o cmd_bedbug.o
 obj-$(CONFIG_CMD_BMP) += cmd_bmp.o
 obj-$(CONFIG_CMD_BOOTMENU) += cmd_bootmenu.o
@@ -86,6 +100,7 @@ ifdef CONFIG_POST
 obj-$(CONFIG_CMD_DIAG) += cmd_diag.o
 endif
 obj-$(CONFIG_CMD_DISPLAY) += cmd_display.o
+obj-$(CONFIG_CMD_DTIMG) += cmd_dtimg.o
 obj-$(CONFIG_CMD_DTT) += cmd_dtt.o
 obj-$(CONFIG_CMD_ECHO) += cmd_echo.o
 obj-$(CONFIG_ENV_IS_IN_EEPROM) += cmd_eeprom.o
@@ -137,6 +152,7 @@ endif
 obj-$(CONFIG_CMD_MISC) += cmd_misc.o
 obj-$(CONFIG_CMD_MMC) += cmd_mmc.o
 obj-$(CONFIG_CMD_MMC_SPI) += cmd_mmc_spi.o
+obj-$(CONFIG_CMD_SD) += cmd_sd.o
 obj-$(CONFIG_MP) += cmd_mp.o
 obj-$(CONFIG_CMD_MTDPARTS) += cmd_mtdparts.o
 obj-$(CONFIG_CMD_NAND) += cmd_nand.o
@@ -191,6 +207,8 @@ obj-$(CONFIG_YAFFS2) += cmd_yaffs2.o
 obj-$(CONFIG_CMD_SPL) += cmd_spl.o
 obj-$(CONFIG_CMD_ZIP) += cmd_zip.o
 obj-$(CONFIG_CMD_ZFS) += cmd_zfs.o
+obj-$(CONFIG_CMD_GICTEST) += cmd_gictest.o
+obj-$(CONFIG_CMD_CACHETEST) += cmd_cachetest.o
 
 # others
 obj-$(CONFIG_BOOTSTAGE) += bootstage.o
@@ -265,6 +283,8 @@ obj-$(CONFIG_IO_TRACE) += iotrace.o
 obj-y += memsize.o
 obj-y += stdio.o
 
+obj-$(CONFIG_CMD_DTIMG) += image-android-dt.o
+
 # This option is not just y/n - it can have a numeric value
 ifdef CONFIG_FASTBOOT_FLASH_MMC_DEV
 obj-y += aboot.o
@@ -272,6 +292,9 @@ obj-y += fb_mmc.o
 endif
 
 obj-$(CONFIG_CMD_BLOB) += cmd_blob.o
+
+# Android Verified Boot 2.0
+obj-$(CONFIG_CMD_AVB) += cmd_avb.o
 
 # We always have this since drivers/ddr/fs/interactive.c needs it
 obj-y += cli_simple.o
@@ -283,4 +306,36 @@ obj-y += s_record.o
 obj-y += xyzModem.o
 obj-y += cmd_disk.o
 
+ifdef CONFIG_RTD161x
+obj-$(CONFIG_CUSTOMIZE_BOOTFLOW_1) += customized_bootflow_rtd161x.o
+endif
+ifdef CONFIG_RTD1295
+obj-$(CONFIG_CUSTOMIZE_BOOTFLOW_1) += customized_bootflow.o
+endif
+
 CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
+
+obj-$(CONFIG_CMD_RTKSPI) += cmd_rtkspi.o
+obj-$(CONFIG_CMD_RTKRNG) += cmd_rtkrng.o
+obj-$(CONFIG_CMD_RTKGPT) += cmd_rtkgpt.o
+obj-$(CONFIG_CMD_RTKMKFAT) += cmd_rtkmkfat.o
+obj-$(CONFIG_CMD_RTKFDT) += cmd_rtkfdt.o
+obj-$(CONFIG_CMD_RTKPWM) += cmd_rtkpwm.o
+obj-$(CONFIG_CMD_KEY_BURNING) += cmd_burn.o cmd_verify.o
+obj-y += cmd_uart_read_write.o
+
+# realtek cmd pmic
+obj-y += pmic/
+
+# uart mp tool
+obj-y += cmd_uart_write.o
+
+#for rpmb module
+obj-$(CONFIG_CMD_RPMB) += cmd_rpmb.o
+
+# rtk bt init
+ifdef CONFIG_CMD_RTKBT_INIT
+obj-y += rtk_bt_init/
+endif
+
+obj-$(CONFIG_AVB_VERIFY) += avb_verify.o

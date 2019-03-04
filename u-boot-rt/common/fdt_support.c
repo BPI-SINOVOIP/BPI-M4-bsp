@@ -13,9 +13,11 @@
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <asm/global_data.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fdt_support.h>
 #include <exports.h>
+#include <fdtdec.h>
+#include <asm/arch/cpu.h>
 
 /**
  * fdt_getprop_u32_default_node - Return a node's property or a default
@@ -280,11 +282,15 @@ int fdt_initrd(void *fdt, ulong initrd_start, ulong initrd_end)
 	return 0;
 }
 
-int fdt_chosen(void *fdt)
+int fdt_chosen(void *fdt, int force)
 {
 	int   nodeoffset;
 	int   err;
+	int   bootarg_len = 0;
+	char  *val = NULL;
 	char  *str;		/* used to set string properties */
+	char  *str_ext;
+	const char *path;
 
 	err = fdt_check_header(fdt);
 	if (err < 0) {
@@ -292,21 +298,186 @@ int fdt_chosen(void *fdt)
 		return err;
 	}
 
-	/* find or create "/chosen" node. */
-	nodeoffset = fdt_find_or_add_subnode(fdt, 0, "chosen");
-	if (nodeoffset < 0)
-		return nodeoffset;
-
-	str = getenv("bootargs");
-	if (str) {
-		err = fdt_setprop(fdt, nodeoffset, "bootargs", str,
-				  strlen(str) + 1);
-		if (err < 0) {
-			printf("WARNING: could not set bootargs %s.\n",
-			       fdt_strerror(err));
-			return err;
+	/*
+	 * The order of resume-entry-addr in kernl is 34 12 78 56, if original address is 0x12345678.
+	 * The order of resume-entry-addr setting by fdt_setprop is 56 78 12 34, if original address is 0x12345678.
+	 * For fitting this order,  resume_addr is adjusted to 78 56 34 12.
+	 * resume_addr is saving resuming address when the system return from S1 sleep. 
+	 */
+#ifdef CONFIG_TARGET_RTD1295
+	int slave_cpu_offset = fdt_path_offset (fdt, "/rtk_boot");
+	unsigned int resume_addr = swab32(CONFIG_SYS_TEXT_BASE);
+	if (resume_addr) {
+		path = fdt_getprop(fdt, slave_cpu_offset, "resume-entry-addr", NULL);
+		if ((path == NULL) || force) {
+			err = fdt_setprop(fdt, slave_cpu_offset,
+				"resume-entry-addr", &resume_addr, sizeof(unsigned int));
+			if (err < 0)
+				printf("WARNING: could not set resume-entry-addr %s.\n",
+					fdt_strerror(err));
 		}
 	}
+#endif
+
+	/*
+	 * Find the "chosen" node.
+	 */
+	nodeoffset = fdt_path_offset (fdt, "/chosen");
+
+	/*
+	 * If there is no "chosen" node in the blob, create it.
+	 */
+	if (nodeoffset < 0) {
+		/*
+		 * Create a new node "/chosen" (offset 0 is root level)
+		 */
+		nodeoffset = fdt_add_subnode(fdt, 0, "chosen");
+		if (nodeoffset < 0) {
+			printf("WARNING: could not create /chosen %s.\n",
+				fdt_strerror(nodeoffset));
+			return nodeoffset;
+		}
+	}
+
+	/*
+	 * Create /chosen properites that don't exist in the fdt.
+	 * If the property exists, update it only if the "force" parameter
+	 * is true.
+	 */
+#define MAX_EXT_LEN	256
+	str = getenv("bootargs");
+	if (str != NULL) {
+		path = fdt_getprop(fdt, nodeoffset, "bootargs", NULL);
+		if ((path == NULL) || force) {
+			str_ext = getenv("extend_bootargs");
+			if (!str_ext) {
+				/* original path */
+				err = fdt_setprop(fdt, nodeoffset,
+					"bootargs", str, strlen(str)+1);
+			} else {
+				/* append extra info onto bootargs */
+				char *buf = malloc(strlen(str) + MAX_EXT_LEN + 1);
+
+				if (!buf) {
+					/* can't allocate enough buffer,
+					 * fall back to original bootargs
+					 */
+					printf("WARNING: couldn't allocate buffer for ext_bootargs\n");
+					err = fdt_setprop(fdt, nodeoffset,
+						"bootargs", str, strlen(str)+1);
+				} else {
+					strncpy(buf, str, strlen(str));
+					strncat(buf, str_ext, MAX_EXT_LEN);
+					err = fdt_setprop(fdt, nodeoffset,
+						"bootargs", buf, strlen(buf)+1);
+					free(buf);
+				}
+			}
+
+			if (err < 0)
+				printf("WARNING: could not set bootargs %s.\n",
+					fdt_strerror(err));
+		}
+	}
+
+	// append verity cmdline.
+	str = getenv("avb_bootargs");
+	if (str != NULL) {
+		char verity_info[1024] = {0};
+		path = fdt_getprop(fdt, nodeoffset, "bootargs", &bootarg_len);
+		strncpy(val, path, bootarg_len);
+		snprintf(verity_info, sizeof(verity_info) -1, " rootwait skip_initramfs %s", str);
+		strncat(val, verity_info, strlen(verity_info));
+		err = fdt_setprop(fdt, nodeoffset, "bootargs", val, strlen(val) + 1);
+		if (err < 0)
+			printf("WARNING: could not set bootargs %s.\n",
+				fdt_strerror(err));
+	}
+
+	// append dtbo information
+	str = getenv("dtbo_addr");
+	if(str != NULL) {
+		char dtbo_info[1024] = {0};
+		path = fdt_getprop(fdt, nodeoffset, "bootargs", &bootarg_len);
+		strncpy(val, path, bootarg_len);
+		snprintf(dtbo_info, sizeof(dtbo_info) -1, " androidboot.dtbo_idx=%d", DTBO_INDEX);
+		strncat(val, dtbo_info, strlen(dtbo_info));
+		err = fdt_setprop(fdt, nodeoffset, "bootargs", val, strlen(val) + 1);
+		if (err < 0)
+			printf("WARNING: could not set bootargs %s.\n",
+				fdt_strerror(err));
+	}
+
+	// append serial number information
+	str = getenv("serial_number");
+	if(str != NULL) {
+		char serial_num_info[1024] = {0};
+		char dtbo_cat_num[32] = "";
+		sprintf(dtbo_cat_num, "%s%s", CHIP_NAME, str);
+		path = fdt_getprop(fdt, nodeoffset, "bootargs", &bootarg_len);
+		strncpy(val, path, bootarg_len);
+		snprintf(serial_num_info, sizeof(serial_num_info) -1, " androidboot.serialno=%s", dtbo_cat_num);
+		strncat(val, serial_num_info, strlen(serial_num_info));
+		err = fdt_setprop(fdt, nodeoffset, "bootargs", val, strlen(val) + 1);
+		if (err < 0)
+			printf("WARNING: could not set bootargs %s.\n",
+				fdt_strerror(err));
+	}
+
+#ifdef CONFIG_OF_STDOUT_VIA_ALIAS
+	path = fdt_getprop(fdt, nodeoffset, "linux,stdout-path", NULL);
+	if ((path == NULL) || force)
+		err = fdt_fixup_stdout(fdt, nodeoffset);
+#endif
+
+#ifdef OF_STDOUT_PATH
+	path = fdt_getprop(fdt, nodeoffset, "linux,stdout-path", NULL);
+	if ((path == NULL) || force) {
+		err = fdt_setprop(fdt, nodeoffset,
+			"linux,stdout-path", OF_STDOUT_PATH, strlen(OF_STDOUT_PATH)+1);
+		if (err < 0)
+			printf("WARNING: could not set linux,stdout-path %s.\n",
+				fdt_strerror(err));
+	}
+#endif
+
+#ifdef NAS_ENABLE
+	str_ext = getenv("nasargs");
+	if (str_ext != NULL) {
+		path = fdt_getprop(fdt, nodeoffset, "nasargs", NULL);
+		if ((path == NULL) || force) {
+			if (0)
+			{
+				err = fdt_setprop(fdt, nodeoffset,"nasargs", str_ext, strlen(str_ext)+1);
+				if (err < 0)
+					printf("WARNING: could not set nasargs %s.\n",
+						fdt_strerror(err));
+			}
+			else
+			{
+				int bootarg_len = 0;
+				/* append extra info onto bootargs */
+				path = fdt_getprop(fdt, nodeoffset, "bootargs", &bootarg_len);
+				char *buf = malloc(strlen(str_ext) + bootarg_len + 1);
+				if (!buf) {
+					/* can't allocate enough buffer,
+					 * fall back to original bootargs
+					 */
+					printf("WARNING: couldn't allocate buffer for ext_bootargs\n");
+				} else {
+					strncpy(buf, path, bootarg_len);
+					strncat(buf, str_ext, strlen(str_ext));
+					buf[strlen(str_ext) + bootarg_len]='\0';
+					err = fdt_setprop(fdt, nodeoffset,
+						"bootargs", buf, strlen(buf)+1);
+					//printf("bootargs=%s\n",buf);
+					free(buf);
+				}
+			}
+		}
+	}
+#endif
+
 
 	return fdt_fixup_stdout(fdt, nodeoffset);
 }
@@ -493,6 +664,45 @@ void fdt_fixup_ethernet(void *fdt)
 		strcpy(mac, "ethaddr");
 	}
 
+#if defined(CONFIG_RTD1295) || defined(CONFIG_RTD1395)
+	(void)enet;
+	(void)i;
+	/* add MAC address */
+	if ((tmp = getenv(mac)) != NULL) {
+		printf("[FDT] mac = %s\n", tmp);
+		for (j = 0; j < 6; j++) {
+			mac_addr[j] = tmp ? simple_strtoul(tmp, &end, 16) : 0;
+			if (tmp)
+				tmp = (*end) ? end+1 : end;
+		}
+
+		/* ETN */
+		path = "/gmac@98016000";
+		do_fixup_by_path(fdt, path, "local-mac-address",
+				&mac_addr, 6, 1);
+#if defined(CONFIG_RTD1295)
+		/* NAT */
+		path = "/gmac@0x98060000";
+		do_fixup_by_path(fdt, path, "local-mac-address",
+				&mac_addr, 6, 1);
+#endif /* CONFIG_RTD1295 */
+		printf("[FDT] update MAC address\n");
+	}
+
+#if defined(CONFIG_RTD1395)
+	/* ETN */
+	node = fdt_path_offset(fdt, "/gmac@98016000");
+	if (node > 0) {
+		const void *ptr;
+		ptr = fdt_getprop(fdt, node, "output-mode", NULL);
+		if (ptr && *(uint32_t *)ptr == 0) {
+			fdt_setprop_u32(fdt, node, "force-Gb-off", 1);
+		}
+	}
+#endif /* CONFIG_RTD1395 */
+
+#else /* others */
+
 	i = 0;
 	while ((tmp = getenv(mac)) != NULL) {
 		sprintf(enet, "ethernet%d", i);
@@ -515,6 +725,7 @@ void fdt_fixup_ethernet(void *fdt)
 
 		sprintf(mac, "eth%daddr", ++i);
 	}
+#endif /* CONFIG_RTD1295 | CONFIG_RTD1395 */
 }
 
 /* Resize the fdt to its actual size + a bit of padding */
@@ -1614,3 +1825,34 @@ int fdt_fixup_display(void *blob, const char *path, const char *display)
 	}
 	return toff;
 }
+
+#ifdef CONFIG_OF_LIBFDT_OVERLAY
+/**
+ * fdt_overlay_apply_verbose - Apply an overlay with verbose error reporting
+ *
+ * @fdt: ptr to device tree
+ * @fdto: ptr to device tree overlay
+ *
+ * Convenience function to apply an overlay and display helpful messages
+ * in the case of an error
+ */
+int fdt_overlay_apply_verbose(void *fdt, void *fdto)
+{
+	int err;
+	bool has_symbols;
+
+	err = fdt_path_offset(fdt, "/__symbols__");
+	has_symbols = err >= 0;
+
+	err = fdt_overlay_apply(fdt, fdto);
+	if (err < 0) {
+		printf("failed on fdt_overlay_apply(): %s\n",
+				fdt_strerror(err));
+		if (!has_symbols) {
+			printf("base fdt does did not have a /__symbols__ node\n");
+			printf("make sure you've compiled with -@\n");
+		}
+	}
+	return err;
+}
+#endif

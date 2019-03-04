@@ -29,9 +29,6 @@
 #include <asm/arch/hardware.h>
 #endif	/* XXX###XXX */
 
-static inline void sync(void)
-{
-}
 
 /*
  * Given a physical address and a length, return a virtual address
@@ -67,6 +64,7 @@ static inline phys_addr_t virt_to_phys(void * vaddr)
  * read/writes.  We define __arch_*[bl] here, and leave __arch_*w
  * to the architecture specific code.
  */
+#if 0
 #define __arch_getb(a)			(*(volatile unsigned char *)(a))
 #define __arch_getw(a)			(*(volatile unsigned short *)(a))
 #define __arch_getl(a)			(*(volatile unsigned int *)(a))
@@ -76,6 +74,17 @@ static inline phys_addr_t virt_to_phys(void * vaddr)
 #define __arch_putw(v,a)		(*(volatile unsigned short *)(a) = (v))
 #define __arch_putl(v,a)		(*(volatile unsigned int *)(a) = (v))
 #define __arch_putq(v,a)		(*(volatile unsigned long long *)(a) = (v))
+#else /* error: cast to pointer from integer of different size [-Werror=int-to-pointer-cast] */
+#define __arch_getb(a)			(*(volatile unsigned char *)((unsigned long)a))
+#define __arch_getw(a)			(*(volatile unsigned short *)((unsigned long)a))
+#define __arch_getl(a)			(*(volatile unsigned int *)((unsigned long)a))
+#define __arch_getq(a)			(*(volatile unsigned long long *)((unsigned long)a))
+
+#define __arch_putb(v,a)		(*(volatile unsigned char *)((unsigned long)a) = (v))
+#define __arch_putw(v,a)		(*(volatile unsigned short *)((unsigned long)a) = (v))
+#define __arch_putl(v,a)		(*(volatile unsigned int *)((unsigned long)a) = (v))
+#define __arch_putq(v,a)		(*(volatile unsigned long long *)((unsigned long)a) = (v))
+#endif
 
 static inline void __raw_writesb(unsigned long addr, const void *data,
 				 int bytelen)
@@ -132,14 +141,28 @@ static inline void __raw_readsl(unsigned long addr, void *data, int longlen)
 #define __raw_readl(a)		__arch_getl(a)
 #define __raw_readq(a)		__arch_getq(a)
 
+
+static inline void sync(void)
+{
+	asm volatile("DMB SY" : : : "memory");
+	__raw_writel(0x00000000, 0x9801A020);
+	asm volatile("DMB SY" : : : "memory");
+}
+
+
+
 /*
  * TODO: The kernel offers some more advanced versions of barriers, it might
  * have some advantages to use them instead of the simple one here.
  */
 #define mb()		asm volatile("dsb sy" : : : "memory")
 #define dmb()		__asm__ __volatile__ ("" : : : "memory")
+#define dsb()		__asm__ __volatile__ ("dsb sy" : : : "memory")
 #define __iormb()	dmb()
 #define __iowmb()	dmb()
+
+#define rmb()       dsb()
+#define wmb()       dsb()
 
 #define writeb(v,c)	({ u8  __v = v; __iowmb(); __arch_putb(__v,c); __v; })
 #define writew(v,c)	({ u16 __v = v; __iowmb(); __arch_putw(__v,c); __v; })
@@ -285,40 +308,6 @@ static inline void __raw_readsl(unsigned long addr, void *data, int longlen)
 #define insl_p(port,to,len)		insl(port,to,len)
 
 /*
- * ioremap and friends.
- *
- * ioremap takes a PCI memory address, as specified in
- * linux/Documentation/IO-mapping.txt.  If you want a
- * physical address, use __ioremap instead.
- */
-extern void * __ioremap(unsigned long offset, size_t size, unsigned long flags);
-extern void __iounmap(void *addr);
-
-/*
- * Generic ioremap support.
- *
- * Define:
- *  iomem_valid_addr(off,size)
- *  iomem_to_phys(off)
- */
-#ifdef iomem_valid_addr
-#define __arch_ioremap(off,sz,nocache)					\
- ({									\
-	unsigned long _off = (off), _size = (sz);			\
-	void *_ret = (void *)0;						\
-	if (iomem_valid_addr(_off, _size))				\
-		_ret = __ioremap(iomem_to_phys(_off),_size,nocache);	\
-	_ret;								\
- })
-
-#define __arch_iounmap __iounmap
-#endif
-
-#define ioremap(off,sz)			__arch_ioremap((off),(sz),0)
-#define ioremap_nocache(off,sz)		__arch_ioremap((off),(sz),1)
-#define iounmap(_addr)			__arch_iounmap(_addr)
-
-/*
  * DMA-consistent mapping functions.  These allocate/free a region of
  * uncached, unwrite-buffered mapped memory space for use with DMA
  * devices.  This is the "generic" version.  The PCI specific version
@@ -453,6 +442,6 @@ out:
 #endif	/* __mem_isa */
 #endif	/* __KERNEL__ */
 
-#include <iotrace.h>
+//#include <iotrace.h>
 
 #endif	/* __ASM_ARM_IO_H */

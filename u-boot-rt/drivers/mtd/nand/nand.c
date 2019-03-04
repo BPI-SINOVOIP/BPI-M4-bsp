@@ -75,6 +75,10 @@ int nand_register(int devnum)
 }
 
 #ifndef CONFIG_SYS_NAND_SELF_INIT
+#if defined(CONFIG_TARGET_RTD1295) || defined(CONFIG_TARGET_RTD1395) || \
+	defined(CONFIG_TARGET_RTD1395_V7)
+extern int rtk_nand_scan (struct mtd_info *mtd, int maxchips);
+#endif
 static void nand_init_chip(int i)
 {
 	struct mtd_info *mtd = &nand_info[i];
@@ -91,7 +95,12 @@ static void nand_init_chip(int i)
 	if (board_nand_init(nand))
 		return;
 
+#if defined(CONFIG_TARGET_RTD1295) || defined(CONFIG_TARGET_RTD1395) || \
+	defined(CONFIG_TARGET_RTD1395_V7)
+	if (rtk_nand_scan(mtd, maxchips))
+#else
 	if (nand_scan(mtd, maxchips))
+#endif
 		return;
 
 	nand_register(i);
