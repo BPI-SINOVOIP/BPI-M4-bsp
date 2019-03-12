@@ -36,7 +36,8 @@ generate_board_mk() {
 	SOC=$SOC
 	MACH=$MACH
 	COMPILE_TOOL=$CROSS_COMPILE
-	UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
+	#UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
+	UBOOT_CONFIG=rtd1395_qa_defconfig
 	KERNEL_CONFIG=${MACH}_bpi_defconfig
 	TARGET_PLATFORM=${TARGET_PLATFORM}
 	EOT
@@ -52,7 +53,8 @@ generate_board_envsh() {
 	export SOC=$SOC
 	export MACH=$MACH
 	export CROSS_COMPILE=aarch64-linux-gnu-
-	export UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
+	#export UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
+	export UBOOT_CONFIG=rtd1395_qa_defconfig
 	export KERNEL_CONFIG=${MACH}_bpi_defconfig
 	export LICHEE_PLATFORM="linux"
 	export GPU_TYPE="mali470"
