@@ -1,0 +1,87 @@
+Index: src/devicedrv/mali/common/mali_timeline_fence_wait.c
+===================================================================
+--- src/devicedrv/mali/common/mali_timeline_fence_wait.c	(revision 195766)
++++ src/devicedrv/mali/common/mali_timeline_fence_wait.c	(working copy)
+@@ -115,6 +115,9 @@
+ #else
+ 			if (1 == sync_fence->fence->ops->signaled(sync_fence->fence)) {
+ #endif
++				ret = MALI_TRUE;
++
++			} else {
+ 				ret = MALI_FALSE;
+ 			}
+ 		} else {
+Index: src/devicedrv/mali/linux/mali_internal_sync.c
+===================================================================
+--- src/devicedrv/mali/linux/mali_internal_sync.c	(revision 195766)
++++ src/devicedrv/mali/linux/mali_internal_sync.c	(working copy)
+@@ -73,6 +73,8 @@
+ {
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+ 	struct mali_internal_sync_fence_cb *check;
++#else
++	struct mali_internal_sync_fence_waiter *waiter;
+ #endif
+ 	struct mali_internal_sync_fence *sync_fence;
+ 	int ret;
+@@ -82,11 +84,9 @@
+ 	check = container_of(cb, struct mali_internal_sync_fence_cb, cb);
+ 	sync_fence = check->sync_file;
+ #else
+-	MALI_DEBUG_ASSERT_POINTER(fence);
+-	MALI_IGNORE(cb);
+-	sync_fence = container_of(&fence, struct mali_internal_sync_fence, fence);
++	waiter = container_of(cb, struct mali_internal_sync_fence_waiter, cb);
++	sync_fence = (struct mali_internal_sync_fence *)waiter->work.private;
+ #endif
+-
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+ 	ret = atomic_dec_and_test(&sync_fence->status);
+ 	if (ret)
+@@ -546,9 +546,9 @@
+ 		return err;
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+-	err = dma_fence_add_callback(sync_fence->fence, &sync_fence->cb, mali_internal_fence_check_cb_func);
++	err = dma_fence_add_callback(sync_fence->fence, &waiter->cb, mali_internal_fence_check_cb_func);
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+-	err = fence_add_callback(sync_fence->fence, &sync_fence->cb, mali_internal_fence_check_cb_func);
++	err = fence_add_callback(sync_fence->fence, &waiter->cb, mali_internal_fence_check_cb_func);
+ #endif
+ 
+ 	if (0 != err)
+@@ -584,6 +584,15 @@
+ 		ret = -ENOENT;
+ 	spin_unlock_irqrestore(&sync_fence->wq.lock, flags);
+ 
++	if (0 == ret) {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
++        	dma_fence_remove_callback(sync_fence->fence, &waiter->cb);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
++        	fence_remove_callback(sync_fence->fence, &waiter->cb);
++#endif
++
++	}
++
+ 	return ret;
+ }
+ 
+Index: src/devicedrv/mali/linux/mali_internal_sync.h
+===================================================================
+--- src/devicedrv/mali/linux/mali_internal_sync.h	(revision 195766)
++++ src/devicedrv/mali/linux/mali_internal_sync.h	(working copy)
+@@ -114,6 +114,13 @@
+ struct mali_internal_sync_fence_waiter {
+ 	wait_queue_t work;
+ 	mali_internal_sync_callback_t callback;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
++	struct fence_cb cb;
++#else
++	struct dma_fence_cb cb;
++#endif
++#endif
+ };
+ 
+ /**
