@@ -388,6 +388,40 @@ bool armv7_boot_nonsec(void)
 }
 #endif
 
+#ifdef CONFIG_ACPU_LOGBUF_ENABLE
+static int reserve_acpu_logbuf(void *blob)
+{
+	int i;
+	uint64_t addr, size;
+	uint64_t r_start, r_end;
+	uint64_t alog_start, alog_end;
+	int total;
+
+	/* First, check if memory region had alreay been reserved */
+	alog_start = CONFIG_ACPU_LOGBUF_ADDR;
+	alog_end = CONFIG_ACPU_LOGBUF_ADDR + CONFIG_ACPU_LOGBUF_SIZE;
+	total = fdt_num_mem_rsv(blob);
+
+	for (i = 0; i < total; i++) {
+		fdt_get_mem_rsv(blob, i, &addr, &size);
+		r_start = addr;
+		r_end = addr + size;
+		if (alog_end <= r_start || alog_start >= r_end)
+			continue;
+		printf("## ERROR, ACPU logbuf region already used\n");
+		debug("## rsvmem: 0x%08llx-0x%08llx, alog:0x%08llx-0x%08llx\n",
+			r_start, r_end, alog_start, alog_end);
+		return -1;
+	}
+
+	fdt_add_mem_rsv(blob, CONFIG_ACPU_LOGBUF_ADDR, CONFIG_ACPU_LOGBUF_SIZE);
+
+	return 0;
+}
+#else /* !CONFIG_ACPU_LOGBUF_ENABLE */
+static inline int reserve_acpu_logbuf(void *blob) {return 0;}
+#endif /* CONFIG_ACPU_LOGBUF_ENABLE */
+
 /* Subcommand: GO */
 static void boot_jump_linux(bootm_headers_t *images, int flag)
 {
@@ -410,6 +444,8 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 	err = fdt_add_mem_rsv(images->ft_addr, TEE_MEM_START_ADDR, TEE_MEM_SIZE);
 	if (err < 0)
 		printf("## WARNING %s Add TEE_MEMRSV: %s\n", __func__, fdt_strerror(err));
+	if (reserve_acpu_logbuf(images->ft_addr))
+		return;
 #ifdef CONFIG_ARM64
 	void (*kernel_entry)(void *fdt_addr, void *res0, void *res1,
 			void *res2);

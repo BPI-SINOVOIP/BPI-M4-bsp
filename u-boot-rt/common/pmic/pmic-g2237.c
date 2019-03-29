@@ -39,10 +39,6 @@ static const unsigned int regfields[PMIC_G2237_MAX] = {
 	[PMIC_G2237_DC3_SVO] = REG_FIELD(0x11, 0, 4),
 	[PMIC_G2237_DC5_SVO] = REG_FIELD(0x12, 0, 3),
 	[PMIC_G2237_LDO1_SVO] = REG_FIELD(0x13, 0, 3),
-	[PMIC_G2237_PWRKEY] = REG_FIELD(0x0, 5, 5),
-	[PMIC_G2237_PWRKEY_LP] = REG_FIELD(0x0, 4, 4),
-	[PMIC_G2237_PWRKEY_IT] = REG_FIELD(0x0, 3, 3),
-	[PMIC_G2237_DCDECT] = REG_FIELD(0x0, 0, 0),
 };
 
 static const char * const dcdc_mode[] = {
@@ -178,10 +174,6 @@ static struct reg_info regs[] = {
 	DEF_REG("ldo1_onoff", PMIC_G2237_LDO1_ON, onoff),
 	DEF_REG("softoff", PMIC_G2237_SOFTOFF, softoff),
 	DEF_REG("lpoff_to_do", PMIC_G2237_LPOFF_TO_DO, lpoff_to_do),
-	DEF_REG("pwrkey", PMIC_G2237_PWRKEY, softoff),
-	DEF_REG("pwrkey_lp", PMIC_G2237_PWRKEY_LP, softoff),
-	DEF_REG("pwrkey_it", PMIC_G2237_PWRKEY_IT, softoff),
-	DEF_REG("dcdect", PMIC_G2237_DCDECT, softoff),
 };
 
 static const char * const row[] = {

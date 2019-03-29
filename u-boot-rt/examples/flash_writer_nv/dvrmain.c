@@ -32,7 +32,8 @@
 #define NAND_BOOT_BACKUP_COUNT			3								// number of backup bootcode in NAND flash
 
 #define BOOTCODE_MAX_SIZE               0xC0000
-#define SECURE_OS_MAX_SIZE                0xC0000
+#define SECURE_OS_MAX_SIZE              0xC0000
+#define MAX_BOOTCODE_FW_SIZE            0x100000
 
 extern unsigned char scpu_resetrom[];	//scpu rom data : 0x8810_0000~8812_B000
 extern unsigned char scpu_resetrom_end;
@@ -1626,16 +1627,16 @@ int dvrmain	( int argc, char * const argv[] )
 
 	    (*do_init)(device);
 
-		//erase first 832KB or 1MB
+		//erase first 832KB or 1MB for bootcode fw size
 		#ifdef FOR_ICE_LOAD
         prints("spi : erase 0x");
-        print_hex(((s_device_type *)device)->size);
+        print_hex(MAX_BOOTCODE_FW_SIZE);
         prints(" bytes from 0x");
         print_hex(SPI_CODE_PART1_1);
         prints("\n");
         #endif
-        rtprintf("spi : erase 0x%x bytes from 0x%08x\n", ((s_device_type *)device)->size, SPI_CODE_PART1_1);
-        if ((*do_erase)(device, (unsigned int *)SPI_CODE_PART1_1, ((s_device_type *)device)->size) !=0 ) {
+        rtprintf("spi : erase 0x%x bytes from 0x%08x\n", MAX_BOOTCODE_FW_SIZE, SPI_CODE_PART1_1);
+        if ((*do_erase)(device, (unsigned int *)SPI_CODE_PART1_1, MAX_BOOTCODE_FW_SIZE) !=0 ) {
             return -3;
         }
 

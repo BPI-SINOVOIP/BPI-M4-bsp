@@ -27,6 +27,13 @@
 
 #define CHIP_NAME       "thor"
 
+/* The dummy register tell bl31 whether aarch64 or aarch32
+ * and tell bl31 whether skip tee os
+ * Bit[0]: 0 <- for Aarch64, 1 <- for Aarch32
+ * Bit[1]: 0 <- no skip tee os, 1 <- skip tee os
+ */
+#define AARCH_REGISTER 0x9800707C
+
 #define RTD161x_CHIP_REVISION_A00 0x00000000
 #define RTD161x_CHIP_REVISION_A01 0x00010000
 #define RTD161x_CHIP_REVISION_B00 0x00020000

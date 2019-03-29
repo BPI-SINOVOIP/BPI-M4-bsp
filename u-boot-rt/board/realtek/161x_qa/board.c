@@ -8,9 +8,13 @@
  * Time initialization.
  */
 #include <common.h>
+#include <asm/io.h>
+#include <asm/arch/cpu.h>
+#include <asm/arch/fw_info.h>
 #include <asm/arch/sys_proto.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+extern BOOT_FLASH_T boot_flash_type;
 
 const struct rtd161x_sysinfo sysinfo = {
 	"Board: Realtek QA Board\n"
@@ -64,9 +68,27 @@ int board_init(void)
 	/* In Melon flow, send command to bl31
 	 * for loading tee OS before bringing up slave core.
 	 */
+#ifndef CONFIG_SYS_NON_TEE
 	cmd_bl31_tee_os();
+#endif
 	cmd_bl31_pcpu();
 	cmd_bl31_avfw();
+
+	__raw_writel(0x00000000, AARCH_REGISTER); // Clear the status of aarch register
+#ifdef CONFIG_RTK_ARM32
+	/* 0x1 for bl31 goto aarch32 resume flow */
+	__raw_writel(__raw_readl(AARCH_REGISTER) | (0x1 << 0), AARCH_REGISTER);
+#else
+	/* 0x0 for bl31 goto aarch64 resume flow */
+	__raw_writel(__raw_readl(AARCH_REGISTER) | (0x0 << 0), AARCH_REGISTER);
+#endif
+
+	/* The non-tee boot flow doesn't contain tee os, and tell bl31 not to init. */
+#ifdef CONFIG_SYS_NON_TEE
+		__raw_writel(__raw_readl(AARCH_REGISTER) | (0x1 << 1), AARCH_REGISTER);
+#else
+		__raw_writel(__raw_readl(AARCH_REGISTER) | (0x0 << 1), AARCH_REGISTER);
+#endif
 
 	return 0;
 }

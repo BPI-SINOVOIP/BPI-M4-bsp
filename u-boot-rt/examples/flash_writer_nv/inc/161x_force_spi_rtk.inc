@@ -7,7 +7,7 @@ Board_CPU =                 RTD161x
 ##Board_Chip_Rev =          [161x]
 Board_Chip_Rev =            161x
 
-Board_HWSETTING =          RTD161x_hwsetting_BOOT_2DDR4_8Gb_s1600
+Board_HWSETTING =          RTD161x_hwsetting_BOOT_2DDR4_8Gb_s2666
 
 
 # ********************************************************************
@@ -58,7 +58,7 @@ Number_of_Scramble_Key = 0x10
 
 # TEE Protect Region
 Address_of_TEE_Region = 0x10200000
-Size_of_TEE_Region = 0x3A00000
+Size_of_TEE_Region = 0xC00000
 Protected_of_TEE_Region = 0xD0801
 Key_Idx_of_TEE_Region = 0x0
 
@@ -175,7 +175,7 @@ Config_Uboot_Sim_Mode =  FALSE
 Config_Auxcode_File_Name = "Aux_code-00.00.bin"
 Config_PCPU_Code_File_Name = "pcpu_fw.bin"
 Config_DTE_Bootcode_File_Name = "FSBL_DDR-00.00.bin"
-Config_SECURE_OS = FALSE
+Config_SECURE_OS = TRUE
 Config_SECURE_OS_File_Name = "secure-os-00.00.bin"
 Config_BL31 = TRUE
 Config_BL31_File_Name = "bl31.bin"

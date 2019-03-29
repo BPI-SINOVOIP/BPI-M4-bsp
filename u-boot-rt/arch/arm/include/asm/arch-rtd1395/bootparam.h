@@ -37,7 +37,7 @@ void set_blue_logo_info(void);
 #define BOOT_SPLASH_H264_FILE_NAME			FACTORY_HEADER_FILE_NAME"splash_h264.h264"
 #define BOOT_SPLASH_H264_MP2_FILE_NAME		FACTORY_HEADER_FILE_NAME"splash_h264.mp2"
 
-void set_memo_animation_file(void);
+int set_memo_animation_file(void);
 void set_memo_animation_info(void);
 #endif
 

@@ -212,136 +212,15 @@ static void check_power_on_reason(void)
 #else /* !CONFIG_CHECK_PWRON_REASON */
 static void check_power_on_reason(void) {}
 #endif /* CONFIG_CHECK_PWRON_REASON  */
+
 /***************************************************************************
  * Watch for 'delay' seconds for autoboot stop or autoboot delay string.
  * returns: 0 -  no key string, allow autoboot 1 - got key string, abort
  */
 #if defined(CONFIG_BOOTDELAY) && (CONFIG_BOOTDELAY >= 0)
-# if defined(CONFIG_AUTOBOOT_KEYED)
-#ifndef CONFIG_MENU
-// cklai mark this line to prevent parsing failed in source insight.
-// static inline
-#endif
-
-int abortboot(int bootdelay)
-{
-	int abort = 0;
-	uint64_t etime = endtick(bootdelay);
-	struct {
-		char* str;
-		u_int len;
-		int retry;
-	}
-	delaykey [] = {
-		{ str: getenv ("bootdelaykey"),  retry: 1 },
-		{ str: getenv ("bootdelaykey2"), retry: 1 },
-		{ str: getenv ("bootstopkey"),   retry: 0 },
-		{ str: getenv ("bootstopkey2"),  retry: 0 },
-	};
-
-	char presskey [MAX_DELAY_STOP_STR];
-	u_int presskey_len = 0;
-	u_int presskey_max = 0;
-	u_int i;
-
-#ifndef CONFIG_ZERO_BOOTDELAY_CHECK
-	if (bootdelay == 0)
-		return 0;
-#endif
-
-#  ifdef CONFIG_AUTOBOOT_PROMPT
-	printf(CONFIG_AUTOBOOT_PROMPT);
-#  endif
-
-#  ifdef CONFIG_AUTOBOOT_DELAY_STR
-	if (delaykey[0].str == NULL)
-		delaykey[0].str = CONFIG_AUTOBOOT_DELAY_STR;
-#  endif
-#  ifdef CONFIG_AUTOBOOT_DELAY_STR2
-	if (delaykey[1].str == NULL)
-		delaykey[1].str = CONFIG_AUTOBOOT_DELAY_STR2;
-#  endif
-#  ifdef CONFIG_AUTOBOOT_STOP_STR
-	if (delaykey[2].str == NULL)
-		delaykey[2].str = CONFIG_AUTOBOOT_STOP_STR;
-#  endif
-#  ifdef CONFIG_AUTOBOOT_STOP_STR2
-	if (delaykey[3].str == NULL)
-		delaykey[3].str = CONFIG_AUTOBOOT_STOP_STR2;
-#  endif
-
-	for (i = 0; i < sizeof(delaykey) / sizeof(delaykey[0]); i ++) {
-		delaykey[i].len = delaykey[i].str == NULL ?
-				    0 : strlen (delaykey[i].str);
-		delaykey[i].len = delaykey[i].len > MAX_DELAY_STOP_STR ?
-				    MAX_DELAY_STOP_STR : delaykey[i].len;
-
-		presskey_max = presskey_max > delaykey[i].len ?
-				    presskey_max : delaykey[i].len;
-
-#  if DEBUG_BOOTKEYS
-		printf("%s key:<%s>\n",
-		       delaykey[i].retry ? "delay" : "stop",
-		       delaykey[i].str ? delaykey[i].str : "NULL");
-#  endif
-	}
-
-	/* In order to keep up with incoming data, check timeout only
-	 * when catch up.
-	 */
-	do {
-		if (tstc()) {
-			if (presskey_len < presskey_max) {
-				presskey [presskey_len ++] = getc();
-			}
-			else {
-				for (i = 0; i < presskey_max - 1; i ++)
-					presskey [i] = presskey [i + 1];
-
-				presskey [i] = getc();
-			}
-		}
-
-		for (i = 0; i < sizeof(delaykey) / sizeof(delaykey[0]); i ++) {
-			if (delaykey[i].len > 0 &&
-			    presskey_len >= delaykey[i].len &&
-			    memcmp (presskey + presskey_len - delaykey[i].len,
-				    delaykey[i].str,
-				    delaykey[i].len) == 0) {
-#  if DEBUG_BOOTKEYS
-				printf("got %skey\n",
-				       delaykey[i].retry ? "delay" : "stop");
-#  endif
-
-#  ifdef CONFIG_BOOT_RETRY_TIME
-				/* don't retry auto boot */
-				if (! delaykey[i].retry)
-					retry_time = -1;
-#  endif
-				abort = 1;
-			}
-		}
-	} while (!abort && get_ticks() <= etime);
-
-#  if DEBUG_BOOTKEYS
-	if (!abort)
-		puts("key timeout\n");
-#  endif
-
-#ifdef CONFIG_SILENT_CONSOLE
-	if (abort)
-		gd->flags &= ~GD_FLG_SILENT;
-#endif
-
-	return abort;
-}
-
-# else	/* !defined(CONFIG_AUTOBOOT_KEYED) */
-
 #ifdef CONFIG_MENUKEY
 static int menukey = 0;
 #endif
-
 int abortboot(int bootdelay)
 {
 	int abort = 0;
@@ -455,7 +334,7 @@ start = get_timer(0);
 				break;
 		}
 #ifdef CONFIG_INSTALL_GPIO_NUM
-		if(!getGPIO(CONFIG_INSTALL_GPIO_NUM)){		
+		if(!getGPIO(CONFIG_INSTALL_GPIO_NUM)){
 			printf("\nPress Install Button\n");
 			setenv("rescue_cmd", "go r");
 			boot_mode = BOOT_RESCUE_MODE;
@@ -464,100 +343,100 @@ start = get_timer(0);
 #endif
 
 #if defined(CONFIG_BOARD_WD_MONARCH)||defined(CONFIG_BOARD_WD_PELICAN)
-        /**
-           @WD_Changes_begin
-           Power On reset to force the device enter
-           Image Recover Mode which booting the device
-           from USB stick
-         **/
-        if(!getISOGPIO(FACTORY_RST_BTN)) { // check if the reset button is pressed
-            printf("\nPress USB-Install Button\n"); // print the message
+		/**
+		@WD_Changes_begin
+		Power On reset to force the device enter
+		Image Recover Mode which booting the device
+		from USB stick
+		**/
+		if(!getISOGPIO(FACTORY_RST_BTN)) { // check if the reset button is pressed
+			printf("\nPress USB-Install Button\n"); // print the message
 #if defined(CONFIG_RTD129X_PWM)
-            //            rtd129x_pwm_init();
-            pwm_set_freq(SYS_LED_PWM_PORT_NUM, 1);  // set the frequency to 1 HZ
-            pwm_set_duty_rate(SYS_LED_PWM_PORT_NUM, 50);
-            pwm_enable(SYS_LED_PWM_PORT_NUM, 1);
+			//rtd129x_pwm_init();
+			pwm_set_freq(SYS_LED_PWM_PORT_NUM, 1);  // set the frequency to 1 HZ
+			pwm_set_duty_rate(SYS_LED_PWM_PORT_NUM, 50);
+			pwm_enable(SYS_LED_PWM_PORT_NUM, 1);
 #endif /* CONFIG_RTD129X_PWM */
-            setenv("rescue_cmd", "go ru"); //set the environment variable rescue_cmd=go ru
-            boot_mode = BOOT_RESCUE_MODE; // set the boot_mode
-            abort = 1; // don't auto boot
-        }
+			setenv("rescue_cmd", "go ru"); //set the environment variable rescue_cmd=go ru
+			boot_mode = BOOT_RESCUE_MODE; // set the boot_mode
+			abort = 1; // don't auto boot
+		}
 #endif /* CONFIG_BOARD_WD_MONARCH */ /* CONFIG_BOARD_WD_PELICAN) */
-	}	
+	}
 #if defined(CONFIG_SYS_IR_SUPPORT)
 
-    int bKeyLeft = 0;
-    int bKeyRight = 0;
-    int bKeyVolumeUp = 0;
-    int bKeyVolumeDown = 0;
-    int bKeyOption = 0;
+	int bKeyLeft = 0;
+	int bKeyRight = 0;
+	int bKeyVolumeUp = 0;
+	int bKeyVolumeDown = 0;
+	int bKeyOption = 0;
 
-    int ret = 0;
-    bootloader_message *boot = NULL;
+	int ret = 0;
+	bootloader_message *boot = NULL;
 
-    if (!abort) {
-        printf("Please Enter IR Key\n");
-        key = 0;
-        count = get_timer(0);
-        while (get_timer(count) < CONFIG_IR_DELAY*20 && !key) {          
-            if (IR_Get_irdvf()) {
-                IR_Set_irdvf(_BIT0);
-                key = IR_Parsing_key();
-                //printf("Press Key:%d\n",key);
+	if (!abort) {
+		printf("Please Enter IR Key\n");
+		key = 0;
+		count = get_timer(0);
+		while (get_timer(count) < CONFIG_IR_DELAY*20 && !key) {
+			if (IR_Get_irdvf()) {
+				IR_Set_irdvf(_BIT0);
+				key = IR_Parsing_key();
+				//printf("Press Key:%d\n",key);
 
-                if (key == KEY_POWER) {
-                    key = 0;
-                }
-            }
-        }
-        
-        switch (key) {
-            case KEY_OPTION:
-                bKeyOption = 1;
-                break;
-                
-            case KEY_LEFT:
-                bKeyLeft = 1;
-                //printf("Detect Other IR Key\n");
-                while (get_timer(count) < CONFIG_IR_DELAY*20) {
-                    if (IR_Get_irdvf()) {
-                        IR_Set_irdvf(_BIT0);
-                        key = IR_Parsing_key();
-                        //printf("Press Key:%d\n",key);
-                    }
+				if (key == KEY_POWER) {
+					key = 0;
+				}
+			}
+		}
 
-                    if (key == KEY_RIGHT) {
-                        bKeyRight = 1;
-                        break;
-                    }
-                }
-                break;
-                
-            case KEY_RIGHT:
-                bKeyRight = 1;
-                //printf("Detect Other IR Key\n");
-                while (get_timer(count) < CONFIG_IR_DELAY*20) {
-                    if (IR_Get_irdvf()) {
-                        IR_Set_irdvf(_BIT0);
-                        key = IR_Parsing_key();
-                        //printf("Press Key:%d\n",key);
-                    }
+		switch (key) {
+			case KEY_OPTION:
+				bKeyOption = 1;
+				break;
 
-                    if (key == KEY_LEFT) {
-                        bKeyLeft = 1;
-                        break;
-                    }
-                }
-                break;               
-            default:
-                break;
-        }
+			case KEY_LEFT:
+				bKeyLeft = 1;
+				//printf("Detect Other IR Key\n");
+				while (get_timer(count) < CONFIG_IR_DELAY*20) {
+					if (IR_Get_irdvf()) {
+						IR_Set_irdvf(_BIT0);
+						key = IR_Parsing_key();
+						//printf("Press Key:%d\n",key);
+					}
+
+					if (key == KEY_RIGHT) {
+						bKeyRight = 1;
+						break;
+					}
+				}
+				break;
+
+			case KEY_RIGHT:
+				bKeyRight = 1;
+				//printf("Detect Other IR Key\n");
+				while (get_timer(count) < CONFIG_IR_DELAY*20) {
+					if (IR_Get_irdvf()) {
+						IR_Set_irdvf(_BIT0);
+						key = IR_Parsing_key();
+						//printf("Press Key:%d\n",key);
+					}
+
+					if (key == KEY_LEFT) {
+						bKeyLeft = 1;
+						break;
+					}
+				}
+				break;
+			default:
+				break;
+		}
 
 
-        if (bKeyOption) {      
-            printf("menu : usb update \n");
+		if (bKeyOption) {
+			printf("menu : usb update \n");
 
-            boot = (bootloader_message *)BACKUP_DESCRIPTION_RECOVERY_ADDR;
+			boot = (bootloader_message *)BACKUP_DESCRIPTION_RECOVERY_ADDR;
 			memset(boot, 0, sizeof(bootloader_message));
 			memset(boot->command, '\0', sizeof(boot->command));
 			memset(boot->recovery, '\0', sizeof(boot->recovery));
@@ -566,18 +445,18 @@ start = get_timer(0);
 
 			ret = factory_write(BOOT_RECOVERY_FILE_NAME, (char *)boot, CONFIG_RECOVERY_SIZE);
 			if (ret != 0) {
-			    // failed case
+				// failed case
 				printf("[ENV] write_recovery failed\n");
-		    }
+			}
 			else
 				factory_save();
 
-            bEnterRecovery = 1;
-        }
-        else if (bKeyLeft && bKeyRight) {
-            printf("<- + -> : backup update \n");
+			bEnterRecovery = 1;
+		}
+		else if (bKeyLeft && bKeyRight) {
+			printf("<- + -> : backup update \n");
 
-            boot = (bootloader_message *)BACKUP_DESCRIPTION_RECOVERY_ADDR;
+			boot = (bootloader_message *)BACKUP_DESCRIPTION_RECOVERY_ADDR;
 			memset(boot, 0, sizeof(bootloader_message));
 			memset(boot->command, '\0', sizeof(boot->command));
 			memset(boot->recovery, '\0', sizeof(boot->recovery));
@@ -586,16 +465,16 @@ start = get_timer(0);
 
 			ret = factory_write(BOOT_RECOVERY_FILE_NAME, (char *)boot, CONFIG_RECOVERY_SIZE);
 			If (ret != 0) {
-			    // failed case
+				// failed case
 				printf("[ENV] write_recovery failed\n");
-		    }
+			}
 			else
 				factory_save();
 
-            bEnterRecovery = 1;
-        }
-    }
-#endif					
+			bEnterRecovery = 1;
+		}
+	}
+#endif
 #if CONFIG_ANDROID_RECOVERY
 	if (!abort) {
 		printf("======== Checking into android recovery ====\n");
@@ -678,7 +557,6 @@ start = get_timer(0);
 
 	return abort;
 }
-# endif	/* CONFIG_AUTOBOOT_KEYED */
 #endif	/* CONFIG_BOOTDELAY >= 0  */
 
 /****************************************************************************/
@@ -719,7 +597,7 @@ void main_loop (void)
 		printf("[WARN] you need to execute \"env default -f\" to reset env.\n");
 	}
 
-	if (bootdelay >= 0 && s && !abortboot (bootdelay)) {
+	if (bootdelay >= 0 && s && !abortboot(bootdelay)) {
 #ifdef CONFIG_CUSTOMIZE_BOOTFLOW_1
 		normal_boot = customize_check_normal_boot();
 #endif

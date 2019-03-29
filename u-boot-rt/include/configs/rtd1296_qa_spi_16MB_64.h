@@ -28,7 +28,7 @@
 	/* Flash writer setting:
 	*   The corresponding setting will be located at
 	*   uboot/examples/flash_writer_u/$(CONFIG_FLASH_WRITER_SETTING).inc*/	
-	#define CONFIG_FLASH_WRITER_SETTING            "1296_force_spi_nS_nE"
+	#define CONFIG_FLASH_WRITER_SETTING            "1295_force_spi_nS_nE"
 	#define CONFIG_CHIP_ID            			   "rtd1295"
 	#define CONFIG_CUSTOMER_ID            		   "demo"
 	#define CONFIG_FLASH_TYPE					   "RTK_FLASH_SPI"	

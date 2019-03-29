@@ -567,6 +567,13 @@ void set_shared_memory_for_communication_with_ACPU(void)
 		svn_number = 0;
 	}
 	ipc_shm.u_boot_version_info = SWAPEND32(svn_number);
+#ifdef CONFIG_ACPU_LOGBUF_ENABLE
+	struct acpu_syslog_struct *alog_p = (struct acpu_syslog_struct*)&ipc_shm.printk_buffer[0];
+	alog_p->log_buf_addr = CONFIG_ACPU_LOGBUF_ADDR;
+	alog_p->log_buf_len = CONFIG_ACPU_LOGBUF_SIZE;
+	debug("%s: ACPU logbuf addr:0x%08x, size:0x%08x\n",
+		__func__, CONFIG_ACPU_LOGBUF_ADDR, CONFIG_ACPU_LOGBUF_SIZE);
+#endif /* CONFIG_ACPU_LOGBUF_ENABLE */
 }
 
 /************************************************************************

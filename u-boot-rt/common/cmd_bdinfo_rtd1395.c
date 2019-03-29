@@ -353,17 +353,17 @@ static const char *get_chip_rev_str(void)
             return "A00";
         case RTD139x_CHIP_REVISION_A01:
             return "A01";
-        case RTD139x_CHIP_REVISION_B00:
-            return "B00";
+        case RTD139x_CHIP_REVISION_A02:
+            return "A02";
         default:
             return "Unrecognized";
     }
 }
 
 static void print_bdinfo(void)
-{    
+{
     printf("---- Hercules Rev. %s ----\n", get_chip_rev_str());
-    printf("%-11s = %s\n", "cpu_id", get_cpu_id_str()); 
+    printf("%-11s = %s\n", "cpu_id", get_cpu_id_str());
 
 #if defined(CONFIG_CMD_NET)
 	print_eth(0);

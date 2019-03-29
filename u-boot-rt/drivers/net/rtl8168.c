@@ -5926,7 +5926,7 @@ static void r8168_phy_iol_tuning(struct rtl8168_private *tp)
         mdio_write(tp, 17, 0xf8ca);
         break;
 
-    case RTD139x_CHIP_REVISION_B00: /* UMC, cut C */
+    case RTD139x_CHIP_REVISION_A02: /* UMC, cut C */
         /* 100M Swing */
         /* idac_fine_mdix, idac_fine_mdi */
         mdio_write(tp, 31, 0xbc0);

@@ -73,11 +73,9 @@ extern int rtk_nand_scan (struct mtd_info *mtd, int maxchips);
 #define BB_DIE_INIT	0xEEEE
 #define RB_DIE_INIT	BB_DIE_INIT
 
-#ifdef CONFIG_MTD_NAND_RTK_SHIFTABLE
 #define SB_INIT 0xFFAA
 #define SBT_TAG 0xAA
 #define STBCOUNT        32
-#endif
 
 typedef struct /*__attribute__ ((__packed__))*/{
     u16 BB_die;
@@ -104,13 +102,11 @@ typedef struct /*__attribute__ ((__packed__))*/{
 	unsigned short eccSelect;//Ecc ability select:   add by alexchang 0319-2010 
 } device_type_t;
 
-#ifdef CONFIG_MTD_NAND_RTK_SHIFTABLE
 typedef struct {
     u16 chipnum;
     u16 block;
     u16 shift;
 }SB_t;
-#endif
 
 /* NAND Flash Command Sets */
 #define CMD_READ_ID				0x90
@@ -335,9 +331,7 @@ struct nand_chip {
 	unsigned int block_num;
 	unsigned int page_num;
 	BB_t *bbt;
-#ifdef CONFIG_MTD_NAND_RTK_SHIFTABLE
 	SB_t *sbt;
-#endif
 	unsigned int RBA;
 	unsigned int RBA_PERCENT;
 	__u32 *erase_page_flag;

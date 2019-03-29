@@ -42,6 +42,7 @@
 
 #define BOOTCODE_MAX_SIZE               0xC0000
 #define FSBL_OS_MAX_SIZE                0xC0000
+#define MAX_BOOTCODE_FW_SIZE            0x200000
 
 #define FSBL_VM_TARGET_ADDRESS (0x120000/0x200)
 #define SECOND_FSBL_VM_TARGET_ADDRESS (0x1A0000/0x200)
@@ -1986,13 +1987,13 @@ program_backup_copy_of_hwsetting:
 	#else
 		#ifdef FOR_ICE_LOAD
         prints("spi : erase 0x");
-        print_hex(((s_device_type *)device)->size);
+        print_hex(MAX_BOOTCODE_FW_SIZE);
         prints(" bytes from 0x");
         print_hex(SPI_CODE_PART1);
         prints("\n");
         #endif
-        rtprintf("spi : erase 0x%x bytes from 0x%08x\n", ((s_device_type *)device)->size, SPI_CODE_PART1);
-        if ((*do_erase)(device, (unsigned int *)SPI_CODE_PART1, ((s_device_type *)device)->size) !=0 ) {
+        rtprintf("spi : erase 0x%x bytes from 0x%08x\n", MAX_BOOTCODE_FW_SIZE, SPI_CODE_PART1);
+        if ((*do_erase)(device, (unsigned int *)SPI_CODE_PART1, MAX_BOOTCODE_FW_SIZE) !=0 ) {
             return -3;
         }
 	#endif

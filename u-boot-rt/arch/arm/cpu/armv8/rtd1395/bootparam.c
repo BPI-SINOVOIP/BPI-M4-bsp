@@ -41,7 +41,7 @@ extern uchar checksum_256;
 **
 *************************************************************************/
 #ifdef CONFIG_CUSTOMIZE_NEMO
-void set_memo_animation_file(void)
+int set_memo_animation_file(void)
 {
 	char *dst_addr;
 	int dst_length;
@@ -49,7 +49,7 @@ void set_memo_animation_file(void)
 	/* Load the ve1 binary from factory to destination */
 	if (factory_read(BOOT_VE1_BIN_FILE_NAME, &dst_addr, &dst_length)){
 		printf("------------can't find %s\n", BOOT_VE1_BIN_FILE_NAME);
-		return;
+		return 1;
 	}
 	else {
 		printf("------------%s found\n", BOOT_VE1_BIN_FILE_NAME);
@@ -59,7 +59,7 @@ void set_memo_animation_file(void)
 	/* Load the splash h264 from factory to destination */
 	if (factory_read(BOOT_SPLASH_H264_FILE_NAME, &dst_addr, &dst_length)){
 		printf("------------can't find %s\n", BOOT_SPLASH_H264_FILE_NAME);
-		return;
+		return 1;
 	}
 	else {
 		printf("------------%s found\n", BOOT_SPLASH_H264_FILE_NAME);
@@ -69,13 +69,14 @@ void set_memo_animation_file(void)
 	/* Load the splash h264 mp2 from factory to destination */
 	if (factory_read(BOOT_SPLASH_H264_MP2_FILE_NAME, &dst_addr, &dst_length)){
 		printf("------------can't find %s\n", BOOT_SPLASH_H264_MP2_FILE_NAME);
-		return;
+		return 1;
 	}
 	else {
 		printf("------------%s found\n", BOOT_SPLASH_H264_MP2_FILE_NAME);
 		memcpy((void *)(uintptr_t)ADDR_SPLASH_H264_MP2, dst_addr, dst_length);
 	}
 
+	return 0;
 }
 
 void set_memo_animation_info(void)
@@ -206,8 +207,9 @@ void get_bootparam(void)
 													,custom_logo_dst_width ,custom_logo_dst_height);
 
 #ifdef CONFIG_CUSTOMIZE_NEMO
-	boot_logo_enable = 2; // For nemo show animation
-	set_memo_animation_file();
+	/* If factory does not have animation or music file, not to set logo enable 2. */
+	if(!set_memo_animation_file())
+		boot_logo_enable = 2; // For nemo show animation
 #endif
 }
 
