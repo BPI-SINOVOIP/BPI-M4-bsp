@@ -96,7 +96,7 @@
 #define CONFIG_BOOTCOMMAND \
 	"run boot_normal;" \
 	"if test $? -ne 0; then "			\
-		"run set_sdbootargs && gosd;"		\
+		"run set_sdbootargs && go all;"		\
 	"fi;"						\
 	"if test $? -ne 0; then "			\
 		"run set_emmcbootargs && bootr; "	\
@@ -144,15 +144,16 @@
    "bootenv=uEnv.txt\0" \
    "checksd=fatinfo ${device} 0:1\0" \
    "loadbootenv=fatload ${device} ${partition} ${scriptaddr} ${bpi}/${board}/${service}/${bootenv} || fatload ${device} ${partition} ${scriptaddr} ${bootenv}\0" \
-   "boot_normal=if run checksd; then echo Boot from SD ; setenv partition 0:1; else echo Boot from eMMC ; mmc init 0 ; setenv partition 0:1 ; fi; if run loadbootenv; then echo Loaded environment from ${bootenv}; env import -t ${scriptaddr} ${filesize}; fi; run uenvcmd; fatload mmc 0:1 ${loadaddr} ${bpi}/${board}/${service}/${kernel}; bootr\0" \
+   "boot_normal=if run checksd; then echo Boot from ${device} ; setenv partition 0:1; else echo Boot from USB ; usb start ; setenv device usb ; setenv partition 0:1 ; fi; if run loadbootenv; then echo Loaded environment from ${bootenv}; env import -t ${scriptaddr} ${filesize}; fi; run uenvcmd; fatload mmc 0:1 ${loadaddr} ${bpi}/${board}/${service}/${kernel}; bootr\0" \
+   "boot_user=echo Boot from USB ; usb start ; setenv device usb ; setenv partition 0:1 ; fi; if run loadbootenv; then echo Loaded environment from ${bootenv}; env import -t ${scriptaddr} ${filesize}; fi; run usercmd; fatload mmc 0:1 ${loadaddr} ${bpi}/${board}/${service}/${kernel}; bootr\0" \
    "bootmenu_delay=30\0" \
    "initrd_high=0xffffffffffffffff\0"				\
    "console_args=earlycon=uart8250,mmio32,0x98007800 fbcon=map:0 console=ttyS0,115200 loglevel=7 cma=32m@576m\0" \
    "sdroot_args=board=bpi-m4 rootwait root=/dev/mmcblk0p2 rw\0" \
    "set_sdbootargs=setenv bootargs ${console_args} ${sdroot_args}\0" \
-   "emmcroot_args=root=/dev/mmcblk0p1 noinitrd rootwait\0" \
+   "emmcroot_args=root=/dev/mmcblk0p2 noinitrd rootwait\0" \
    "set_emmcbootargs=setenv bootargs ${console_args} ${emmcroot_args}\0" \
-   "bootargs=earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=4 cma=32m@576m noinitrd rootwait root=/dev/mmcblk0p1\0" \
+   "bootargs=earlycon=uart8250,mmio32,0x98007800 board=bpi-m4 console=tty1 console=ttyS0,115200 loglevel=7 cma=32m@576m noinitrd rootwait root=/dev/sda2 rw \0" \
    "RTK_ARM64=y\0"                  \
    "kernel_loadaddr=0x03000000\0"                  \
    "fdt_loadaddr=0x02100000\0"                  \
@@ -304,6 +305,30 @@
 #define CONFIG_FS_EXT4
 #define CONFIG_CMD_EXT4
 
+/* SPI FLASH */
+#define CONFIG_RTKSPI
+#define CONFIG_CMD_RTKSPI
+
+/* SD FLASH */
+/*
+#define CONFIG_RTK_SD
+*/
+#define CONFIG_SYS_RTK_SD_FLASH
+#define CONFIG_RTK_SD_DRIVER
+/* SD */
+#ifdef CONFIG_RTK_SD_DRIVER
+	#define CONFIG_SD
+	#define CONFIG_SD30
+	#ifndef CONFIG_PARTITIONS
+		#define CONFIG_PARTITIONS
+	#endif
+	#define CONFIG_DOS_PARTITION
+	#define CONFIG_RTK_SD
+	#define CONFIG_CMD_SD
+	#define USE_SIMPLIFY_READ_WRITE
+	#define CONFIG_SHA256
+#endif
+
 /* USB Setting */
 #define CONFIG_CMD_FAT
 #define CONFIG_FAT_WRITE
@@ -317,6 +342,7 @@
 /*Total USB quantity*/
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 4
 
+#ifdef BPI
 /* for none define GPIO */
 /* define 1395 USB GPIO control */
 /* Port 0, DRD, TYPE_C */
@@ -330,6 +356,21 @@
 /* Port 2, xhci u2 host */
 #define USB_PORT2_GPIO_TYPE "ISOGPIO"
 #define USB_PORT2_GPIO_NUM  49
+#else /* BPI */
+/* for none define GPIO */
+/* define 1395 USB GPIO control */
+/* Port 0, DRD, TYPE_C */
+#define USB_PORT0_GPIO_TYPE "NONE"
+#define USB_PORT0_GPIO_NUM 0
+#define USB_PORT0_TYPE_C_SWITCH_GPIO_TYPE "NONE"
+#define USB_PORT0_TYPE_C_SWITCH_GPIO_NUM 0
+/* Port 1, xhci u2 host */
+#define USB_PORT1_GPIO_TYPE "NONE"
+#define USB_PORT1_GPIO_NUM  0
+/* Port 2, xhci u2 host */
+#define USB_PORT2_GPIO_TYPE "NONE"
+#define USB_PORT2_GPIO_NUM  0
+#endif
 
 /* Fastboot */
 #define CONFIG_G_DNL_VENDOR_NUM      0x18d1
@@ -354,6 +395,10 @@
 /* GPIO */
 /* #define CONFIG_REALTEK_GPIO */
 /* #define CONFIG_INSTALL_GPIO_NUM    		8 */
+/* BPI */
+#define CONFIG_REALTEK_GPIO
+#define CONFIG_INSTALL_GPIO_NUM    		52
+#define CONFIG_BOOT_GPIO_NUM    		49
 #define CONFIG_HDMITx_HPD_IGPIO_NUM		7
 
 /* I2C */

@@ -471,7 +471,11 @@ int boot_rescue_from_usb(void)
 	{
 		sprintf(tmpbuf, "fatload usb 0:1 %s %s", getenv("rootfs_loadaddr"), filename);
 		if (run_command(tmpbuf, 0) != 0) {
+#ifdef BPI
 			goto loading_failed;
+#else
+			printf("\nSKIP ...");
+#endif
 		}
 	}
 
@@ -1442,7 +1446,11 @@ int rtk_plat_read_fw_image_from_USB(int skip)
 	{
 		sprintf(tmpbuf, "fatload usb 0:1 %s %s", getenv("rootfs_loadaddr"), filename);
 		if (run_command(tmpbuf, 0) != 0) {
+#ifdef BPI
 			goto loading_failed;
+#else
+			printf("\nSKIP ...");
+#endif
 		}
 	}
 

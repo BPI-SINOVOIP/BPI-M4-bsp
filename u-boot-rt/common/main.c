@@ -135,6 +135,12 @@ int normal_boot = 1;
 //static BOOT_MODE boot_mode = BOOT_NORMAL_MODE; // Modify for fixing Rescue Kernel stop at 8051 standby
 BOOT_MODE boot_mode = BOOT_NORMAL_MODE;
 
+#ifdef BPI
+#else
+int bpi_install_key = 0;
+int bpi_boot_key = 0;
+#endif
+
 #if defined(CONFIG_ANDROID_RECOVERY)
 static int bEnterRecovery = 0;
 static void check_reboot_action(void)
@@ -228,6 +234,7 @@ int abortboot(int bootdelay)
 	printf(CONFIG_MENUPROMPT);
 #else
 #ifdef CONFIG_BSP_REALTEK
+	printf("BPI: Press Install Button: %2d rescue linux\n", CONFIG_INSTALL_GPIO_NUM);
 	printf("Hit Esc or Tab key to enter console mode or rescue linux: %2d ", bootdelay);
 #else
 	printf("Hit any key to stop autoboot: %2d ", bootdelay);
@@ -334,11 +341,38 @@ start = get_timer(0);
 				break;
 		}
 #ifdef CONFIG_INSTALL_GPIO_NUM
-		if(!getGPIO(CONFIG_INSTALL_GPIO_NUM)){
+		// BPI: need dummy read
+		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,1);
+		getISOGPIO(CONFIG_INSTALL_GPIO_NUM);
+		udelay(10000);
+		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,0);
+		getISOGPIO(CONFIG_INSTALL_GPIO_NUM);
+		udelay(10000);
+		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,1);
+		printf("\nINSTALL key: %d\n", getISOGPIO(CONFIG_INSTALL_GPIO_NUM));
+		udelay(10000);
+
+		setISOGPIO(CONFIG_BOOT_GPIO_NUM,1);
+		printf("\nBOOT key: %d\n", getISOGPIO(CONFIG_BOOT_GPIO_NUM));
+
+		if(!getISOGPIO(CONFIG_INSTALL_GPIO_NUM)){ // like TAB key
+			bpi_install_key = 1;
 			printf("\nPress Install Button\n");
 			setenv("rescue_cmd", "go r");
 			boot_mode = BOOT_RESCUE_MODE;
 			abort = 1; // don't auto boot
+		}
+		if(!getISOGPIO(CONFIG_BOOT_GPIO_NUM)){ // like ESC key
+			bpi_boot_key = 1;
+			printf("\nPress BOOT Button\n");
+			boot_mode = BOOT_CONSOLE_MODE;
+			abort = 1; // don't auto boot
+		}
+		if(bpi_boot_key && bpi_install_key){ // both INSTALL / BOOT
+			printf("\nPress Install & BOOT Button\n");
+			setenv("bootcmd", "run boot_user");
+			boot_mode = BOOT_NORMAL_MODE;
+			abort = 0; // auto boot
 		}
 #endif
 

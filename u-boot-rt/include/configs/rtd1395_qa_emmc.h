@@ -101,10 +101,17 @@
 /* Bootcode Feature: Rescue linux read from USB */
 #define CONFIG_RESCUE_FROM_USB
 #ifdef CONFIG_RESCUE_FROM_USB
+#ifdef BPI
 	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"emmc.uImage"
 	#define CONFIG_RESCUE_FROM_USB_DTB		"rescue.emmc.dtb"
 	#define CONFIG_RESCUE_FROM_USB_ROOTFS		"rescue.root.emmc.cpio.gz_pad.img"
 	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"bluecore.audio"
+#else /* BPI */
+	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"/bananapi/bpi-m4/linux/uImage"
+	#define CONFIG_RESCUE_FROM_USB_DTB		"/bananapi/bpi-m4/linux/bpi-m4.dtb"
+	#define CONFIG_RESCUE_FROM_USB_ROOTFS		"/bananapi/bpi-m4/linux/rescue.root.emmc.cpio.gz_pad.img"
+	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"/bananapi/bpi-m4/linux/bluecore.audio.enc.A01"
+#endif /* BPI */
 #endif /* CONFIG_RESCUE_FROM_USB */
 
 #define CONFIG_VERSION			"0000"
