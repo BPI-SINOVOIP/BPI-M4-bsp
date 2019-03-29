@@ -1,3 +1,4 @@
+#!/bin/bash
 mkdir -p DVRBOOT_OUT/hw_setting
 
 make mrproper; make rtd1395_qa_defconfig;
