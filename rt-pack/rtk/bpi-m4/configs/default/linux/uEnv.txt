@@ -9,6 +9,8 @@ service=linux
 ##
 #
 kernel=uImage
+dtb=bpi-m4.dtb
+audio=bluecore.audio
 #
 ##
 #
@@ -24,18 +26,19 @@ rootfs_loadaddr=0x02200000
 sd_boot_dtb=bananapi/bpi-m4/linux/bpi-m4.dtb
 sd_boot_rootfs=bananapi/bpi-m4/linux/uInitrd
 sd_vmlinux=bananapi/bpi-m4/linux/uImage
-sd_audio=bananapi/bpi-m4/linux/bluecore.audio.enc.A01
+sd_audio=bananapi/bpi-m4/linux/bluecore.audio
 #
 ##
 #
 #root=/dev/ram
 # SD / eMMC
 #root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait 
+root=/dev/mmcblk2p2 rw rootfstype=ext4 rootwait 
 # USB / SATA
-root=/dev/sda2 rw rootfstype=ext4 rootwait 
+#root=/dev/sda2 rw rootfstype=ext4 rootwait 
 #
 console=earlycon=uart8250,mmio32,0x98007800 console=tty1 fbcon=map:0 console=ttyS0,115200
-bootopts=loglevel=7 debug=7 initcall_debug=0
+bootopts=loglevel=8 debug=8 initcall_debug=0
 #
 ##
 #
@@ -48,14 +51,17 @@ ahello=echo Banana Pi ${board} chip: $chip Service: $service
 ##
 #
 #aboot=if fatload $device $partition $rootfs_loadaddr ${bpi}/berryboot.img; gosd;
-aboot=gosd;
+aboot=go all;
 #
+aload_dtb=fatload $device $partition ${fdt_loadaddr} ${bpi}/${board}/${service}/${dtb}
 aload_kernel=fatload $device $partition ${kernel_loadaddr} ${bpi}/${board}/${service}/${kernel}
+aload_audio=fatload $device $partition ${audio_loadaddr} ${bpi}/${board}/${service}/${audio}
 #
 ##
 #
-#uenvcmd=run ahello abootargs aload_kernel aboot
-uenvcmd=run ahello abootargs aboot
+#uenvcmd=run ahello abootargs aboot
+uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_audio aboot
+usercmd=run ahello abootargs
 #
 ## END
 #
