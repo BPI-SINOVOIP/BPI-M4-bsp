@@ -2,14 +2,6 @@
 # Makefile for MMC/SD host controller drivers
 #
 
-ifeq ($(CONFIG_ARCH_RTD119X),y)
-obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc_rtd119x.o
-else ifeq ($(CONFIG_ARCH_RTD13xx),y)
-obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc_rtd13xx.o
-else
-obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc.o
-endif
-
 obj-$(CONFIG_MMC_ARMMMCI)	+= mmci.o
 obj-$(CONFIG_MMC_QCOM_DML)	+= mmci_qcom_dml.o
 obj-$(CONFIG_MMC_PXA)		+= pxamci.o
@@ -94,3 +86,11 @@ obj-$(CONFIG_MMC_RTK_SDMMC)		+= rtk-sdmmc.o
 obj-y					+= sdmmc_export.o
 #obj-$(CONFIG_MMC_RTK_EMMC)		+= rtkemmc.o
 #obj-$(CONFIG_MMC_RTK_EMMC)		+= rtkemmc_ops.o
+
+ifeq ($(CONFIG_ARCH_RTD119X),y)
+obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc_rtd119x.o
+else ifeq ($(CONFIG_ARCH_RTD13xx),y)
+obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc_rtd13xx.o
+else
+obj-$(CONFIG_MMC_RTK_EMMC)              += rtkemmc.o
+endif
