@@ -55,6 +55,7 @@
 #include <version.h>
 #endif
 
+#include <asm/arch/platform_lib/board/gpio.h> //BPI
 
 #ifdef CONFIG_LZMA
 #include <lzma/LzmaTypes.h>
@@ -713,15 +714,60 @@ int load_bootcode_from_sd(void)
 	printf("==== start load bootcode from SD =====\n");
 
 	do {
+#ifdef BPI
 		ret = run_command("sd init", 0);
 		if( ret != 0 ) {
 			DDDDRED("sd initialize failed\n");
 			break;
 		}
-
 		/* add sanity check here */
 		sprintf(commandBuf, "sd read 0x%08x 0x50 0x430", CONFIG_SD_BOOTCODE_BASE);
 		run_command(commandBuf, 0);
+#else
+	int f_boot=0;
+	int f_boot_start=0;
+	setISOGPIO(35, 1);
+	if(getISOGPIO(35)) {
+		printf("SD: try to boot from eMMC\n");
+		f_boot_start=3;
+	}
+	else {
+		printf("SD: try to boot from SD\n");
+		ret = run_command("sd init", 0);
+		if( ret != 0 ) {
+			printf("sd initialize failed\n");
+			f_boot_start=3;
+		}
+	}
+		for(f_boot=f_boot_start;f_boot<=5;f_boot++) {
+			switch (f_boot) {
+			case 0: // SD
+				sprintf(commandBuf, "fatload sd 0:1 0x%08x /bananapi/bpi-m4/linux/u-boot-bpi-m4.bin", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			case 1:
+				sprintf(commandBuf, "fatload sd 0:1 0x%08x u-boot-bpi-m4.bin", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			case 2:
+				sprintf(commandBuf, "sd read 0x%08x 0x50 0x430", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			case 3: // eMMC
+				ret = run_command("mmc rescan", 0);
+				sprintf(commandBuf, "fatload mmc 0:1 0x%08x /bananapi/bpi-m4/linux/u-boot-bpi-m4.bin", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			case 4:
+				sprintf(commandBuf, "fatload mmc 0:1 0x%08x u-boot-bpi-m4.bin", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			case 5:
+				sprintf(commandBuf, "rtkemmc read 0x%08x 0x50 0x430", CONFIG_SD_BOOTCODE_BASE);
+				break;
+			}
+			printf("CMD[%s]\n",commandBuf);
+			ret = run_command(commandBuf, 0);
+			if(ret == 0) {
+				break;
+			}
+		}
+#endif
 		pBuf = (unsigned char *)CONFIG_SD_BOOTCODE_BASE;
 		/* add sanity check here */
 		if( ! ( pBuf[0] == 0x0A &&

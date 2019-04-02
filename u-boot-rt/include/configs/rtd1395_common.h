@@ -314,7 +314,9 @@
 #define CONFIG_RTK_SD
 */
 #define CONFIG_SYS_RTK_SD_FLASH
+#ifndef CONFIG_RTK_SD_DRIVER
 #define CONFIG_RTK_SD_DRIVER
+#endif
 /* SD */
 #ifdef CONFIG_RTK_SD_DRIVER
 	#define CONFIG_SD

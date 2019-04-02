@@ -72,7 +72,7 @@ unsigned int pcb_get_boot_flash_type(void)
 		return boot_flash_type=BOOT_EMMC; // 2
 #endif
 */
-#else //BPI
+#else //BPI :TODO: support SPI NOR
 	extern int bpi_boot;
 	if(bpi_boot) {
 		rtd_maskl(SYS_muxpad0, ~0xFFFF0FFF, 0xaaaa0aa8);

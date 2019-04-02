@@ -110,7 +110,7 @@
 	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"/bananapi/bpi-m4/linux/uImage"
 	#define CONFIG_RESCUE_FROM_USB_DTB		"/bananapi/bpi-m4/linux/bpi-m4.dtb"
 	#define CONFIG_RESCUE_FROM_USB_ROOTFS		"/bananapi/bpi-m4/linux/rescue.root.emmc.cpio.gz_pad.img"
-	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"/bananapi/bpi-m4/linux/bluecore.audio.enc.A01"
+	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"/bananapi/bpi-m4/linux/bluecore.audio"
 #endif /* BPI */
 #endif /* CONFIG_RESCUE_FROM_USB */
 
