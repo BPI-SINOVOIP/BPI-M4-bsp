@@ -1209,7 +1209,7 @@ int rtkemmc_SendCMDGetRSP( struct rtk_cmd_info * cmd_info, unsigned int bIgnore)
 	
 
 	rtkemmc_set_rspparam(cmd_info);
-	cr_writel(0, CR_EMMC_SWC_SEL);
+	cr_writel(0x1, CR_EMMC_SWC_SEL); //0x1 for emmc-ree
 	cr_writel(0, CR_EMMC_CP);
 	
 	isb();
@@ -1726,7 +1726,7 @@ int rtkemmc_send_cmd25(void)
 int rtkemmc_Stream( unsigned int cmd_idx,UINT32 blk_addr, UINT32 dma_addr, UINT32 dma_length, int bIgnore){
 	UINT32 ret_error = 0;
 
-	cr_writel(0, CR_EMMC_SWC_SEL);
+	cr_writel(0x1, CR_EMMC_SWC_SEL); //0x1 for emmc-ree
     cr_writel(0, CR_EMMC_CP);
 
 	CP15ISB;
@@ -2347,7 +2347,7 @@ int cmd25_request(struct mmc * mmc,
 {
 
 	int error = -1;
-	cr_writel(0, CR_EMMC_SWC_SEL);
+	cr_writel(0x1, CR_EMMC_SWC_SEL); //0x1 for emmc-ree
     cr_writel(0, CR_EMMC_CP);
 
 	
@@ -2400,7 +2400,7 @@ int cmd18_request(struct mmc * mmc,
 	//printf("%s : Line %d: func:%s \n", __FILE__, __LINE__,__func__);
 
 	int error = -1;
-	cr_writel(0, CR_EMMC_SWC_SEL);
+	cr_writel(0x1, CR_EMMC_SWC_SEL); //0x1 for emmc-ree
     cr_writel(0, CR_EMMC_CP);
 
 	make_ip_des((UINT64) data->src,0x200);
@@ -3893,7 +3893,7 @@ int emmc_read_write_ip(UINT32 cmd_idx, UINT32 blk_addr, unsigned char *dma_addr,
 	UINT32 ret_error = 0;
 
 	//descriptor and dma must be in DDR
-	cr_writel(0, CR_EMMC_SWC_SEL);
+	cr_writel(0x1, CR_EMMC_SWC_SEL); //0x1 for emmc-ree
 	cr_writel(0, CR_EMMC_CP);	
 
 
