@@ -5052,12 +5052,12 @@ CONFIG_RTK_EFUSE=y
 # FPGA Configuration Support
 #
 # CONFIG_FPGA is not set
-CONFIG_TEE=y
+CONFIG_TEE=m
 
 #
 # TEE drivers
 #
-CONFIG_OPTEE=y
+CONFIG_OPTEE=m
 
 #
 # Smart Crad Interface Support
