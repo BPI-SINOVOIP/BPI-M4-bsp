@@ -12,6 +12,12 @@
 
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
+#include <linux/interrupt.h>
+#include <linux/workqueue.h>
+#include <linux/input.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regmap.h>
@@ -145,28 +151,35 @@ static const struct reg_default g2237_reg_defaults[] = {
 static bool g2237_regmap_readable_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
-	case G2237_REG_ONOFF ... G2237_REG_VERSION:
-		return true;
+		case G2237_REG_INTR:
+		case G2237_REG_PWRKEY:
+		case G2237_REG_ONOFF ... G2237_REG_VERSION:
+			return true;
 	}
+	
 	return false;
 }
 
 static bool g2237_regmap_writeable_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
-	case G2237_REG_ONOFF ... G2237_REG_LDO1_SLPVOLT:
-		return true;
+		case G2237_REG_INTR:
+		case G2237_REG_PWRKEY:
+		case G2237_REG_ONOFF ... G2237_REG_LDO1_SLPVOLT:
+			return true;
 	}
+	
 	return false;
 }
 
 static bool g2237_regmap_volatile_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
-	case G2237_REG_CHIP_ID:
-	case G2237_REG_VERSION:
-		return true;
+		case G2237_REG_CHIP_ID:
+		case G2237_REG_VERSION:
+			return true;
 	}
+	
 	return false;
 }
 
@@ -174,7 +187,7 @@ static const struct regmap_config g2237_regmap_config = {
 	.reg_bits         = 8,
 	.val_bits         = 8,
 	.max_register     = 0x15,
-	.cache_type       = REGCACHE_FLAT,
+	/*.cache_type       = REGCACHE_FLAT,*/
 	.reg_defaults     = g2237_reg_defaults,
 	.num_reg_defaults = ARRAY_SIZE(g2237_reg_defaults),
 	.readable_reg     = g2237_regmap_readable_reg,
@@ -206,10 +219,157 @@ static const struct dev_pm_ops g2237_regulator_pm_ops = {
 	.suspend = g2237_regulator_suspend,
 };
 
+static int g2237_powerkey_report_event(struct g22xx_device *gdev)
+{
+	unsigned int val;
+	//int state;
+
+	pr_info("%s\n", __func__);
+
+	//gdev->regmap->cache_bypass = true;
+
+	//state = gpio_get_value(gdev->g2237_int_gpio);
+	//pr_info("%s, gpio state = %d\n", __func__, state);
+
+	regmap_read(gdev->regmap, G2237_REG_INTR, &val);
+	pr_info("%s, reg[0x00] val = %x\n", __func__, val);
+
+	if (val & 0x20) {
+		pr_info("%s, power key pressed\n", __func__);
+
+		//input_report_key(gdev->input_dev, KEY_POWER, 1);
+		//input_sync(gdev->input_dev);
+	}
+
+	if (val & 0x08) {
+		pr_info("%s, power key it pressed\n", __func__);
+
+		input_report_key(gdev->input_dev, KEY_POWER, 1);
+		input_sync(gdev->input_dev);
+		msleep(100);
+		input_report_key(gdev->input_dev, KEY_POWER, 0);
+		input_sync(gdev->input_dev);
+	}
+
+	if (val & 0x10) {
+		pr_info("%s, power key lp pressed\n", __func__);
+
+		//input_report_key(gdev->input_dev, KEY_POWER, 1);
+		//input_sync(gdev->input_dev);
+		//ssleep(2);
+		//input_report_key(gdev->input_dev, KEY_POWER, 0);
+		//input_sync(gdev->input_dev);
+	}
+
+	//gdev->regmap->cache_bypass = false;
+	
+	return 0;
+}
+
+static void g2237_int_work(struct work_struct *work)
+{
+	struct g22xx_device *gdev = container_of(work, struct g22xx_device, work.work);
+
+	g2237_powerkey_report_event(gdev);
+}
+
+static irqreturn_t g2237_irq_handle(int irq, void *dev_id)
+{
+	struct g22xx_device *gdev = dev_id;
+	
+	schedule_delayed_work(&gdev->work, 0);
+
+	return IRQ_HANDLED;
+}
+
+static int g2237_init_gpio_irq(struct device_node *node, struct g22xx_device *gdev)
+{
+	unsigned int g2237_irq;
+	int ret;
+	
+	gdev->g2237_int_gpio = of_get_gpio_flags(node, 0, NULL);
+	if (gdev->g2237_int_gpio < 0)
+		pr_err("%s, could not get gpio from of\n", __func__);
+
+	if (!gpio_is_valid(gdev->g2237_int_gpio))	
+		pr_err("%s, gpio %d is not valid\n", __func__, gdev->g2237_int_gpio);
+
+	if (gpio_request(gdev->g2237_int_gpio, node->name)) 
+		pr_err("%s, could not request gpio, %d\n", __func__, gdev->g2237_int_gpio);
+
+	gpio_direction_input(gdev->g2237_int_gpio);
+	g2237_irq = gpio_to_irq(gdev->g2237_int_gpio);
+
+	irq_set_irq_type(g2237_irq, IRQ_TYPE_EDGE_FALLING);
+	ret = request_irq(g2237_irq, g2237_irq_handle, IRQF_SHARED, "g2237-int", gdev);
+	if (ret) {
+		pr_err("%s, cannot assign irq %d\n", __func__, g2237_irq);
+		return ret;
+	}
+			
+	return 0;
+}
+
+static void g2337_powerkey_hw_init(struct g22xx_device *gdev)
+{
+	/* clear int */
+	regmap_write(gdev->regmap, G2237_REG_INTR, 0x00);
+
+	/* 6s hw shutdown */
+	regmap_write(gdev->regmap, G2237_REG_PWRKEY, 0x44);
+}
+
+static int g2237_powerkey_register(struct device_node *node, struct g22xx_device *gdev)
+{
+	struct input_dev *powerkey_dev;
+	int ret;
+	
+	g2337_powerkey_hw_init(gdev);
+
+	/* register input device */
+	powerkey_dev = input_allocate_device();
+	if(!powerkey_dev) {
+		pr_err("alloc powerkey input device error\n");
+		return -EINVAL;
+	}
+
+	powerkey_dev->name = "g2237-powerkey";
+	powerkey_dev->phys = "m1kbd/input2";
+	powerkey_dev->id.bustype = BUS_HOST;
+	powerkey_dev->id.vendor = 0x0001;
+	powerkey_dev->id.product = 0x0001;
+	powerkey_dev->id.version = 0x0100;
+	//powerkey_dev->open = NULL;
+	//powerkey_dev->close = NULL;
+	//powerkey_dev->dev.parent = &pdev->dev;
+	set_bit(EV_KEY, powerkey_dev->evbit);
+	set_bit(EV_REL, powerkey_dev->evbit);
+	set_bit(KEY_POWER, powerkey_dev->keybit);
+
+	ret = input_register_device(powerkey_dev);
+	if(ret) {
+		pr_err("Unable to Register the g2337-powerkey\n");
+		goto out;
+	}
+
+	gdev->input_dev = powerkey_dev;
+
+	ret = g2237_init_gpio_irq(node, gdev);
+	if(ret) {
+		pr_err("%s, gpio irq request failed\n", __func__);
+		goto out;
+	}
+
+out:
+	input_free_device(powerkey_dev);
+	
+	return ret;
+}
 static int g2237_regulator_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
+	struct device_node *node = dev->of_node;
 	struct g22xx_device *gdev;
 	int i, ret;
 	unsigned int chip_id, rev;
@@ -245,7 +405,14 @@ static int g2237_regulator_probe(struct i2c_client *client,
 	}
 
 	i2c_set_clientdata(client, gdev);
+	
+	/* power key handle */
+	g2237_powerkey_register(node, gdev);
+
+	INIT_DELAYED_WORK(&gdev->work, g2237_int_work);
+	
 	g22xx_setup_pm_power_off(gdev, G2237_REG_SYS_CONTROL, G2237_SOFTOFF_MASK);
+	
 	return 0;
 }
 

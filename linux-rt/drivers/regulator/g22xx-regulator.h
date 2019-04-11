@@ -26,6 +26,10 @@ struct g22xx_device {
 	struct device *dev;
 	struct regmap *regmap;
 	struct list_head list;
+
+	int g2237_int_gpio;
+	struct delayed_work work;
+	struct input_dev *input_dev;
 };
 
 struct g22xx_regulator_desc {

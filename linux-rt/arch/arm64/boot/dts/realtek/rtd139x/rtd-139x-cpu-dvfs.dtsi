@@ -12,6 +12,7 @@
 		compatible = "gmt,g2237";
 		reg = <0x12>;
 		status = "okay";
+		gpios = <&rtk_iso_gpio 1 0 1>; /* int gpio */
 
 		vd33_supp: dc1 {
 			regulator-name = "vd33";
