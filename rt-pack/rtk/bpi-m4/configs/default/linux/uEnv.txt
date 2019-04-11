@@ -60,8 +60,7 @@ aload_audio=fatload $device $partition ${audio_loadaddr} ${bpi}/${board}/${servi
 ##
 #
 #uenvcmd=run ahello abootargs aboot
-#uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_audio aboot
-uenvcmd=run ahello abootargs aload_dtb aload_kernel aboot
+uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_audio aboot
 usercmd=run ahello abootargs
 #
 ## END

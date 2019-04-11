@@ -251,14 +251,6 @@ static unsigned long do_go_audio_fw(void)
 	int offset = SWAPEND32(MIPS_SHARED_MEMORY_ENTRY_ADDR);
 	unsigned long fw_addr = getenv_ulong("audio_loadaddr", 16, 0);
 
-#ifdef CONFIG_LOADBOOTCODE_FROM_SD
-	printf("BPI: SPI boot %s...(%d)\n",__func__,audio_fw_state);
-	if(audio_fw_state!=1){
-		printf("BPI: SPI boot :SKIP: Start Audio Firmware ...\n");
-		return 0;
-	}
-#endif
-
 	if(audio_fw_state) return 0;
 
 	// if IR wakeup info is set...
@@ -300,7 +292,6 @@ static unsigned long do_go_audio_fw(void)
 #endif
 
 	audio_fw_state = 1;
-	mdelay(1000);
 
 	return 0;
 
@@ -4371,32 +4362,12 @@ int rtk_plat_prepare_fw_image_from_SPI(void)
 int rtk_plat_prepare_fw_image_from_SD(void)
 {
 	int ret = RTK_PLAT_ERR_OK;
-#ifdef CONFIG_LOADBOOTCODE_FROM_SD
-#else
-	char tmpbuf[128];
-	char *filename;
-#endif
 
 #if 0 // for SD
 	// add your code here
 #endif
 
-#ifdef CONFIG_LOADBOOTCODE_FROM_SD
-	printf("BPI spi skip:---------------%s ---------------\n",__FUNCTION__);
-#else
-	printf("BPI:---------------%s ---------------\n",__FUNCTION__);
-	if ((filename = getenv("sd_audio")) == NULL) {
-		filename =(char*) CONFIG_RESCUE_FROM_USB_AUDIO_CORE;
-	}
-	sprintf(tmpbuf, "fatload sd 0:1 %s %s", getenv("audio_loadaddr"), filename);
-	if (run_command(tmpbuf, 0) != 0) {
-		printf("load %s to %s failed\n", filename, getenv("audio_loadaddr"));
-	}
-	else
-	printf("Loading \"%s\" to %s is OK.\n\n", filename, getenv("audio_loadaddr"));
-
 	ret = rtk_plat_read_fw_image_from_SD();
-#endif
 
 	return ret;
 }
