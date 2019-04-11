@@ -286,6 +286,7 @@ static patch_info fw_patch_table[] = {
 	{0x3462, 0x8821, "mp_rtl8821a_fw", "rtl8821a_fw", "rtl8821a_config", NULL, 0},	/* RTL8821AE */
 
 	{0xb00b, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
+	{0xb822, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
 	{0xb82c, 0x8822, "mp_rtl8822bu_fw", "rtl8822bu_fw", "rtl8822bu_config", NULL, 0}, /* RTL8822BU */
 	{0xd723, 0x8723, "mp_rtl8723du_fw", "rtl8723du_fw", "rtl8723du_config", NULL, 0}, /* RTL8723DU */
 	{0xb820, 0x8821, "mp_rtl8821cu_fw", "rtl8821cu_fw", "rtl8821cu_config", NULL, 0 }, /* RTL8821CU */
