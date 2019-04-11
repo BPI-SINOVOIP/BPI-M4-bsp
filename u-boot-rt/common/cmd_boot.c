@@ -5043,12 +5043,12 @@ int rtk_plat_do_bootr(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
     if (ret != RTK_PLAT_ERR_OK) {
 #if defined(NAS_ENABLE) && defined(CONFIG_SPI_MTD_STATIC)
 #if defined(CONFIG_CMD_NET)
-	ret = run_command("run upgrade_img_tftp", 0);
+		ret = run_command("run upgrade_img_tftp", 0);
 #endif // tftp
 #if defined(CONFIG_CMD_USB) && defined(CONFIG_USB_STORAGE)
-	if(ret) ret=run_command("run upgrade_img_usb", 0);
+		if(ret) ret=run_command("run upgrade_img_usb", 0);
 #endif // USB
-	if(!ret) run_command("reset", 0);
+		if(!ret) run_command("reset", 0);
 #else
         /*   LOAD GOLD FW   */
         ret = RTK_PLAT_ERR_OK;

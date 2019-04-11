@@ -341,18 +341,8 @@ start = get_timer(0);
 		}
 #ifdef CONFIG_INSTALL_GPIO_NUM
 		// BPI: need dummy read
-		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,1);
-		getISOGPIO(CONFIG_INSTALL_GPIO_NUM);
-		udelay(10000);
-		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,0);
-		getISOGPIO(CONFIG_INSTALL_GPIO_NUM);
-		udelay(10000);
-		setISOGPIO(CONFIG_INSTALL_GPIO_NUM,1);
-		printf("\nINSTALL key: %d\n", getISOGPIO(CONFIG_INSTALL_GPIO_NUM));
-		udelay(10000);
-
-		setISOGPIO(CONFIG_BOOT_GPIO_NUM,1);
-		printf("\nBOOT key: %d\n", getISOGPIO(CONFIG_BOOT_GPIO_NUM));
+		setISOGPIO_pullsel(CONFIG_INSTALL_GPIO_NUM, PULL_UP);
+		setISOGPIO_pullsel(CONFIG_BOOT_GPIO_NUM, PULL_UP);
 
 		if(!getISOGPIO(CONFIG_INSTALL_GPIO_NUM)){ // like TAB key
 			bpi_install_key = 1;
@@ -361,12 +351,14 @@ start = get_timer(0);
 			boot_mode = BOOT_RESCUE_MODE;
 			abort = 1; // don't auto boot
 		}
+		
 		if(!getISOGPIO(CONFIG_BOOT_GPIO_NUM)){ // like ESC key
 			bpi_boot_key = 1;
 			printf("\nPress BOOT Button\n");
 			boot_mode = BOOT_CONSOLE_MODE;
 			abort = 1; // don't auto boot
 		}
+		
 		if(bpi_boot_key && bpi_install_key){ // both INSTALL / BOOT
 			printf("\nPress Install & BOOT Button\n");
 			setenv("bootcmd", "run boot_user");
@@ -622,7 +614,7 @@ void main_loop (void)
 
 	debug ("### main_loop entered: bootdelay=%d\n\n", bootdelay);
 
-	s = getenv ("bootcmd");
+	s = getenv ("bootcmd");  //CONFIG_BOOT_COMMAND in configs.h
 	debug ("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
 
 	if (s == NULL) {
@@ -635,11 +627,14 @@ void main_loop (void)
 		normal_boot = customize_check_normal_boot();
 #endif
 
+#if 0 /* bpi, load blueaudio in uEnv.txt */
 #ifdef CONFIG_CUSTOMIZE_ACCELERATE_BOOT_BLUE_LOGO
 #if !defined(NAS_DUAL) && !defined(CONFIG_BOOT_FROM_SPI)
 		/*Accelerate boot blue logo with bootr f*/
 		run_command_list("bootr f", -1, 0);
 		run_command_list("go a", -1, 0);
+		printf("%s run bootr f and go a\n", __func__);
+#endif
 #endif
 #endif
 		run_command_list(s, -1, 0);

@@ -780,10 +780,10 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	extern int sd_card_init(void);
 	setISOGPIO(35, 1);
 	if(!getISOGPIO(35)) {
-	if( sd_card_init() != 0 ) {
-		puts("SD: initialize card failed\n");
-		bpi_boot=1; // 0: SD 1: eMMC
-	}
+		if( sd_card_init() != 0 ) {
+			puts("SD: initialize card failed\n");
+			bpi_boot=1; // 0: SD 1: eMMC
+		}
 	} else {
 		puts("SD: not insert skip!!\n");
 		bpi_boot=1; // 0: SD 1: eMMC
