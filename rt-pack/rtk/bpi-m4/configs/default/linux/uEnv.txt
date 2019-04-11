@@ -10,6 +10,7 @@ service=linux
 #
 kernel=uImage
 dtb=rtd-1395-bananapi-m4.dtb
+rootfs=uInitrd
 audio=bluecore.audio
 #
 ##
@@ -18,7 +19,7 @@ kernel_loadaddr=0x03000000
 audio_loadaddr=0x0f900000
 blue_logo_loadaddr=0x30000000
 fdt_loadaddr=0x02100000
-rootfs_loadaddr=0x02200000
+rootfs_loadaddr=0x31400000
 #
 ## ${bpi}/${board}/${service}/${kernel}
 #
@@ -38,11 +39,11 @@ root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait
 #root=/dev/sda2 rw rootfstype=ext4 rootwait 
 #
 console=earlycon=uart8250,mmio32,0x98007800 console=tty1 fbcon=map:0 console=ttyS0,115200
-bootopts=loglevel=8 debug=8 initcall_debug=0
+bootopts=loglevel=8 initcall_debug=0
 #
 ##
 #
-abootargs=setenv bootargs board=${board} console=${console} root=${root} service=${service} sdmmc_on=${sdmmc_on} ${bootopts} 
+abootargs=setenv bootargs board=${board} console=${console} root=${root} fsck.mode=force fsck.repair=yes service=${service} sdmmc_on=${sdmmc_on} ${bootopts} 
 #
 ##
 #
@@ -55,12 +56,13 @@ aboot=go all;
 #
 aload_dtb=fatload $device $partition ${fdt_loadaddr} ${bpi}/${board}/${service}/${dtb}
 aload_kernel=fatload $device $partition ${kernel_loadaddr} ${bpi}/${board}/${service}/${kernel}
+aload_rootfs=fatload $device $partition ${rootfs_loadaddr} ${bpi}/${board}/${service}/${rootfs}
 aload_audio=fatload $device $partition ${audio_loadaddr} ${bpi}/${board}/${service}/${audio}
 #
 ##
 #
 #uenvcmd=run ahello abootargs aboot
-uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_audio aboot
+uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_rootfs aload_audio aboot
 usercmd=run ahello abootargs
 #
 ## END

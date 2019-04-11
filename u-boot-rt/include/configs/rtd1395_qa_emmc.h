@@ -99,7 +99,7 @@
 #define COUNTER_FREQUENCY               27000000 // FIXME, need to know what impact it will cause
 
 /* Bootcode Feature: Rescue linux read from USB */
-//#define CONFIG_RESCUE_FROM_USB
+/* #define CONFIG_RESCUE_FROM_USB */
 #ifdef CONFIG_RESCUE_FROM_USB
 #ifdef BPI
 	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"emmc.uImage"

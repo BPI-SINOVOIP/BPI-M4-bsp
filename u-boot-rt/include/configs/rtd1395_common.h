@@ -151,14 +151,15 @@
    "console_args=earlycon=uart8250,mmio32,0x98007800 fbcon=map:0 console=ttyS0,115200 loglevel=7 cma=32m@576m\0" \
    "sdroot_args=board=bpi-m4 rootwait root=/dev/mmcblk0p2 rw\0" \
    "set_sdbootargs=setenv bootargs ${console_args} ${sdroot_args}\0" \
-   "emmcroot_args=root=/dev/mmcblk0p2 noinitrd rootwait\0" \
+   "emmcroot_args=root=/dev/mmcblk0p2 rootwait\0" \
    "set_emmcbootargs=setenv bootargs ${console_args} ${emmcroot_args}\0" \
-   "bootargs=earlycon=uart8250,mmio32,0x98007800 board=bpi-m4 console=tty1 console=ttyS0,115200 loglevel=7 cma=32m@576m noinitrd rootwait root=/dev/sda2 rw \0" \
+   "bootargs=earlycon=uart8250,mmio32,0x98007800 board=bpi-m4 console=tty1 console=ttyS0,115200 loglevel=7 cma=32m@576m rootwait root=/dev/mmcblk0p2 rw \0" \
    "RTK_ARM64=y\0"                  \
    "kernel_loadaddr=0x03000000\0"                  \
    "fdt_loadaddr=0x02100000\0"                  \
    "fdt_high=0xffffffffffffffff\0"                  \
    "rootfs_loadaddr=0x02200000\0"                   \
+   "initrd_high=0xffffffffffffffff\0"				\
    "rescue_rootfs_loadaddr=0x02200000\0"                   \
    "audio_loadaddr=0x0f900000\0"                 \
    "dtbo_loadaddr=0x26400000\0"                 \
@@ -399,7 +400,7 @@
 /* #define CONFIG_INSTALL_GPIO_NUM    		8 */
 /* BPI */
 #define CONFIG_REALTEK_GPIO
-//#define CONFIG_INSTALL_GPIO_NUM    		52
+/* #define CONFIG_INSTALL_GPIO_NUM    		52 */
 #define CONFIG_BOOT_GPIO_NUM    		49
 #define CONFIG_HDMITx_HPD_IGPIO_NUM		7
 
