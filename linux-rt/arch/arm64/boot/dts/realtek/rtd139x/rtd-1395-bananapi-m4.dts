@@ -174,4 +174,13 @@
 			<0x98000000 0x1000>;
 		interrupts = <0 34 4>;
 	};
+
+	rtk-leds {
+		compatible = "Realtek,rtk-leds";
+		led-num = <1>;
+		led1-gpio = <&rtk_iso_gpio 52 1 0>;
+		led1-gpio-trigger = "heartbeat";
+		led1-gpio-active-low = <1>;
+		status = "okay";
+	};
 };
