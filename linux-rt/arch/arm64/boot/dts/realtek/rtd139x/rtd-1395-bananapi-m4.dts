@@ -175,6 +175,13 @@
 		interrupts = <0 34 4>;
 	};
 
+	rfkill: rfkilligpio {
+		compatible = "Realtek,rfkill";
+		gpios = <&rtk_iso_gpio 49 1 0>;
+		status = "okay";
+	};
+
+
 	rtk-leds {
 		compatible = "Realtek,rtk-leds";
 		led-num = <1>;
