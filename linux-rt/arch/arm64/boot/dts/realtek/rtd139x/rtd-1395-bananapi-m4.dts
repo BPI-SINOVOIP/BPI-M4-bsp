@@ -55,7 +55,7 @@
 	chosen {
 		linux,initrd-start = <ROOTFS_NORMAL_START>;
 		linux,initrd-end = <ROOTFS_NORMAL_END>;
-		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 init=/init androidboot.hardware=hercules androidboot.storage=emmc loglevel=8";
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 init=/init androidboot.hardware=hercules androidboot.storage=emmc loglevel=4";
 		swiotlb-memory-reservation-size = <512>; /*  512: 1MB,  2048: 4MB*/
 		swiotlb-force = <0>; /* 0: SWIOTLB_NORMAL, 1: SWIOTLB_FORCE, 2: SWIOTLB_NO_FORCE */
 		cma-region-enable = <1>;
@@ -174,6 +174,81 @@
 			<0x98000000 0x1000>;
 		interrupts = <0 34 4>;
 	};
+	
+	pinctrl@9804E000 {
+
+		m4_uart1_pins: m4_uart1_pins {
+			realtek,pins = "gpio_8",
+			"gpio_9",
+			"gpio_10",
+			"gpio_11";
+			realtek,function = "uart1";
+		};
+	};
+
+	uart1: serial1@9801B200 {
+		compatible = "snps,dw-apb-uart";
+		pinctrl-names = "default";
+                pinctrl-0 = <&m4_uart1_pins>;
+		status = "okay";
+	};
+
+	uart2: serial2@9801B400 {
+		compatible = "snps,dw-apb-uart";
+		status = "disabled";
+	};
+
+	nic: gmac@98016000 {
+		compatible = "Realtek,r8168";
+		pinctrl-names = "default";
+		pinctrl-0 = <&etn_led_pins>;
+		status = "okay";
+	};
+
+	sdio: sdio@98010A00 {
+		compatible = "Realtek,rtk1295-sdio";
+		gpios = <&rtk_iso_gpio 27 1 1>;
+		status = "disabled";
+	};
+
+	sd: sdmmc@98010400 {
+		compatible = "Realtek,rtk1295-sdmmc";
+		gpios = <&rtk_iso_gpio 30 1 0>, /* sd power */
+			<&rtk_iso_gpio 34 0 1>, /* sd wp */
+			<&rtk_iso_gpio 35 0 1>; /* sd cd */
+		status = "okay";
+	};
+
+	i2c_0: i2c@0x98007D00 {
+		compatible = "Realtek,rtk-i2c";
+		status = "okay";
+	};
+
+	i2c_1: i2c@0x98007C00 {
+		compatible = "Realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+	i2c_5: i2c@0x9801BB00 {
+		compatible = "Realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+	spi_0: spi@9801BD00 {
+		compatible = "Realtek,rtk-dw-apb-ssi";
+		status = "disabled";
+	};
+
+	pwm: pwm@980070D0 {
+		compatible = "Realtek,rtd1295-pwm";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm1_1_pins>;
+		status = "disabled";
+
+		pwm_1 {
+			enable = <1>;
+		};
+	};
 
 	rfkill: rfkilligpio {
 		compatible = "Realtek,rfkill";
@@ -181,6 +256,34 @@
 		status = "okay";
 	};
 
+	smartcard@9801BE00 {
+		compatible = "Realtek,rtk-smc";
+		status = "disabled";
+	};
+
+	rtk_cvbs_detect {
+		compatible = "realtek,rtd1395-cvbs-switch";
+		status = "disabled";
+	};
+
+	irda@98007400 {
+		compatible = "Realtek,rtk-irda";
+		status = "disabled";
+	};
+
+	audio_in: audio-in {
+		compatible = "realtek,audio-in", "adc";
+		status = "disabled";
+	};
+
+	rtk_usb_power_manager@0 {
+                compatible = "Realtek,usb-manager";
+		realtek,port0-power-gpio;
+		realtek,port1-power-gpio;
+		realtek,port2-power-gpio;
+		realtek,port0_switch_ctrl-gpio;
+		status = "okay";
+        };
 
 	rtk-leds {
 		compatible = "Realtek,rtk-leds";
