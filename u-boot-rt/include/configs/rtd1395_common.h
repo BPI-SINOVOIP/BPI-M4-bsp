@@ -399,7 +399,7 @@
 /* #define CONFIG_INSTALL_GPIO_NUM    		8 */
 /* BPI */
 #define CONFIG_REALTEK_GPIO
-#define CONFIG_INSTALL_GPIO_NUM    		52
+//#define CONFIG_INSTALL_GPIO_NUM    		52
 #define CONFIG_BOOT_GPIO_NUM    		49
 #define CONFIG_HDMITx_HPD_IGPIO_NUM		7
 

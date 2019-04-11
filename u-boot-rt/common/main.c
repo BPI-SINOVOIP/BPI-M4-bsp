@@ -234,7 +234,6 @@ int abortboot(int bootdelay)
 	printf(CONFIG_MENUPROMPT);
 #else
 #ifdef CONFIG_BSP_REALTEK
-	printf("BPI: Press Install Button: %2d rescue linux\n", CONFIG_INSTALL_GPIO_NUM);
 	printf("Hit Esc or Tab key to enter console mode or rescue linux: %2d ", bootdelay);
 #else
 	printf("Hit any key to stop autoboot: %2d ", bootdelay);
