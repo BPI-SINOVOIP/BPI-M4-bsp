@@ -41,8 +41,7 @@ R="${SD}/BPI-ROOT"
 	mkdir -p $B/bananapi/${board}
 	cp -a $T/${BPIPACK}/${BPISOC}/${TARGET_PRODUCT}/configs/default/linux $B/bananapi/${board}/
 	cp -a $T/${BPILINUX}/arch/arm64/boot/Image $B/bananapi/${board}/linux/uImage
-	cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd139x/*.dtb $B/bananapi/${board}/linux/dtb
-	cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd139x/rtd-1395-lionskin-glinux-1GB.dtb $B/bananapi/${board}/linux/bpi-m4.dtb
+	cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd139x/rtd-1395-bananapi-m4.dtb $B/bananapi/${board}/linux/
 	#
 	cp -a $T/u-boot-rt/u-boot.bin $B/bananapi/${board}/linux/u-boot-bpi-m4.bin
 	#BPI

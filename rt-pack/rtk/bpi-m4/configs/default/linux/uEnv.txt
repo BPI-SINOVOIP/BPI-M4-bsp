@@ -9,7 +9,7 @@ service=linux
 ##
 #
 kernel=uImage
-dtb=bpi-m4.dtb
+dtb=rtd-1395-bananapi-m4.dtb
 audio=bluecore.audio
 #
 ##
@@ -23,7 +23,7 @@ rootfs_loadaddr=0x02200000
 ## ${bpi}/${board}/${service}/${kernel}
 #
 #
-sd_boot_dtb=bananapi/bpi-m4/linux/bpi-m4.dtb
+sd_boot_dtb=bananapi/bpi-m4/linux/rtd-1395-bananapi-m4.dtb
 sd_boot_rootfs=bananapi/bpi-m4/linux/uInitrd
 sd_vmlinux=bananapi/bpi-m4/linux/uImage
 sd_audio=bananapi/bpi-m4/linux/bluecore.audio

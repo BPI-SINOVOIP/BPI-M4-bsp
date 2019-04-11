@@ -1,3 +1,4 @@
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-bananapi-m4.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += hercules-fpga.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-384MB.CMAx2.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-512MB.CMAx2.dtb
