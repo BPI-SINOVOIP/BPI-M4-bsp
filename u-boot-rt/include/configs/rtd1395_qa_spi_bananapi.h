@@ -56,6 +56,13 @@
 	#endif
 #endif
 
+/* EMMC boot and GPT format */
+#define CONFIG_SYS_RTK_EMMC_FLASH
+#define CONFIG_RTK_EMMC_TRADITIONAL_MODE
+#define CONFIG_CMD_GPT
+#define CONFIG_PARTITION_UUIDS
+#define CONFIG_CMD_RTKGPT
+
 /* Boot Revision */
 #define CONFIG_COMPANY_ID 		"0000"
 #define CONFIG_BOARD_ID         "0705"
@@ -135,6 +142,12 @@
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND \
 	"gosdb"
+
+#undef CONFIG_BOOTDELAY
+#define CONFIG_BOOTDELAY	0
+#undef CONFIG_SYS_PROMPT
+#define CONFIG_SYS_PROMPT       		"BPI-M4(SPI)> "
+
 
 #endif /* __CONFIG_RTK_RTD1395_QA_SPI_BANANAPI_H */
 

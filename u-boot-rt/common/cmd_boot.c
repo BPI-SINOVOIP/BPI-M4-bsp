@@ -706,6 +706,7 @@ int load_bootcode_from_sd(void)
 	int ret;
 	unsigned char *pBuf;
 	char commandBuf[128];
+	int f_ok=0;
 
 	printf("==== start load bootcode from SD =====\n");
 
@@ -747,7 +748,6 @@ int load_bootcode_from_sd(void)
 				sprintf(commandBuf, "sd read 0x%08x 0x50 0x430", CONFIG_SD_BOOTCODE_BASE);
 				break;
 			case 3: // eMMC
-				ret = run_command("mmc rescan", 0);
 				sprintf(commandBuf, "fatload mmc 0:1 0x%08x /bananapi/bpi-m4/linux/u-boot-bpi-m4.bin", CONFIG_SD_BOOTCODE_BASE);
 				break;
 			case 4:
@@ -759,25 +759,33 @@ int load_bootcode_from_sd(void)
 			}
 			printf("CMD[%s]\n",commandBuf);
 			ret = run_command(commandBuf, 0);
-			if(ret == 0) {
+			if(ret != 0) {
+				continue;
+			}
+			pBuf = (unsigned char *)CONFIG_SD_BOOTCODE_BASE;
+			/* add sanity check here */
+			if( ! ( pBuf[0] == 0x0A &&
+					pBuf[1] == 0x00 &&
+					pBuf[2] == 0x00 &&
+					pBuf[3] == 0x14 ) ) {
+				printf("[WARNING] bootcode seem is not valid, first 4 bytes:\n"
+						"          %02x %02x %02x %02x\n",
+						pBuf[0], pBuf[1], pBuf[2], pBuf[3]);
+				continue;
+			}
+			else {
+				printf("[SPI] load bootcode !!\n");
+				f_ok=1;
 				break;
 			}
+
 		}
 #endif
-		pBuf = (unsigned char *)CONFIG_SD_BOOTCODE_BASE;
-		/* add sanity check here */
-		if( ! ( pBuf[0] == 0x0A &&
-				pBuf[1] == 0x00 &&
-				pBuf[2] == 0x00 &&
-				pBuf[3] == 0x14 ) ) {
-			DDDDRED("[WARNING] bootcode seem is not valid, first 4 bytes:\n"
-					"          %02x %02x %02x %02x\n",
-					pBuf[0], pBuf[1], pBuf[2], pBuf[3]);
+		if(!f_ok)
 			break;
-		}
 		run_command("icache off", 0);
 		run_command("dcache off", 0);
-		printf("finish to load bootcode from SD to 0x%08x\n", CONFIG_SD_BOOTCODE_BASE);
+		printf("finish to load bootcode to 0x%08x\n", CONFIG_SD_BOOTCODE_BASE);
 
 		sprintf(commandBuf, "go 0x%08x", CONFIG_SD_BOOTCODE_BASE);
 		run_command(commandBuf, 0);
