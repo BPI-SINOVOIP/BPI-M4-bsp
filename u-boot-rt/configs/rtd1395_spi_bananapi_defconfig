@@ -74,3 +74,8 @@ CONFIG_CMD_LOADB=y
 # CONFIG_CMD_NM is not set
 # CONFIG_CMD_CMP is not set
 # CONFIG_CMD_CP is not set
+
+#
+# Others
+#
+# CONFIG_CUSTOMIZE_ACCELERATE_BOOT_BLUE_LOGO is not set

@@ -65,9 +65,9 @@ unsigned long get_accessible_ddr_size(int unit)
 #endif //CONFIG_BOARD_FPGA
 }
 
-#define DC0_DPI_DLL_CRT_SSC3_reg	0x9800E028
+#define DC0_DPI_DLL_CRT_SSC3_reg	0x9801B0E4
 #define DC1_DPI_DLL_CRT_SSC3_reg	0x9800F028
-#define DCPHY_DPI_DLL_CRT_SSC3_get_DPI_N_CODE_T(data)   ((0x0000FF00&(data))>>8)
+#define DCPHY_DPI_DLL_CRT_SSC3_get_DPI_N_CODE_T(data)   ((0xFF000000&(data))>>24)
 
 static int do_bdinfo_ddr(void)
 {

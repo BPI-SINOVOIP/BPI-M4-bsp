@@ -472,11 +472,7 @@ int boot_rescue_from_usb(void)
 	{
 		sprintf(tmpbuf, "fatload usb 0:1 %s %s", getenv("rootfs_loadaddr"), filename);
 		if (run_command(tmpbuf, 0) != 0) {
-#ifdef BPI
 			goto loading_failed;
-#else
-			printf("\nSKIP ...");
-#endif
 		}
 	}
 
@@ -1492,11 +1488,7 @@ int rtk_plat_read_fw_image_from_USB(int skip)
 	{
 		sprintf(tmpbuf, "fatload usb 0:1 %s %s", getenv("rootfs_loadaddr"), filename);
 		if (run_command(tmpbuf, 0) != 0) {
-#ifdef BPI
 			goto loading_failed;
-#else
-			printf("\nSKIP ...");
-#endif
 		}
 	}
 
@@ -4731,10 +4723,10 @@ static int rtk_call_booti(void)
 	 * exec subcommands of do_booti to init the images
 	 * data structure
 	 */
-	printf("booti_argv ={ ");
+	debug("booti_argv ={ ");
 	for (j = 0; j < argc; j++)
-			printf("%s,",booti_argv[j]);
-	printf("}\n");
+			debug("%s,",booti_argv[j]);
+	debug("}\n");
 
 #ifdef CONFIG_SYS_RTK_NAND_FLASH
 	rtk_plat_boot_prep_partition();
@@ -5047,12 +5039,12 @@ int rtk_plat_do_bootr(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
     if (ret != RTK_PLAT_ERR_OK) {
 #if defined(NAS_ENABLE) && defined(CONFIG_SPI_MTD_STATIC)
 #if defined(CONFIG_CMD_NET)
-		ret = run_command("run upgrade_img_tftp", 0);
+	ret = run_command("run upgrade_img_tftp", 0);
 #endif // tftp
 #if defined(CONFIG_CMD_USB) && defined(CONFIG_USB_STORAGE)
-		if(ret) ret=run_command("run upgrade_img_usb", 0);
+	if(ret) ret=run_command("run upgrade_img_usb", 0);
 #endif // USB
-		if(!ret) run_command("reset", 0);
+	if(!ret) run_command("reset", 0);
 #else
         /*   LOAD GOLD FW   */
         ret = RTK_PLAT_ERR_OK;

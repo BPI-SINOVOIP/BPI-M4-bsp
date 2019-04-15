@@ -81,7 +81,6 @@ extern void dataflash_print_info(void);
 #include <i2c.h>
 #endif
 
-#define CONFIG_RTK_EMMC_TRADITIONAL_MODE /* BPI */
 #ifdef CONFIG_RTK_EMMC_TRADITIONAL_MODE
 #define RTK_eMMC_TRADITIONAL_MODE
 #else

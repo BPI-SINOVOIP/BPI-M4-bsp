@@ -99,19 +99,12 @@
 #define COUNTER_FREQUENCY               27000000 // FIXME, need to know what impact it will cause
 
 /* Bootcode Feature: Rescue linux read from USB */
-/* #define CONFIG_RESCUE_FROM_USB */
+#define CONFIG_RESCUE_FROM_USB
 #ifdef CONFIG_RESCUE_FROM_USB
-#ifdef BPI
 	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"emmc.uImage"
 	#define CONFIG_RESCUE_FROM_USB_DTB		"rescue.emmc.dtb"
 	#define CONFIG_RESCUE_FROM_USB_ROOTFS		"rescue.root.emmc.cpio.gz_pad.img"
 	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"bluecore.audio"
-#else /* BPI */
-	#define CONFIG_RESCUE_FROM_USB_VMLINUX		"/bananapi/bpi-m4/linux/uImage"
-	#define CONFIG_RESCUE_FROM_USB_DTB		"/bananapi/bpi-m4/linux/rtd-1395-bananapi-m4.dtb"
-	#define CONFIG_RESCUE_FROM_USB_ROOTFS		"/bananapi/bpi-m4/linux/rescue.root.emmc.cpio.gz_pad.img"
-	#define CONFIG_RESCUE_FROM_USB_AUDIO_CORE	"/bananapi/bpi-m4/linux/bluecore.audio"
-#endif /* BPI */
 #endif /* CONFIG_RESCUE_FROM_USB */
 
 #define CONFIG_VERSION			"0000"
@@ -120,7 +113,7 @@
 #undef CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_TEXT_BASE		0x00030000
 
-/* #define CONFIG_ACPU_LOGBUF_ENABLE */
+// #define CONFIG_ACPU_LOGBUF_ENABLE
 #ifdef CONFIG_ACPU_LOGBUF_ENABLE
 #define CONFIG_ACPU_LOGBUF_ADDR                0x0FE00000
 #define CONFIG_ACPU_LOGBUF_SIZE                0x00002000
