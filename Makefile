@@ -34,7 +34,7 @@ pack: rt-pack
 u-boot: 
 #	$(Q)$(MAKE) -C u-boot-rt $(UBOOT_CONFIG) CROSS_COMPILE=$(U_CROSS_COMPILE)
 #	$(Q)$(MAKE) -C u-boot-rt all CROSS_COMPILE=$(U_CROSS_COMPILE) BUILD_BOOTCODE_ONLY=true
-	(cd u-boot-rt ; ./build_bananapi_m4.sh)
+	(cd u-boot-rt ; ./build_bananapi_m4_all.sh)
 
 u-boot-clean:
 	$(Q)$(MAKE) -C u-boot-rt CROSS_COMPILE=$(U_CROSS_COMPILE) distclean
