@@ -119,10 +119,17 @@ extern int check_usb_update(const char *install_file_name, uchar bBootcode, ucha
 /*
  * Define the ASCII encoding
  */
+#ifdef CONFIG_LOADBOOTCODE_FROM_SD
+#define _TAB			0x32
+#define _ENTER			0x33
+#define _ESC			0x31
+#define _SPACE			0x34
+#else
 #define _TAB			0x09
 #define _ENTER			0x0D
 #define _ESC			0x1B
 #define _SPACE			0x20
+#endif
 
 #ifdef CONFIG_CMD_SATA
 int sata_boot_debug = 0;
