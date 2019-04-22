@@ -172,7 +172,7 @@ static void g22xx_powerkey_poll(struct input_polled_dev *ipdev)
 		if (pdata->lp_emu_left-- == 1) {
 			input_report_key(idev, KEY_POWER, 0);
 			input_sync(idev);
-			dev_dbg(dev, "pwrkey longpress stop\n");
+			dev_info(dev, "pwrkey longpress stop\n");
 
 			/* clear ints */
 			regmap_read(r, 0x00, &val);
@@ -198,7 +198,7 @@ static void g22xx_powerkey_poll(struct input_polled_dev *ipdev)
 	val = val_c;
 
 	if (val != 0)
-		dev_dbg(pdata->dev, "read=%02x, pwrkey_it=%d, pwrkey_lp=%d, pwrkey=%d, ints=%d\n",
+		dev_info(pdata->dev, "read=%02x, pwrkey_it=%d, pwrkey_lp=%d, pwrkey=%d, ints=%d\n",
 			val, pwrkey_it, pwrkey_lp, pwrkey, ints);
 
 	action = G22XX_ACT_NONE;
@@ -221,13 +221,13 @@ static void g22xx_powerkey_poll(struct input_polled_dev *ipdev)
 	case G22XX_STATE_IT_PRESSED:
 		next_state = G22XX_STATE_DEFAULT;
 		if (pwrkey == 1) {
-			dev_dbg(dev, "state_it: pwrkey press\n");
+			dev_info(dev, "state_it: pwrkey press\n");
 			action = G22XX_ACT_KEY_POWEY;
 		} else if (pwrkey_lp == 1) {
-			dev_dbg(dev, "state_it: pwrkey long press\n");
+			dev_info(dev, "state_it: pwrkey long press\n");
 			action = G22XX_ACT_KEY_POWEY_LP;
 		} else if (ktime_ms_delta(cur, pdata->it_timestamp) >= pdata->lp_timeout) {
-			dev_dbg(dev, "state_it: pwrkey long press timeout\n");
+			dev_info(dev, "state_it: pwrkey long press timeout\n");
 			action = G22XX_ACT_KEY_POWEY;
 		} else
 			next_state = G22XX_STATE_IT_PRESSED;
@@ -239,13 +239,13 @@ static void g22xx_powerkey_poll(struct input_polled_dev *ipdev)
 
 	switch (action) {
 	case G22XX_ACT_KEY_POWEY_LP:
-		dev_dbg(dev, "pwrkey longpress start\n");
+		dev_info(dev, "pwrkey longpress start\n");
 		pdata->lp_emu_left = DIV_ROUND_UP(pdata->lp_time, pdata->ipdev->poll_interval);
 		input_report_key(idev, KEY_POWER, 1);
 		input_sync(idev);
 		break;
 	case G22XX_ACT_KEY_POWEY:
-		dev_dbg(dev, "pwrkey press\n");
+		dev_info(dev, "pwrkey press\n");
 		input_report_key(idev, KEY_POWER, 1);
 		input_sync(idev);
 		input_report_key(idev, KEY_POWER, 0);
