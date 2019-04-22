@@ -418,7 +418,7 @@
 		has-write-en;
 	};
 
-	mux_rst0: mux-soft-reset {
+	crst: mux-soft-reset {
 		compatible = "realtek,rtd16xx-mux-reset-controller";
 		#reset-cells = <1>;
 		resets = <&rst1 RSTN_HSE>,  <&rst6 RSTN_HSE_2>,
@@ -924,7 +924,7 @@
 		speed-step = <3>; /* 0: sdr50, 1: ddr50, 2: hs200, 3: hs400 */
 		clocks = <&clk_en_2 CLK_EN_EMMC>, <&clk_en_2 CLK_EN_EMMC_IP>;
 		clock-names = "emmc", "emmc_ip";
-		resets = <&mux_rst0 RSTN_MUX_EMMC>;
+		resets = <&crst RSTN_MUX_EMMC>;
 		reset-names = "emmc";
 		status = "okay";
 		pddrive_nf_s0 = <1 0x0 0x0 0x0 0x0>; /* pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for sdr50 */
@@ -941,7 +941,7 @@
 		reg = <0x0 0x98010000 0x0 0x400>, /* NWC */
 			<0x0 0x9801F000 0x0 0x400>; /* SWC */
 		clocks = <&clk_en_2 CLK_EN_NF>;
-		resets = <&mux_rst0 RSTN_MUX_NF>;
+		resets = <&crst RSTN_MUX_NF>;
 		status = "disabled";
 	};
 
@@ -996,7 +996,6 @@
         rtc@9801B600 {
                 compatible = "realtek,rtk-rtc";
                 reg = <0x0 0x9801B600 0x0 0x100>,
-                        <0x0 0x98000000 0x0 0x100>,
                         <0x0 0x98007000 0x0 0x100>;
                 rtc-base-year = <2018>;
                 status = "okay";
@@ -1062,7 +1061,7 @@
 		interrupts = <GIC_SPI 7 4>, <GIC_SPI 27 4>;
 		interrupt-names =  "SWC", "NWC";
 		clocks = <&clk_en_3 CLK_EN_HSE>;
-		resets = <&mux_rst0 RSTN_MUX_HSE>;
+		resets = <&crst RSTN_MUX_HSE>;
 		status = "okay";
 
 		engine-0-disabled;
@@ -1076,7 +1075,7 @@
 		reg = <0 0x9800b000 0 0x1000>;
 		interrupts = <0 38 4>;
 		clocks = <&clk_en_2 CLK_EN_MD>;
-		resets = <&mux_rst0 RSTN_MUX_MD>;
+		resets = <&crst RSTN_MUX_MD>;
 		status = "okay";
 	};
 
@@ -1146,10 +1145,6 @@
 		status = "okay";
 	};
 	
-	uctrl {
-		compatible = "realtek,userspace-control";
-	};
-
 	dptx@9803D000 {
 		compatible = "Realtek,rtk-dptx";
 		reg = <0x0 0x9803D000 0x0 0x1000>,

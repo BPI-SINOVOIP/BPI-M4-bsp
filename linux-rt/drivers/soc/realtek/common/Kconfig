@@ -60,13 +60,6 @@ config RTK_MCP
 	help
 	  Realtek MCP driver
 
-config RTK_DUMMY_DEVICE
-	bool "Dummy device"
-	default n
-	select POWER_CONTROL_PD_DUMMY
-	help
-	  A dummy device driver. If unsure, say No.
-
 config RTK_VMX_ULTRA
 	bool "VMX ultra boot enable"
 	default n
@@ -114,6 +107,27 @@ config RTK_DMC
 	  This driver provides support of multiple comsumers for using PC,
 	  and safty DMC register access.
 
+config RTK_AVCPU_LOG
+	bool "Realtek AVCPU share memory logging system"
+	depends on RTK_RPC
+	help
+	  Enable AVCPU share memory logging read from userspace
+	  via device node.
+
+config RTK_CPU_CACHE_SUPPLY_COORDINATOR
+	bool "Realtek CPU cache supply coordinator"
+	depends on REGULATOR_G2227
+	depends on ARCH_RTD129x
+	default y
+
+config RTK_CPU_SUPPLY_ENHANCER
+	bool "Realtek CPU supply enhancer"
+	depends on ARCH_RTD139x || ARCH_RTD16xx
+	default y
+
+config RTK_CPU_HIGH_LOAD_BOOSTER
+	bool "Realtek CPU high-load booster"
+	default n
 
 source "drivers/soc/realtek/common/Kconfig.workaround"
 source "drivers/soc/realtek/common/rpc/Kconfig"

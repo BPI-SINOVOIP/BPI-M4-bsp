@@ -105,8 +105,6 @@ static int hse_probe(struct platform_device *pdev)
 	int i;
 	int requested_irq_num = 0;
 
-	dev_info(dev, "%s\n", __func__);
-
 	hdev = devm_kzalloc(dev, sizeof(*hdev), GFP_KERNEL);
 	if (!hdev)
 		return -ENOMEM;
@@ -202,6 +200,7 @@ static int hse_probe(struct platform_device *pdev)
 			i, ret);
 	}
 	pm_runtime_put_sync(dev);
+	dev_info(dev, "initialized\n");
 
 	hse_self_test(hdev);
 	return 0;
@@ -213,6 +212,7 @@ static int hse_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(hdev->dev);
 	reset_control_assert(hdev->rstc);
+	dev_info(&pdev->dev, "removed\n");
 	return 0;
 }
 
@@ -229,6 +229,7 @@ static struct platform_driver hse_driver = {
 		.owner          = THIS_MODULE,
 		.of_match_table = hse_ids,
 		.pm             = &hse_pm_ops,
+		.probe_type     = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 module_platform_driver(hse_driver);

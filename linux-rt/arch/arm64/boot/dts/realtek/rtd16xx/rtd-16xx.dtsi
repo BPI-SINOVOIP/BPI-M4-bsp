@@ -394,69 +394,11 @@
 			"clk_en_usb";
 	};
 
-	rst1: soft-reset@98000000 {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x98000000 0x0 0x4>;
+	crst: soft-reset@98000000 {
+		compatible = "realtek,grouped-reset-controller";
+		reg = <0x0 0x98000000 0x0 0x1000>;
 		#reset-cells = <1>;
-		has-write-en;
-	};
-
-	rst2: soft-reset@98000004 {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x98000004 0x0 0x4>;
-		#reset-cells = <1>;
-		has-write-en;
-	};
-
-	rst3: soft-reset@98000008 {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x98000008 0x0 0x4>;
-		#reset-cells = <1>;
-		has-write-en;
-		pm-ignore-bits = <0x50000000>;
-	};
-
-	rst4: soft-reset@9800000c {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x9800000c 0x0 0x4>;
-		#reset-cells = <1>;
-		has-write-en;
-	};
-
-	rst6: soft-reset@98000014 {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x98000014 0x0 0x4>;
-		#reset-cells = <1>;
-		has-write-en;
-		realtek,mmio = <&crt_mmio 0x14>;
-	};
-
-	rst7: soft-reset@98000068 {
-		compatible = "realtek,reset-controller";
-		reg = <0x0 0x98000068 0x0 0x4>;
-		#reset-cells = <1>;
-		has-write-en;
-	};
-
-	mux_rst0: mux-soft-reset {
-		compatible = "realtek,rtd16xx-mux-reset-controller";
-		#reset-cells = <1>;
-		resets = <&rst1 RSTN_HSE>,  <&rst6 RSTN_HSE_2>,
-			 <&rst2 RSTN_EMMC>, <&rst6 RSTN_EMMC_2>,
-			 <&rst3 RSTN_NF>,   <&rst6 RSTN_NF_2>,
-			 <&rst3 RSTN_MD>,   <&rst6 RSTN_MD_2>,
-			 <&rst3 RSTN_MIPI>, <&rst6 RSTN_MIPI_2>,
-			 <&rst3 RSTN_TP>,   <&rst6 RSTN_TP_2>,
-			 <&rst7 RSTN_TPB>,  <&rst6 RSTN_TPB_2>,
-			 <&rst7 RSTN_R2RDSC>, <&rst6 RSTN_R2RDSC_2>;
-		reset-names = "hse0",  "hse1",
-			      "emmc0", "emmc1",
-			      "nf0",   "nf1",
-			      "md0",   "md1",
-			      "mipi0", "mipi1",
-			      "tp0",   "tp1",
-			      "tpb0",  "tpb1",
-			      "r2rdsc0", "r2rdsc1";
+		realtek,mmio = <&crt_mmio 0x0>;
 	};
 
 	iso_rst: soft-reset@98007088 {
@@ -477,8 +419,6 @@
 	pd: power-domain@98007000 {
 		compatible = "realtek,rtd16xx-power-controller", "simple-bus";
 		reg = <0x0 0x98007000 0x0 0x1000>;
-		resets = <&rst1 RSTN_VE1>, <&rst1 RSTN_VE2>, <&rst7 RSTN_VE3>;
-		reset-names = "ve1", "ve2", "ve3";
 		#power-domain-cells = <1>;
 		#powerctrl-cells = <1>;
 	};
@@ -602,7 +542,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart1_pins>;
 		clocks = <&clk_en_4 CLK_EN_UR1>;
-		resets = <&rst2 RSTN_UR1>;
+		resets = <&crst RSTN_UR1>;
 		/* This value must be overriden by the board. */
 		clock-frequency = <432000000>;
 		status = "okay";
@@ -619,7 +559,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart2_pins_0>;
 		clocks = <&clk_en_3 CLK_EN_UR2>;
-		resets = <&rst2 RSTN_UR2>;
+		resets = <&crst RSTN_UR2>;
 		/* This value must be overriden by the board. */
 		clock-frequency = <432000000>;
 		status = "disabled"; /* Disable UR2 first since we don't use it now */
@@ -643,11 +583,17 @@
 		rtl-config = <1>;
 		mac-version = <42>; /* RTL_GIGA_MAC_VER_42 */
 		rtl-features = <2>; /* BIT(2) GMii */
+		wake-mask0 = [3f 30 80 c0 3f 10 80 ff ff 1f 00 00 00 00 00 00];
+		wake-crc0 = <0x8d25>;
+		wake-mask1 = [3f 30 80 c0 3f 10 00 00 c0 ff ff 0f 00 00 00 00];
+		wake-crc1 = <0x8d25>;
+		wake-mask2 = [3f 30 80 c0 3f 10 00 00 00 00 00 00 80 ff ff 1f];
+		wake-crc2 = <0x8d25>;
 		output-mode = <0>; /* 0:embedded PHY, 1:SGMII to MAC, 2:SGMII to PHY */
 		ext-phy-id = <3>; /* 0 ~ 31, only valid when output-mode = 2 */
 		sgmii-swing = <0>; /* 0:640mV, 1:380mV, 2:250mV, 3:190mV */
 		bypass = <1>; /* 0: disable, 1: enable */
-		acp = <1>; /* 0: disable, 1: enable */
+		acp = <0>; /* 0: disable, 1: enable */
 		eee = <1>; /* 0: disable, 1: enable */
 		clocks = <&iso_clk_en CLK_EN_ETN_250M>,
 			<&iso_clk_en CLK_EN_ETN_SYS>,
@@ -657,12 +603,12 @@
 			"sds";
 		resets = <&iso_rst RSTN_GMAC>,
 			<&iso_rst RSTN_GPHY>,
-			<&rst1 RSTN_SDS_REG>,
-			<&rst1 RSTN_SDS>,
-			<&rst2 RSTN_PCIE0_POWER>,
-			<&rst2 RSTN_PCIE0_PHY>,
-			<&rst2 RSTN_PCIE0_SGMII_MDIO>,
-			<&rst2 RSTN_PCIE0_PHY_MDIO>;
+			<&crst RSTN_SDS_REG>,
+			<&crst RSTN_SDS>,
+			<&crst RSTN_PCIE0_POWER>,
+			<&crst RSTN_PCIE0_PHY>,
+			<&crst RSTN_PCIE0_SGMII_MDIO>,
+			<&crst RSTN_PCIE0_PHY_MDIO>;
 		reset-names = "gmac",
 			"gphy",
 			"sds_reg",
@@ -741,7 +687,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&clk_en_3 CLK_EN_MISC_I2C_3>;
-		resets = <&rst3 RSTN_I2C_3>;
+		resets = <&crst RSTN_I2C_3>;
 	};
 
 	i2c_4: i2c@0x9801BA00 {
@@ -756,7 +702,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&clk_en_4 CLK_EN_MISC_I2C_4>;
-		resets = <&rst7 RSTN_I2C_4>;
+		resets = <&crst RSTN_I2C_4>;
 	};
 
 	i2c_5: i2c@0x9801BB00 {
@@ -771,7 +717,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&clk_en_4 CLK_EN_MISC_I2C_5>;
-		resets = <&rst7 RSTN_I2C_5>;
+		resets = <&crst RSTN_I2C_5>;
 	};
 
 	spi_0: spi@9801BD00 {
@@ -789,7 +735,7 @@
 		bus-num = <0>;
 		clocks = <&clk_en_1 CLK_EN_GSPI>;
 		clock-frequency = <256000000>;
-		resets = <&rst1 RSTN_GSPI>;
+		resets = <&crst RSTN_GSPI>;
 		status = "disabled";
 	};
 
@@ -841,7 +787,7 @@
 		vdd_mux2 = <0>; /* 0 ~ 15: VDD_IN source selection */
 		vdd_mux_en = <1>; /* 0:disable; 1:enable */
 		clocks = <&clk_en_1 CLK_EN_LSADC>;
-		resets = <&rst1 RSTN_LSADC>;
+		resets = <&crst RSTN_LSADC>;
 
 		rtk-lsadc0-pad0 {
 			//compatible = "Realtek,rtk-lsadc0-pad0";
@@ -885,7 +831,7 @@
 		gpio-hpd-detect = <&rtk_iso_gpio 7 0 0>; /* Hotplug detect pin */
 		clocks = <&clk_en_1 CLK_EN_HDMI>;
 		clock-names = "clk_en_hdmi";
-		resets = <&rst3 RSTN_HDMI>;
+		resets = <&crst RSTN_HDMI>;
 		reset-names = "rstn_hdmi";
 		status = "okay";
 
@@ -932,9 +878,9 @@
 			"cbusrx_sys",
 			"tp",
 			"cp";
-		resets = <&rst3 RSTN_HDMIRX>,
-			<&rst3 RSTN_HDMIRX_WRAP>,
-			<&mux_rst0 RSTN_MUX_MIPI>,
+		resets = <&crst RSTN_HDMIRX>,
+			<&crst RSTN_HDMIRX_WRAP>,
+			<&crst RSTN_MIPI>,
 			<&iso_rst RSTN_CBUS>,
 			<&iso_rst RSTN_CBUSTX>,
 			<&iso_rst RSTN_CBUSRX>;
@@ -966,7 +912,7 @@
 		pinctrl-0 = <&sdcard_pins_low>, <&scpu_ejtag_pins_disable>; /*<&sdcard_pins_high>;*/
 		clocks = <&clk_en_2 CLK_EN_SD>, <&clk_en_2 CLK_EN_SD_IP>;
 		clock-names = "clk_en_cr", "clk_en_sd_ip";
-		resets = <&rst2 RSTN_SD>;
+		resets = <&crst RSTN_SD>;
 		status = "okay";
 	};
 
@@ -981,7 +927,7 @@
 		clocks = <&clk_en_2 CLK_EN_SDIO>,
 			<&clk_en_2 CLK_EN_SDIO_IP>;
 		clock-names = "sdio", "sdio_ip";
-		resets = <&rst2 RSTN_SDIO>;
+		resets = <&crst RSTN_SDIO>;
 		status = "okay";
 	};
 
@@ -997,7 +943,7 @@
 		speed-step = <3>; /* 0: sdr50, 1: ddr50, 2: hs200, 3: hs400 */
 		clocks = <&clk_en_2 CLK_EN_EMMC>, <&clk_en_2 CLK_EN_EMMC_IP>;
 		clock-names = "emmc", "emmc_ip";
-		resets = <&mux_rst0 RSTN_MUX_EMMC>;
+		resets = <&crst RSTN_EMMC>;
 		reset-names = "emmc";
 		status = "okay";
 		pddrive_nf_s0 = <1 0x0 0x0 0x0 0x0>; /* pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for sdr50 */
@@ -1014,7 +960,7 @@
 		reg = <0x0 0x98010000 0x0 0x400>, /* NWC */
 			<0x0 0x9801F000 0x0 0x400>; /* SWC */
 		clocks = <&clk_en_2 CLK_EN_NF>;
-		resets = <&mux_rst0 RSTN_MUX_NF>;
+		resets = <&crst RSTN_NF>;
 		status = "disabled";
 	};
 
@@ -1041,7 +987,7 @@
 		pinctrl-0 = <&smartcard_pins_0>;
 		clock-names = "clk_en_misc_sc";
 		clocks = <&clk_en_3 CLK_EN_MISC_SC0>;
-		resets = <&rst2 RSTN_MISC_SC0>;
+		resets = <&crst RSTN_MISC_SC0>;
 		status = "okay";
 		lsic_control{
 			pin_cmd_vcc = <&rtk_iso_gpio 63 1 0>; /* pin cmd_vcc , default low */
@@ -1069,7 +1015,6 @@
         rtc@9801B600 {
                 compatible = "realtek,rtk-rtc";
                 reg = <0x0 0x9801B600 0x0 0x100>,
-                        <0x0 0x98000000 0x0 0x100>,
                         <0x0 0x98007000 0x0 0x100>;
                 rtc-base-year = <2018>;
                 status = "okay";
@@ -1103,7 +1048,7 @@
 		interrupt-names = "JOB", "MMU", "GPU";
 		clocks = <&cc CC_CLK_GPU>;
 		clock-name = "clk_mali";
-		resets = <&rst1 RSTN_GPU>;
+		resets = <&crst RSTN_GPU>;
 		power-domains = <&pd PD_SRAM_GPU>;
 		status = "okay";
 	};
@@ -1137,7 +1082,7 @@
 		interrupts = <GIC_SPI 7 4>, <GIC_SPI 27 4>;
 		interrupt-names =  "SWC", "NWC";
 		clocks = <&clk_en_3 CLK_EN_HSE>;
-		resets = <&mux_rst0 RSTN_MUX_HSE>;
+		resets = <&crst RSTN_HSE>;
 		status = "okay";
 
 		engine-0-disabled;
@@ -1151,7 +1096,7 @@
 		reg = <0 0x9800b000 0 0x1000>;
 		interrupts = <0 38 4>;
 		clocks = <&clk_en_2 CLK_EN_MD>;
-		resets = <&mux_rst0 RSTN_MUX_MD>;
+		resets = <&crst RSTN_MD>;
 		status = "okay";
 	};
 
@@ -1160,7 +1105,7 @@
 		reg = <0 0x9800c000 0 0x1000>;
 		interrupts = <0 20 4>;
 		clocks = <&clk_en_1 CLK_EN_SE>;
-		resets = <&rst1 RSTN_SE>;
+		resets = <&crst RSTN_SE>;
 		status = "okay";
 	};
 
@@ -1184,7 +1129,7 @@
 		interrupts = <0 52 4>;
 		clocks = <&clk_en_3 CLK_EN_JPEG>;
 		clock-names = "jpeg";
-		resets = <&rst2 RSTN_JPEG>;
+		resets = <&crst RSTN_JPEG>;
 		status = "okay";
 	};
 
@@ -1209,9 +1154,9 @@
 			"clk_sysh",
 			"pll_ve1",
 			"pll_ve2";
-		resets = <&rst1 RSTN_VE1>,
-			<&rst1 RSTN_VE2>,
-			<&rst7 RSTN_VE3>;
+		resets = <&crst RSTN_VE1>,
+			<&crst RSTN_VE2>,
+			<&crst RSTN_VE3>;
 		reset-names = "ve1",
 			"ve2",
 			"ve3";
@@ -1221,10 +1166,6 @@
 		status = "okay";
 	};
 	
-	uctrl {
-		compatible = "realtek,userspace-control";
-	};
-
 	cec0@98037800 {
 		compatible = "Realtek,rtk-cec0";
 		reg = <0x0 0x98037800 0x0 0xe0>,
@@ -1290,7 +1231,7 @@
 		reg = <0x0 0x9801E000 0x0 0x1000>;
 		clocks = <&clk_en_2 CLK_EN_CABLERX>, <&cc CC_PLL_DIF>;
 		clock-names = "cablerx", "pll";
-		resets = <&rst3 RSTN_CABLERX>;
+		resets = <&crst RSTN_CABLERX>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&demod_pins>;
 		status = "okay";
@@ -1302,7 +1243,7 @@
 		      <0x0 0x98039000 0x0 0x1000>;
 		clocks = <&clk_en_2 CLK_EN_TP>, <&clk_en_2 CLK_EN_TPB>;
 		clock-names = "tp", "tpb";
-		resets = <&mux_rst0 RSTN_MUX_TP>, <&mux_rst0 RSTN_MUX_TPB>;
+		resets = <&crst RSTN_TP>, <&crst RSTN_TPB>;
 		reset-names = "tp", "tpb";
 		status = "okay";
 	};
@@ -1312,7 +1253,7 @@
 		reg = <0x0 0x9800b000 0x0 0x1000>;
 		clocks = <&clk_en_4 CLK_EN_R2RDSC>;
 		clock-names = "r2rdsc";
-		resets = <&mux_rst0 RSTN_MUX_R2RDSC>;
+		resets = <&crst RSTN_R2RDSC>;
 		reset-names = "r2rdsc";
 		status = "okay";
 	};

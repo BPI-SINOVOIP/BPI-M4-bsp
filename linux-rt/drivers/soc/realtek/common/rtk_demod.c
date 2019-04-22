@@ -198,8 +198,6 @@ static int rtk_demod_probe(struct platform_device *pdev)
 	int ret;
 	struct resource res;
 
-	dev_info(dev, "%s\n", __func__);
-
 	dmdev = devm_kzalloc(dev, sizeof(*dmdev), GFP_KERNEL);
 	if (!dmdev)
 		return -ENOMEM;
@@ -256,7 +254,7 @@ static int rtk_demod_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dmdev);
 	pm_runtime_set_suspended(dev);
 	pm_runtime_enable(dev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
@@ -268,6 +266,7 @@ static int rtk_demod_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 	platform_set_drvdata(pdev, NULL);
 	misc_deregister(&dmdev->mdev);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 
@@ -281,6 +280,7 @@ static struct platform_driver rtk_demod_driver = {
 	.probe = rtk_demod_probe,
 	.remove = rtk_demod_remove,
 	.driver = {
+		.owner = THIS_MODULE,
 		.name = "rtk-demod",
 		.of_match_table = rtk_demod_ids,
 		.pm = &rtk_demod_pm_ops,

@@ -12,7 +12,27 @@
 		compatible = "gmt,g2237";
 		reg = <0x12>;
 		status = "okay";
+		powerkey: powerkey {
+			compatible = "gmt,g22xx-powerkey";
+			lp-handler = "sw";
+			it-handler = "sw";
+			time-sel = <0 0 3>;
+			status = "disabled";
+		};
+		poweroff: poweroff {
+			compatible = "gmt,g22xx-poweroff";
+			system-power-controller;
+			status = "disabled";
+		};
+		regulators: regulators {
+			compatible = "gmt,g2237-regulator";
+			status = "okay";
+		};
+	};
+};
 
+&g2237 {
+	regulators {
 		vd33_supp: dc1 {
 			regulator-name = "vd33";
 			regulator-min-microvolt = <2200000>;
@@ -56,7 +76,7 @@
 			};
 
 		};
-		dc5 {
+		vd18_supp: dc5 {
 			regulator-name = "vd18";
 			regulator-min-microvolt = <800000>;
 			regulator-max-microvolt = <2500000>;
@@ -65,7 +85,7 @@
 			regulator-always-on;
 			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
 		};
-		ldo1 {
+		vd25_supp: ldo1 {
 			regulator-name = "vd25";
 			regulator-min-microvolt = <2200000>;
 			regulator-max-microvolt = <3000000>;

@@ -31,12 +31,12 @@ static int rtk_cc_suspend(struct device *dev)
 	if (RTK_PM_STATE == PM_SUSPEND_STANDBY)
 		return 0;
 #endif
-	dev_info(dev, "[CLK] Enter %s\n", __func__);
+	dev_info(dev, "Enter %s\n", __func__);
 
 	for (i = 0; i < cc_clock_num(); i++)
 		clk_pm_data_save(&ccd->pm_data[i]);
 
-	dev_info(dev, "[CLK] Exit %s\n", __func__);
+	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
 }
 
@@ -48,12 +48,12 @@ static int rtk_cc_resume(struct device *dev)
 	if (RTK_PM_STATE == PM_SUSPEND_STANDBY)
 		return 0;
 #endif
-	dev_info(dev, "[CLK] Enter %s\n", __func__);
+	dev_info(dev, "Enter %s\n", __func__);
 
 	for (i = cc_clock_num() - 1; i >= 0; i--)
 		clk_pm_data_restore(&ccd->pm_data[i]);
 
-	dev_info(dev, "[CLK] Exit %s\n", __func__);
+	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
 }
 
@@ -71,8 +71,6 @@ static int rtk_cc_probe(struct platform_device *pdev)
 	struct regmap *regmap;
 	int offset = 0;
 	int ret;
-
-	dev_info(dev, "[CLK] %s\n", __func__);
 
 	ccd = devm_cc_alloc(dev, cc_clock_num());
 	if (!ccd)
@@ -103,6 +101,7 @@ static int rtk_cc_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(dev, "of_clk_add_provider() returns %d\n", ret);
 
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 

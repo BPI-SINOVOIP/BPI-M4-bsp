@@ -1927,6 +1927,63 @@ exit:
     return ret;
 }
 
+int RPC_TOAGENT_SET_EQ(snd_card_RTK_pcm_t *dpcm, AUDIO_RPC_EQUALIZER_MODE equalizer_mode)
+{
+	AUDIO_EQUALIZER_CONFIG *rpc = NULL;
+	AUDIO_RPC_PRIVATEINFO_RETURNVAL *res;
+	struct ion_handle *handle = NULL;
+	HRESULT rpc_ret;
+	unsigned int offset;
+	int ret = -1;
+	ion_phys_addr_t dat;
+	size_t len;
+
+	TRACE_RPC();
+	handle = ion_alloc(alsa_client, 4096, 1024, RTK_PHOENIX_ION_HEAP_AUDIO_MASK, AUDIO_ION_FLAG);
+
+	if (IS_ERR(handle)) {
+		ALSA_WARNING("[%s %d ion_alloc fail]\n", __FUNCTION__, __LINE__);
+		goto exit;
+	}
+
+	if (ion_phys(alsa_client, handle, &dat, &len) != 0) {
+		ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+		goto exit;
+	}
+
+	rpc = ion_map_kernel(alsa_client, handle);
+	offset = get_rpc_alignment_offset(sizeof(AUDIO_RPC_PRIVATEINFO_PARAMETERS));
+	res = (AUDIO_RPC_PRIVATEINFO_RETURNVAL *)((unsigned long)rpc + offset);
+	rpc->instanceID = htonl(dpcm->AOAgentID);
+	rpc->gbl_var_eq_ID = htonl(ENUM_EQUALIZER_AO);
+	rpc->ena = 0x1;
+	rpc->app_eq_config = equalizer_mode;
+
+	if(send_rpc_command(RPC_AUDIO,
+		ENUM_KERNEL_RPC_EQ_CONFIG,
+		CONVERT_FOR_AVCPU(dat),
+		CONVERT_FOR_AVCPU(dat + offset),
+		&rpc_ret)) {
+		ALSA_WARNING("[ALSA %s %d RPC fail]\n", __FUNCTION__, __LINE__);
+		goto exit;
+	}
+
+	if(rpc_ret != S_OK) {
+		ALSA_WARNING("[ALSA %s %d RPC fail]\n", __FUNCTION__, __LINE__);
+		goto exit;
+	}
+
+	TRACE_CODE("[%s %s %d] success\n", __FILE__, __FUNCTION__, __LINE__);
+	ret = 0;
+
+exit:
+	if(handle != NULL) {
+        ion_unmap_kernel(alsa_client, handle);
+        ion_free(alsa_client, handle);
+    }
+    return ret;
+}
+
 int RPC_TOAGENT_AI_CONFIG_NONPCM_IN(snd_card_RTK_capture_pcm_t *dpcm)
 {
     AUDIO_RPC_PRIVATEINFO_PARAMETERS *rpc = NULL;

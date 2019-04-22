@@ -20,7 +20,6 @@
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
-#include <linux/reset-helper.h> // rstc_get
 #include <linux/reset.h>
 #include <linux/clk.h>   // clk_get
 #include <linux/clk-provider.h>
@@ -642,14 +641,20 @@ static int __port0_gpio_on_off(struct manager_data *data, bool on)
 	bool power_low_active = data->port0_power_low_active;
 
 	if (gpio_is_valid(gpio)) {
-		if (gpio_direction_output(gpio, power_low_active?!on:on)) {
-			dev_err(dev, "%s ERROR set gpio fail\n", __func__);
-			ret = -1;
+		if (gpio_request(gpio, "port0_pow_gpio")) {   //request gpio
+			dev_err(dev, "%s ERROR Request port0_pow_gpio (id=%d) fail\n",
+				   __func__, gpio);
 		} else {
-			dev_info(dev, "%s to set port0 power%s %s by gpio (id=%d) OK\n",
-				    __func__, power_low_active?" (power_low_active)":"",
-				    on?"on":"off", gpio);
-			data->port0_pow_enable = on;
+			if (gpio_direction_output(gpio, power_low_active?!on:on)) {
+				dev_err(dev, "%s ERROR set gpio fail\n", __func__);
+				ret = -1;
+			} else {
+				dev_info(dev, "%s to set port0 power%s %s by gpio (id=%d) OK\n",
+					    __func__, power_low_active?" (power_low_active)":"",
+					    on?"on":"off", gpio);
+				data->port0_pow_enable = on;
+			}
+			gpio_free(gpio);
 		}
 	}
 	return ret;

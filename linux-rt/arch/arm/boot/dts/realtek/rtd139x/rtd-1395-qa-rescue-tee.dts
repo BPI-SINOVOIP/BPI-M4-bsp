@@ -23,6 +23,25 @@
 /* ION SECURE BUFFER */
 /memreserve/ 0x32b00000 0x12c00000;
 
+#define SECURE_AUDIO_SIZE               (0x00200000) // 2MB
+#define SECURE_MD_SIZE                  (0x00100000) // 1MB
+#define SECURE_HEAP_SIZE_0              (0x04600000) // 70MB
+
+#define ION_SECURE_AUDIO_PHYS_0         (0x20800000)
+#define ION_SECURE_AUDIO_SIZE_0         (SECURE_AUDIO_SIZE)
+#define ION_SECURE_AUDIO_FLAG_0         (RTK_FLAG_SECURE_AUDIO)
+
+#define ION_SECURE_MD_PHYS_0            (ION_SECURE_AUDIO_PHYS_0 + SECURE_AUDIO_SIZE)
+#define ION_SECURE_MD_SIZE_0            (SECURE_MD_SIZE)
+
+#define ION_SECURE_HEAP_PHYS_0          (ION_SECURE_MD_PHYS_0 + ION_SECURE_MD_SIZE_0)
+#define ION_SECURE_HEAP_SIZE_0          (SECURE_HEAP_SIZE_0)
+#define ION_SECURE_HEAP_FLAG_0          (RTK_FLAG_HWIPACC)
+
+/memreserve/ ION_SECURE_AUDIO_PHYS_0    ION_SECURE_AUDIO_SIZE_0;
+/memreserve/ ION_SECURE_MD_PHYS_0       ION_SECURE_MD_SIZE_0;
+/memreserve/ ION_SECURE_HEAP_PHYS_0     ION_SECURE_HEAP_SIZE_0;
+
 #include "rtd-139x.dtsi"
 
 / {
@@ -154,6 +173,15 @@
 				0x03100000
 				0x06000000
 				ION_MEDIA_HEAP_FLAG1>;
+		};
+
+		rtk,ion-heap@9 {    /* Secure */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <9>;
+			rtk,memory-reserve = <
+				ION_SECURE_HEAP_PHYS_0 ION_SECURE_HEAP_SIZE_0 ION_SECURE_HEAP_FLAG_0
+				ION_SECURE_AUDIO_PHYS_0 ION_SECURE_AUDIO_SIZE_0 ION_SECURE_AUDIO_FLAG_0
+				>;
 		};
 	};
 

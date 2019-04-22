@@ -9,6 +9,9 @@ obj-$(CONFIG_RTK_MMIO) += rtk_mmio.o
 obj-$(CONFIG_ION_RTK) += rtk_ion_of.o
 obj-$(CONFIG_RTK_MCP) += rtk_mcp.o rtk_sha1.o
 obj-$(CONFIG_RTK_SECURE_DVFS) += secure_dvfs.o
+obj-$(CONFIG_RTK_CPU_CACHE_SUPPLY_COORDINATOR) += rtk_cpu-cache-supp-coord.o
+obj-$(CONFIG_RTK_CPU_SUPPLY_ENHANCER) += rtk_cpu-supp-enh.o
+obj-$(CONFIG_RTK_CPU_HIGH_LOAD_BOOSTER) += rtk_cpu-hlb.o
 obj-y += pwrctrl/
 obj-y += info/
 obj-$(CONFIG_RTK_HSE) += hse/
@@ -18,5 +21,6 @@ obj-$(CONFIG_RTK_R2RDSC) += rtk_r2rdsc.o
 obj-$(CONFIG_RTK_DCSYS) += rtk_dcsys.o
 obj-$(CONFIG_RTK_DMC) += rtk_dmc.o
 obj-$(CONFIG_RTK_PERFCNT) += perfcnt/
-obj-$(CONFIG_RTK_DUMMY_DEVICE) += dummy/
+obj-$(CONFIG_RTK_AVCPU_LOG) += rtk_avcpulog.o
 obj-y += debug/
+

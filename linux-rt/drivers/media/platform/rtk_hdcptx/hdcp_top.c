@@ -37,8 +37,6 @@ struct hdcp_ksvlist_info ksvlist_info;
 
 static int hdcp_wait_re_entrance;
 
-static int init_ta_flag = 0;
-
 #ifdef CONFIG_RTK_HDCP1x_REPEATER
 /* RX function, for HDCP repeater*/
 extern void HdmiRx_disable_bcaps_ready(void);
@@ -679,11 +677,7 @@ long hdcp_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
 		_IOC_TYPE(cmd), _IOC_NR(cmd), _IOC_SIZE(cmd));
 
 #ifdef CONFIG_RTK_HDCP_1x_TEE
-	if (init_ta_flag == 0) {
-		HDCP_INFO("Init HDCP14 TA");
-		ta_hdcp14_init();
-		init_ta_flag = 1;
-	}
+	ta_hdcp14_init();
 #endif
 
 	switch (cmd) {
@@ -918,11 +912,7 @@ static int rtk_hdcptx_suspend(struct device *dev)
 
 #ifdef CONFIG_RTK_HDCP_1x_TEE
 	/* tee_client should be closed before enter suspend */
-	if (init_ta_flag == 1) {
-		HDCP_INFO("DeInit HDCP14 TA");
-		ta_hdcp14_deinit();
-		init_ta_flag = 0;
-	}
+	ta_hdcp14_deinit();
 #endif
 
 	HDCP_INFO("Exit %s", __func__);
@@ -943,11 +933,7 @@ static void rtk_hdcptx_shutdown(struct platform_device *pdev)
 	HDCP_INFO("Enter %s", __func__);
 
 #ifdef CONFIG_RTK_HDCP_1x_TEE
-	if (init_ta_flag == 1) {
-		HDCP_INFO("DeInit HDCP14 TA");
-		ta_hdcp14_deinit();
-		init_ta_flag = 0;
-	}
+	ta_hdcp14_deinit();
 #endif
 
 	HDCP_INFO("Exit %s", __func__);

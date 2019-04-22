@@ -459,4 +459,9 @@ void register_config_tv_system_sysfs(struct device *dev);
 
 void register_support_list_sysfs(struct device *dev);
 
+#ifdef CONFIG_RTK_HDCP_1x_TEE
+extern void ta_hdcp14_init(void);
+extern int ta_hdcp_fix480p(void);
+#endif
+
 #endif /* _HDMITX_H_ */

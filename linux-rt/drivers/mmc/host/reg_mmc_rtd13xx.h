@@ -327,6 +327,7 @@
 #define EMMC_CQCRA		(0x1dc)
 
 #define EMMC_CQ_EN		(1<<0)
+#define EMMC_CQ_HALT		(1<<0)
 #define EMMC_TASK_DESC_SIZE	(1<<8)
 #define EMMC_DCMD_EN		(1<<12)
 

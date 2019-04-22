@@ -180,9 +180,6 @@ static int sw_rtc_probe(struct platform_device *pdev)
 	struct sw_rtc_data *data;
 	int ret = 0;
 
-
-	dev_info(dev, "%s\n", __func__);
-
 	data = create_sw_rtc();
 	if (!data) {
 		dev_err(dev, "fail to create_sw_rtc\n");
@@ -199,6 +196,8 @@ static int sw_rtc_probe(struct platform_device *pdev)
 		dev_err(dev, "rtc_device_register() returns %d\n", ret);
 		return ret;
 	}
+
+	dev_info(dev, "initialized\n");
 	return ret;
 }
 
@@ -207,23 +206,47 @@ static int  sw_rtc_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct sw_rtc_data *data = dev_get_drvdata(dev);
 
-	dev_info(dev, "%s", __func__);
 	destroy_sw_rtc(data);
+	dev_info(dev, "removed\n");
 	return 0;
 }
-
-static const struct of_device_id sw_rtc_ids[] = {
-	{ .compatible = "realtek,sw-rtc" },
-	{},
-};
-MODULE_DEVICE_TABLE(of, sw_rtc_ids);
 
 static struct platform_driver sw_rtc_driver = {
 	.probe = sw_rtc_probe,
 	.remove = sw_rtc_remove,
 	.driver = {
+		.owner = THIS_MODULE,
 		.name = "rtk-sw-rtc",
-		.of_match_table = sw_rtc_ids,
 	},
 };
-module_platform_driver(sw_rtc_driver);
+
+static struct platform_device *sw_rtc_dev;
+
+static int __init sw_rtc_init(void)
+{
+	int ret;
+
+	ret = platform_driver_register(&sw_rtc_driver);
+	if (ret) {
+		pr_err("%s: platform_driver_register() returns %d\n", __func__, ret);
+		return ret;
+	}
+
+	sw_rtc_dev = platform_device_register_simple("rtk-sw-rtc", 0, NULL, 0);
+	if (IS_ERR(sw_rtc_dev)) {
+		ret = PTR_ERR(sw_rtc_dev);
+		pr_err("%s: platform_driver_register() returns %d\n", __func__, ret);
+		platform_driver_unregister(&sw_rtc_driver);
+		return ret;
+	}
+	return 0;
+}
+module_init(sw_rtc_init);
+
+static void __exit sw_rtc_exit(void)
+{
+	platform_device_unregister(sw_rtc_dev);
+	platform_driver_unregister(&sw_rtc_driver);
+}
+module_exit(sw_rtc_exit);
+

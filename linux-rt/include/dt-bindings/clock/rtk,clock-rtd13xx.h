@@ -64,6 +64,7 @@
 #define CLK_EN_SATA_WRAP_SYSH  10
 #define CLK_EN_SATA_MAC_SYSH   12
 #define CLK_EN_R2RDSC          14
+#define CLK_EN_TPC             16
 #define CLK_EN_PCIE1           18
 #define CLK_EN_MISC_I2C_4      20
 #define CLK_EN_MISC_I2C_5      22
@@ -72,9 +73,20 @@
 #define CLK_EN_EDP             28
 #define CLK_EN_TSIO_TRX        30
 
+/* 0x98000084 */
+#define CLK_EN_DSC              0
+#define CLK_EN_ND               2
+#define CLK_EN_AKL              4
+#define CLK_EN_SCE              6
+#define CLK_EN_KT               8
+
+/* 0x9800008C */
+#define CLK_EN_PCIE2            0
+#define CLK_EN_ISO_GSPI         2
+#define CLK_EN_EARC             4
+
 /* 0x9800708C */
 #define CLK_EN_MISC_MIX         0
-#define CLK_EN_MISC_VFD         1
 #define CLK_EN_MISC_CEC0        2
 #define CLK_EN_CBUSRX_SYS       3
 #define CLK_EN_CBUSTX_SYS       4
@@ -112,5 +124,3 @@
 #define CC_CLK_MAX             18
 
 #endif /* __DT_BINDINGS_RTK_CLOCK_RTD13XX_H */
-
-

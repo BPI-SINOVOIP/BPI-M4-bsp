@@ -20,6 +20,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 
 #include "rtc-rtk.h"
 
@@ -46,9 +47,9 @@
 #define LEAPS_THRU_END_OF(y) ((y)/4 - (y)/100 + (y)/400)
 
 static void __iomem *rtk_rtc_base;
-static void __iomem *rtk_rbus_base;
 static void __iomem *rtk_iso_base;
 static struct clk *rtc_clk;
+static struct reset_control *rtc_rstc;
 
 static long rtk_base_year;
 
@@ -421,18 +422,24 @@ static int rtk_rtc_probe(struct platform_device *pdev)
 
 	dev_info(dev, "%s", __func__);
 
-	if (IS_ENABLED(CONFIG_ARCH_RTD16xx)) {
-                ;
-        }
-	else {
-		rtc_clk = of_clk_get(pdev->dev.of_node, 0);
-		if (IS_ERR_OR_NULL(rtc_clk)) {
-			dev_warn(dev, "Failed to get clk from DT\n");
-			rtc_clk = NULL;
-			return -1;
-		}
-		clk_prepare_enable(rtc_clk);
+	/*
+	 * The rstn and clk_en of rtc should be set for RTD-119x,
+	 * and clk_en should be set for RTD-129x.
+	 */
+	rtc_clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(rtc_clk)) {
+		dev_dbg(dev, "clk_get() reutrns %ld\n", PTR_ERR(rtc_clk));
+		rtc_clk = NULL;
 	}
+
+	rtc_rstc = devm_reset_control_get(dev, NULL);
+	if (IS_ERR(rtc_rstc)) {
+		dev_dbg(dev, "reset_control_get() reutrns %ld\n", PTR_ERR(rtc_rstc));
+		rtc_rstc = NULL;
+	}
+	clk_prepare_enable(rtc_clk);
+	if (rtc_rstc)
+		reset_control_deassert(rtc_rstc);
 
 	prop = of_get_property(pdev->dev.of_node, "rtc-base-year", NULL);
 	if (prop)
@@ -444,18 +451,12 @@ static int rtk_rtc_probe(struct platform_device *pdev)
 	rtk_base_year -= 1900;
 
 	rtk_rtc_base = of_iomap(pdev->dev.of_node, 0);
-	rtk_rbus_base = of_iomap(pdev->dev.of_node, 1);
-	rtk_iso_base = of_iomap(pdev->dev.of_node, 2);
+	rtk_iso_base = of_iomap(pdev->dev.of_node, 1);
 	dev_info(dev, "rtk_rtc_base = 0x%llx\n", (u64)rtk_rtc_base);
 	dev_info(dev, "rtk_iso_base = 0x%llx\n", (u64)rtk_iso_base);
 
-	writel(readl(rtk_rbus_base + 0x10) | BIT(10), rtk_rbus_base + 0x10);
-
 	rtk_rtc_check_rtcacr(&pdev->dev);
 	rtk_rtc_enable(&pdev->dev, 1);
-
-	dev_info(dev, "reset bit 0x%x\n", readl(rtk_rbus_base + 0x4));
-	dev_info(dev, "clock bit 0x%x\n", readl(rtk_rbus_base + 0x10));
 
 #if RTC_TEST
 	{
@@ -522,6 +523,8 @@ static int rtk_rtc_probe(struct platform_device *pdev)
 	return 0;
 
 err_nortc:
+	if (rtc_rstc)
+		reset_control_assert(rtc_rstc);
 	clk_disable_unprepare(rtc_clk);
 	return ret;
 }
@@ -533,6 +536,8 @@ static int  rtk_rtc_remove(struct platform_device *pdev)
 	dev_info(&pdev->dev, "%s %s", __FILE__, __func__);
 	devm_rtc_device_unregister(&pdev->dev, rtc);
 
+	if (rtc_rstc)
+		reset_control_assert(rtc_rstc);
 	clk_disable_unprepare(rtc_clk);
 
 	platform_set_drvdata(pdev, NULL);

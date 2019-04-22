@@ -42,7 +42,6 @@ Update List :
 
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/reset-helper.h> /* rstc_get */
 #include <linux/reset.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h> 
@@ -1299,17 +1298,6 @@ static void mars_scd_load_gpio_config(mars_scd* p_this)
  *------------------------------------------------------------------*/
 static int mars_clk_reset_ctrl(SCD_CLK_CTL enable)
 {
-#if 0
-    struct reset_control *reset = rstc_get("rstn_misc_sc");
-    struct clk *clk = clk_get(NULL, "clk_en_misc_sc");
-
-    if(enable == CTL_ENABLE){
-        reset_control_deassert(reset);
-        clk_prepare_enable(clk);
-    }else{
-        clk_disable(clk);
-    }
-#endif
     if(enable == CTL_ENABLE){
         reset_control_deassert(dts_info.rstc);
         clk_prepare_enable(dts_info.clk);

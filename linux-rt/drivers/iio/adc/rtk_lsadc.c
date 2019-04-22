@@ -693,10 +693,10 @@ static int __init rtk_lsadc_probe(struct platform_device *pdev)
 	uint vdd_mux_sel, vdd_mux1, vdd_mux2, vdd_mux_en;
 	#if defined(CONFIG_ARCH_RTD129x)
 	void __iomem *lsadc_clk_addr;
-	#elif defined(CONFIG_ARCH_RTD16xx)
+	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
 	struct clk *clk;
 	struct reset_control *rstc;
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD16xx */
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
 
 	pr_info("--- debug : rtk_lsadc_probe \n");
 
@@ -839,15 +839,6 @@ static int __init rtk_lsadc_probe(struct platform_device *pdev)
 	if (!of_property_read_u32(lsadc1_pad1_node, "detect_range_ctrl", &val))
 		priv->lsadc[1].padInfoSet[1].vref_sel=val;
 
-	lsadc_power_reg = LSADC_READL(LSADC0_POWER_ADDR) & ~(LSADC0_CLK_GATING_EN | LSADC1_CLK_GATING_EN);
-	if(priv->lsadc[0].clk_gating_en == 1)
-		lsadc_power_reg |= LSADC0_CLK_GATING_EN;
-	if(priv->lsadc[1].clk_gating_en == 1)
-		lsadc_power_reg |= LSADC1_CLK_GATING_EN;
-
-	LSADC_WRITEL(lsadc_power_reg, LSADC0_POWER_ADDR);
-	pr_info("--- debug :    write lsadc0_power_reg=0x%x  --  \n\n",lsadc_power_reg);
-
 	#if defined(CONFIG_ARCH_RTD129x)
 	if (get_rtd129x_cpu_revision() >= RTD129x_CHIP_REVISION_B00) {
 		// Enable LSADC clock
@@ -856,7 +847,7 @@ static int __init rtk_lsadc_probe(struct platform_device *pdev)
 		writel(val, lsadc_clk_addr);
 		__iounmap(lsadc_clk_addr);
 	}
-	#elif defined(CONFIG_ARCH_RTD16xx)
+	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
 		clk = NULL;
@@ -873,7 +864,16 @@ static int __init rtk_lsadc_probe(struct platform_device *pdev)
 		reset_control_deassert(rstc);
 		reset_control_put(rstc);
 	}
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD16xx */
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+
+	lsadc_power_reg = LSADC_READL(LSADC0_POWER_ADDR) & ~(LSADC0_CLK_GATING_EN | LSADC1_CLK_GATING_EN);
+	if(priv->lsadc[0].clk_gating_en == 1)
+		lsadc_power_reg |= LSADC0_CLK_GATING_EN;
+	if(priv->lsadc[1].clk_gating_en == 1)
+		lsadc_power_reg |= LSADC1_CLK_GATING_EN;
+
+	LSADC_WRITEL(lsadc_power_reg, LSADC0_POWER_ADDR);
+	pr_info("--- debug :    write lsadc0_power_reg=0x%x  --  \n\n",lsadc_power_reg);
 
 	// Initial Ananlog_ctrl value to 0x00011101
 	LSADC_WRITEL(LSADC_ANALOG_CTRL_VALUE, LSADC0_ANALOG_CTRL_ADDR);

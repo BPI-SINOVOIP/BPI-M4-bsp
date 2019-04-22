@@ -63,71 +63,18 @@
 		/*** should be disabled ***/
 		status = "disabled";
 
-		vd33_supp: dc1 {
-			regulator-name = "vd33";
-			regulator-min-microvolt = <2200000>;
-			regulator-max-microvolt = <3700000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-state-mem {
-				regulator-on-in-suspend;
-				regulator-suspend-microvolt = <3200000>;
-			};
+		powerkey_0: powerkey {
+			compatible = "gmt,g22xx-powerkey";
+			status = "disabled";
 		};
-		gpu_supp_0: dc2 {
-			regulator-name = "gpudvs";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <1187500>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-ramp-delay = <625>;
-			regulator-state-mem {
-				regulator-off-in-suspend;
-			};
+		poweroff_0: poweroff {
+			compatible = "gmt,g22xx-poweroff";
+			system-power-controller;
+			statis = "disabled";
 		};
-		dc3 {
-			regulator-name = "core";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <1187500>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-state-mem {
-				regulator-on-in-suspend;
-				regulator-suspend-microvolt = <900000>;
-			};
-		};
-		ddr_supp: dc4 {
-			regulator-name = "ddr";
-			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-
-		};
-		dc5 {
-			regulator-name = "vd18";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <2500000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-		};
-		ldo1 {
-			regulator-name = "vd25";
-			regulator-min-microvolt = <2200000>;
-			regulator-max-microvolt = <3000000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_LDO_MODE_NORMAL>;
+		regulators_0: regulators {
+			compatible = "gmt,g2237-regulator";
+			status = "okay";
 		};
 	};
 
@@ -138,7 +85,7 @@
 		/*** should be disabled ***/
 		status = "disabled";
 
-		dc1 {
+		vd33_supp_1: dc1 {
 			regulator-name = "vd33";
 			regulator-min-microvolt = <2200000>;
 			regulator-max-microvolt = <3777500>;
@@ -151,7 +98,7 @@
 				regulator-suspend-microvolt = <3200000>;
 			};
 		};
-		dc2 {
+		core_supp_1: dc2 {
 			regulator-name = "core";
 			regulator-min-microvolt = <550000>;
 			regulator-max-microvolt = <1337500>;
@@ -190,7 +137,7 @@
 				regulator-off-in-suspend;
 			};
 		};
-		dc5 {
+		ddr_supp_1: dc5 {
 			regulator-name = "ddr";
 			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1200000>;
@@ -198,7 +145,7 @@
 			regulator-always-on;
 			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
 		};
-		dc6 {
+		vd18_supp_1: dc6 {
 			regulator-name = "vd18";
 			regulator-min-microvolt = <800000>;
 			regulator-max-microvolt = <2060000>;
@@ -207,7 +154,7 @@
 			regulator-always-on;
 			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
 		};
-		ldo1 {
+		vd25_supp_1: ldo1 {
 			regulator-name = "vd25";
 			regulator-min-microvolt = <1870000>;
 			regulator-max-microvolt = <4300000>;
@@ -215,6 +162,77 @@
 			regulator-boot-on;
 			regulator-always-on;
 			regulator-initial-mode = <APW8889_LDO_MODE_NORMAL>;
+		};
+	};
+};
+
+&g2237 {
+	regulators {
+		vd33_supp_0: dc1 {
+			regulator-name = "vd33";
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <3700000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <3200000>;
+			};
+		};
+		gpu_supp_0: dc2 {
+			regulator-name = "gpudvs";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
+			regulator-ramp-delay = <625>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		core_supp_0: dc3 {
+			regulator-name = "core";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <900000>;
+			};
+		};
+		ddr_supp_0: dc4 {
+			regulator-name = "ddr";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
+
+		};
+		vd18_supp_0: dc5 {
+			regulator-name = "vd18";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <2500000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
+		};
+		vd25_supp_0: ldo1 {
+			regulator-name = "vd25";
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <3000000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G22XX_LDO_MODE_NORMAL>;
 		};
 	};
 };

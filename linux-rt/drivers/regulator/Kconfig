@@ -880,14 +880,12 @@ config REGULATOR_WM8994
 
 config REGULATOR_G22XX_CORE
 	tristate
-	depends on I2C
 	help
 	  GMT G2227/G2237 common codes
 
 config REGULATOR_G2227
 	tristate "GMT G2227 Power regulators"
-	depends on I2C
-	select RTK_REGMAP_I2C
+	depends on MFD_G2227_I2C
 	select REGULATOR_G22XX_CORE
 	help
 	  This driver provides support for the voltage regulators on the
@@ -895,8 +893,7 @@ config REGULATOR_G2227
 
 config REGULATOR_G2237
 	tristate "GMT G2237 Power regulators"
-	depends on I2C
-	select RTK_REGMAP_I2C
+	depends on MFD_G2237_I2C
 	select REGULATOR_G22XX_CORE
 	help
 	  This driver provides support for the voltage regulators on the
@@ -933,6 +930,7 @@ config REGULATOR_APW8889
 config REGULATOR_I2C_SELECTOR
 	tristate "I2C selector regualtors"
 	select REGULATOR_APW8889
+	select MFD_G2237_I2C
 	select REGULATOR_G2237
 
 config XEN_REGDEV_FRONTEND

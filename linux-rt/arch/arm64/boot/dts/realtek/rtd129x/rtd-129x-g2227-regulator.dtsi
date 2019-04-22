@@ -1,11 +1,27 @@
 #include <dt-bindings/regulator/gmt,g22xx.h>
 
 &i2c_0 {
-	g2227@12 {
+	g2227: g2227@12 {
 		compatible = "gmt,g2227";
 		reg = <0x12>;
 		status = "okay";
-
+		powerkey {
+			compatible = "gmt,g22xx-powerkey";
+			status = "disabled";
+		};
+		poweroff {
+			compatible = "gmt,g22xx-poweroff";
+			system-power-controller;
+			status = "disabled";
+		};
+		regulators {
+			compatible = "gmt,g2227-regulator";
+			status = "okay";
+		};
+	};
+};
+&g2227 {
+	regulators {
 		vd33_supp: dc1 {
 			regulator-name = "vd33";
 			regulator-min-microvolt = <3000000>;
@@ -99,5 +115,5 @@
 			};
 		};
 	};
-}; /* i2c0 */
+};
 

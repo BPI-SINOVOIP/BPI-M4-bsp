@@ -265,9 +265,9 @@
 			"clk_en_tve",
 			"clk_en_vo";
 		resets = <&iso_rst RSTN_DP>,
-			<&rst7 RSTN_EDP>,
-			<&rst3 RSTN_TVE>,
-			<&rst3 RSTN_VO>;
+			<&crst RSTN_EDP>,
+			<&crst RSTN_TVE>,
+			<&crst RSTN_VO>;
 		reset-names = "dp",
 			"edp",
 			"tve",

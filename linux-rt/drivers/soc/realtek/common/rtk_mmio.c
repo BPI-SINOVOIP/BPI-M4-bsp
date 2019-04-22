@@ -3,8 +3,8 @@
  * drivers/mfd/syscon.c. SB2 HW can be supported if the relative API
  * is existed.
  *
- * Copyright (C) 2017 Realtek Semiconductor Corporation
- * Copyright (C) 2017 Cheng-Yu Lee <cylee12@realtek.com>
+ * Copyright (C) 2017,2019 Realtek Semiconductor Corporation
+ *                         Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +17,20 @@
 #include <linux/list.h>
 #include <linux/regmap.h>
 #include <linux/io.h>
-#include <linux/device.h>
 #include <soc/realtek/rtk_sb2_sem.h>
 #include <soc/realtek/rtk_regmap.h>
 
 #ifdef CONFIG_ARCH_RTD16xx
 
-extern bool secure_dvfs_is_disabled(void);
-
-static const struct secure_register_desc crt_regs[] = {
+static struct secure_register_desc crt_regs[] = {
 	{ .offset = 0x030, .wcmd = 0x8400ff0b, .rcmd = 0x8400ff18, .fmt = SMCCC_FMT_CMD, },
 	{ .offset = 0x504, .wcmd = 0x8400ff0c, .rcmd = 0x8400ff19, .fmt = SMCCC_FMT_CMD, },
-	{ .offset = 0x068, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
 	{ .offset = 0x014, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
+	{ .offset = 0x06c, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
+	{ .offset = 0x088, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
 };
 
-static const struct rtk_regmap_config crt_config = {
+static struct rtk_regmap_config crt_config = {
 	.addr = 0x98000000,
 	.descs = crt_regs,
 	.num_descs = ARRAY_SIZE(crt_regs),
@@ -43,17 +41,28 @@ static const struct rtk_regmap_config crt_config = {
 	},
 };
 
-static const struct rtk_regmap_config *configs[] = {
+static struct rtk_regmap_config *configs[] = {
 	&crt_config,
 	NULL
 };
 
-static const struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
+extern bool secure_dvfs_is_disabled(void);
+static int __init secure_register_init(void)
 {
-	const struct rtk_regmap_config **p;
+#define OFFSET_INVALD         (0xffffffff)
+	if (!secure_dvfs_is_disabled())
+		return 0;
+	pr_info("update CRT secure_register_desc\n");
+	crt_regs[0].offset = OFFSET_INVALD;
+	crt_regs[1].offset = OFFSET_INVALD;
+	return 0;
+}
+arch_initcall(secure_register_init);
 
-	if (secure_dvfs_is_disabled())
-		return NULL;
+
+static struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
+{
+	struct rtk_regmap_config **p;
 
 	for (p = configs; *p != NULL; p++)
 		if ((*p)->addr == addr)
@@ -63,7 +72,7 @@ static const struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
 
 #else
 
-static inline const struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
+static inline struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
 {
 	return NULL;
 }
@@ -100,6 +109,7 @@ struct rtk_mmio {
 	struct device_node *np;
 	struct resource res;
 	const char *name;
+	struct regmap_config *cfg;
 };
 
 #define mmio_err(_m, _fmt, ...) \
@@ -127,10 +137,12 @@ static struct rtk_mmio *create_rtk_mmio(struct device_node *np)
 	struct sb2_sem *sb2lock = NULL;
 	struct regmap_sb2_lock_data *lock = NULL;
 	int ret;
-	const struct rtk_regmap_config *conf = NULL;
+	struct rtk_regmap_config *conf = NULL;
 
-	if (!of_device_is_compatible(np, "realtek,mmio"))
+	if (!of_device_is_compatible(np, "realtek,mmio")) {
+		pr_err("%s: not realtek,mmio\n", np->name);
 		return ERR_PTR(-EINVAL);
+	}
 
 	mmio = kzalloc(sizeof(*mmio), GFP_KERNEL);
 	if (!mmio)
@@ -138,41 +150,58 @@ static struct rtk_mmio *create_rtk_mmio(struct device_node *np)
 	mmio->name = np->name;
 
 	ret = of_address_to_resource(np, 0, &mmio->res);
-	if (ret)
+	if (ret) {
+		mmio_err(mmio, "of_address_to_resource() returns %d\n", ret);
 		goto free_mem;
-	reg = ioremap(mmio->res.start, resource_size(&mmio->res));
-	cfg.name = np->name;
-	cfg.max_register = resource_size(&mmio->res) - 1;
-
-	/* hwsemaphore */
-	sb2lock = of_sb2_sem_get(np, 0);
-	if (IS_ERR(sb2lock)) {
-		mmio_info(mmio, "of_sb2_sem_get() returns %ld", PTR_ERR(sb2lock));
-		sb2lock = NULL;
 	}
-	if (sb2lock) {
-		mmio_info(mmio, "has sb2_sem\n");
 
-		lock = kzalloc(sizeof(*lock), GFP_KERNEL);
-		if (!lock) {
-			ret = -ENOMEM;
-			goto free_mem;
-		}
-		spin_lock_init(&lock->spinlock);
-		lock->sb2lock = sb2lock;
-
-		cfg.lock_arg = lock;
-		cfg.lock = regmap_sb2_lock;
-		cfg.unlock = regmap_sb2_unlock;
+	reg = ioremap(mmio->res.start, resource_size(&mmio->res));
+	if (!reg) {
+		mmio_err(mmio, "ioremap() returns NULL\n");
+		ret = -ENOMEM;
+		goto free_mem;
 	}
 
 	/* secure regster accese */
 	conf = match_config_by_addr(mmio->res.start);
 	if (conf) {
 		mmio_info(mmio, "use secure config\n");
+		mmio->cfg = &conf->config;
+		mmio->cfg->max_register = resource_size(&mmio->res) - 1;
+	} else {
+		mmio->cfg = &cfg;
+		mmio->cfg->name = np->name;
+		mmio->cfg->max_register = resource_size(&mmio->res) - 1;
+	}
+
+	/* hwsemaphore */
+	sb2lock = of_sb2_sem_get(np, 0);
+	if (IS_ERR(sb2lock)) {
+		mmio_info(mmio, "of_sb2_sem_get() returns %ld\n", PTR_ERR(sb2lock));
+		sb2lock = NULL;
+	}
+	if (sb2lock) {
+		mmio_info(mmio, "lock with sb2_sem\n");
+
+		lock = kzalloc(sizeof(*lock), GFP_KERNEL);
+		if (!lock) {
+			ret = -ENOMEM;
+			mmio_err(mmio, "failed to alloc lock_arg\n");
+			goto free_mem;
+		}
+		spin_lock_init(&lock->spinlock);
+		lock->sb2lock = sb2lock;
+
+		mmio->cfg->lock_arg = lock;
+		mmio->cfg->lock = regmap_sb2_lock;
+		mmio->cfg->unlock = regmap_sb2_unlock;
+	}
+
+
+	if (conf)
 		regmap = rtk_regmap_init_secure_mmio(NULL, reg, conf);
-	} else
-		regmap = regmap_init_mmio(NULL, reg, &cfg);
+	else
+		regmap = regmap_init_mmio(NULL, reg, mmio->cfg);
 	if (IS_ERR(regmap)) {
 		ret = PTR_ERR(regmap);
 		mmio_err(mmio, "failed to init regmap: %d\n", ret);
@@ -214,5 +243,4 @@ struct regmap *rtk_mmio_node_to_regmap(struct device_node *np)
 
 	return mmio->regmap;
 }
-
 

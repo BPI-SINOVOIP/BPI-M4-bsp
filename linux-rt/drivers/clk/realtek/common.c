@@ -167,7 +167,7 @@ int cc_init_hw(struct device *dev, struct cc_desc *ccd, int cc_index,
 	}
 #endif
 
-	dev_info(dev, "%s: %s\n", __func__, name);
+	dev_dbg(dev, "%s: start initialize %s\n", __func__, name);
 
 	clk_type = __hw_to_cc_type(hw);
 	switch (clk_type) {
@@ -270,7 +270,7 @@ int cc_init_composite_clk(struct device *dev, struct cc_desc *ccd, int cc_index,
 	}
 #endif
 
-	dev_info(dev, "%s: %s\n", __func__, name);
+	dev_dbg(dev, "%s: start initialize %s\n", __func__, name);
 
 	clk = clk_reg_create_composite_clk(dev, &ccd->init_data, init);
 	if (IS_ERR(clk))

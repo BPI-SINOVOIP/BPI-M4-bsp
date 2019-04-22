@@ -349,7 +349,7 @@ static snd_pcm_hardware_t snd_card_mars_capture_audio =
 };
 
 /************************************************************************/
-/* MODULE                                                                     */
+/* MODULE                                                               */
 /************************************************************************/
 module_param_array(snd_card_enable, bool, NULL, 0444);
 MODULE_PARM_DESC(snd_card_enable, "Enable this mars soundcard.");
@@ -357,7 +357,7 @@ module_param_array(pcm_substreams, int, NULL, 0444);
 MODULE_PARM_DESC(pcm_substreams, "PCM substreams # (1-16) for mars driver.");
 
 /************************************************************************/
-/* FUNCTION                                                                     */
+/* FUNCTION                                                             */
 /************************************************************************/
 int snd_monitor_audio_data_queue(void)
 {
@@ -2623,56 +2623,61 @@ static int snd_card_capture_ioctl(struct snd_pcm_substream *substream,  unsigned
 
 static int snd_card_playback_ioctl(struct snd_pcm_substream *substream,  unsigned int cmd, void *arg)
 {
-    snd_pcm_runtime_t *runtime = substream->runtime;
-    snd_card_RTK_pcm_t *dpcm = runtime->private_data;
+	snd_pcm_runtime_t *runtime = substream->runtime;
+	snd_card_RTK_pcm_t *dpcm = runtime->private_data;
+	AUDIO_RPC_EQUALIZER_MODE equalizer_mode;
 
-    //TRACE_CODE("[%s %s %d cmd %d]\n", __FILE__, __FUNCTION__, __LINE__, cmd);
+	//printk("[ALSA %s %d]\n", __FUNCTION__, __LINE__);
 
-    switch (cmd) 
-    {
-        case SNDRV_PCM_IOCTL_VOLUME_SET:
-        {
-            ALSA_VitalPrint("[ALSA SET VOLUME]\n");
-            get_user(dpcm->volume, (int *) arg);
-            if (dpcm->volume < 0)
-                dpcm->volume = 0;
-            if (dpcm->volume > 31)
-                dpcm->volume = 31;
-            RPC_TOAGENT_SET_AO_FLASH_VOLUME(substream);
-            break;
-        }
-        case SNDRV_PCM_IOCTL_VOLUME_GET:
-        {
-            put_user(dpcm->volume, (int *) arg);
-            break;
-        }
-        case SNDRV_PCM_IOCTL_GET_LATENCY:
-        {
-            int mLatency = 0;
-
-			mLatency = snd_monitor_audio_data_queue_new(substream);
-
-            put_user(mLatency, (int *) arg);
-            break;
-        }
-        case SNDRV_PCM_IOCTL_GET_FW_DELAY:
-        {
-            int mLatency = 0;
-            snd_pcm_sframes_t n = 0;
+	switch (cmd)
+	{
+		case SNDRV_PCM_IOCTL_VOLUME_SET:
+		{
+			printk("[ALSA SET VOLUME]\n");
+			get_user(dpcm->volume, (int *) arg);
+			if (dpcm->volume < 0)
+				dpcm->volume = 0;
+			if (dpcm->volume > 31)
+				dpcm->volume = 31;
+			RPC_TOAGENT_SET_AO_FLASH_VOLUME(substream);
+			break;
+		}
+		case SNDRV_PCM_IOCTL_VOLUME_GET:
+		{
+			put_user(dpcm->volume, (int *) arg);
+			break;
+		}
+		case SNDRV_PCM_IOCTL_GET_LATENCY:
+		{
+			int mLatency = 0;
 
 			mLatency = snd_monitor_audio_data_queue_new(substream);
 
+			put_user(mLatency, (int *) arg);
+			break;
+		}
+		case SNDRV_PCM_IOCTL_GET_FW_DELAY:
+		{
+			int mLatency = 0;
+			snd_pcm_sframes_t n = 0;
 
-            n = (mLatency * runtime->rate) / 1000;
-            put_user(n, (snd_pcm_sframes_t *) arg);
-            break;
-        }
+			mLatency = snd_monitor_audio_data_queue_new(substream);
 
-        default:
-            return snd_pcm_lib_ioctl(substream, cmd, arg);
-            break;
-    }
-    return 0;
+			n = (mLatency * runtime->rate) / 1000;
+			put_user(n, (snd_pcm_sframes_t *) arg);
+			break;
+		}
+		case SNDRV_PCM_IOCTL_EQ_SET:
+		{
+			memcpy(&equalizer_mode, arg, sizeof(AUDIO_RPC_EQUALIZER_MODE));
+			RPC_TOAGENT_SET_EQ(dpcm, equalizer_mode);
+			break;
+		}
+		default:
+			return snd_pcm_lib_ioctl(substream, cmd, arg);
+			break;
+	}
+	return 0;
 }
 
 static snd_pcm_uframes_t snd_card_capture_pointer(snd_pcm_substream_t * substream)
@@ -2854,6 +2859,12 @@ static int snd_card_capture_prepare_LPCM(snd_pcm_substream_t * substream)
 	{
 		case ENUM_AIN_AUDIO_V2:
 		case ENUM_AIN_AUDIO_V3:
+			// For audio processing flow, doing connect alsa before config audio v2 or v3
+			if(RPC_TOAGENT_AI_CONNECT_ALSA(runtime))
+			{
+				ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+				return -ENOMEM;
+			}
 			RPC_TOAGENT_AI_CONFIG_AUDIO_IN(dpcm); // config audio v2 or v3
 			break;
 		case ENUM_AIN_HDMIRX:
@@ -2867,17 +2878,33 @@ static int snd_card_capture_prepare_LPCM(snd_pcm_substream_t * substream)
 	}
 
 	// private info
-	if(RPC_TOAGENT_AI_CONNECT_ALSA(runtime))
+	switch(dpcm->source_in)
 	{
-		ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
-		return -ENOMEM;
+		case ENUM_AIN_AUDIO_V2:
+		case ENUM_AIN_AUDIO_V3:
+			break;
+		default:
+			if(RPC_TOAGENT_AI_CONNECT_ALSA(runtime))
+			{
+				ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+				return -ENOMEM;
+			}
+			break;
 	}
 
 	// run
-	if(snd_realtek_hw_capture_run(dpcm))
+	switch(dpcm->source_in)
 	{
-		ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
-		return -ENOMEM;
+		case ENUM_AIN_AUDIO_V2:
+		case ENUM_AIN_AUDIO_V3:
+			break;
+		default:
+			if(snd_realtek_hw_capture_run(dpcm))
+			{
+				ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+				return -ENOMEM;
+			}
+			break;
 	}
 
 	dpcm->hr_timer.function = &snd_card_capture_lpcm_timer_function;
@@ -3837,6 +3864,7 @@ static int snd_card_capture_trigger(snd_pcm_substream_t * substream, int cmd)
 			spin_lock_irqsave(&capture_lock, flags);
 			dpcm->enHRTimer = HRTIMER_NORESTART;
 			spin_unlock_irqrestore(&capture_lock, flags);
+			hrtimer_try_to_cancel(&dpcm->hr_timer);
 			break;
 		default:
 			ret = -EINVAL;
@@ -3872,6 +3900,7 @@ static int snd_card_playback_trigger(snd_pcm_substream_t * substream, int cmd)
 			spin_lock_irqsave(&playback_lock, flags);
 			dpcm->enHRTimer = HRTIMER_NORESTART;
 			spin_unlock_irqrestore(&playback_lock, flags);
+			hrtimer_try_to_cancel(&dpcm->hr_timer);
 			break;
 
 		case SNDRV_PCM_TRIGGER_START:
@@ -3940,29 +3969,29 @@ static int snd_card_hw_free(snd_pcm_substream_t * substream)
 
 static unsigned long ring_valid_data(unsigned long ring_base, unsigned long ring_limit, unsigned long ring_rp, unsigned long ring_wp)
 {
-    if (ring_wp >= ring_rp)
-    {
-        return (ring_wp-ring_rp);
-    }
-    else
-    {
-        return (ring_limit-ring_base)-(ring_rp-ring_wp);
-    }
+	if (ring_wp >= ring_rp)
+	{
+		return (ring_wp-ring_rp);
+	}
+	else
+	{
+		return (ring_limit-ring_base)-(ring_rp-ring_wp);
+	}
 }
 
 static unsigned long ring_add(unsigned long ring_base, unsigned long ring_limit, unsigned long ptr, unsigned int bytes)
 {
-    ptr += bytes;
-    if (ptr >= ring_limit)
-    {
-        ptr = ring_base + (ptr-ring_limit);
-    }
-    return ptr;
+	ptr += bytes;
+	if (ptr >= ring_limit)
+	{
+		ptr = ring_base + (ptr-ring_limit);
+	}
+	return ptr;
 }
 
 static unsigned long ring_minus(unsigned long ring_base, unsigned long ring_limit, unsigned long ptr, int bytes)
 {
-	ptr -= bytes; 
+	ptr -= bytes;
 
 	if (ptr < ring_base)
 		ptr = ring_limit-(ring_base-ptr);
@@ -3972,7 +4001,7 @@ static unsigned long ring_minus(unsigned long ring_base, unsigned long ring_limi
 
 static unsigned long valid_free_size(unsigned long base, unsigned long limit, unsigned long rp, unsigned long wp)
 {
-    return (limit-base)-ring_valid_data(base,limit,rp,wp)-1;
+	return (limit-base)-ring_valid_data(base,limit,rp,wp)-1;
 }
 
 static int ring_check_ptr_valid_32(unsigned int ring_rp, unsigned int ring_wp, unsigned int ptr)
@@ -3990,134 +4019,134 @@ static int ring_check_ptr_valid_32(unsigned int ring_rp, unsigned int ring_wp, u
 
 static unsigned long buf_memcpy2_ring(unsigned long base, unsigned long limit, unsigned long ptr, char* buf, unsigned long size)
 {
-    if (ptr + size <= limit)
-    {                   
-        memcpy((char*)ptr,buf,size);            
-    }
-    else
-    {
-        int i = limit-ptr;
-        memcpy((char*)ptr,(char*)buf,i);
-        memcpy((char*)base,(char*)(buf+i),size-i);
-    }
-    
-    ptr += size;
-    if (ptr >= limit)
-    {
-        ptr = base + (ptr-limit);
-    }   
-    return ptr;
+	if (ptr + size <= limit)
+	{
+		memcpy((char*)ptr,buf,size);
+	}
+	else
+	{
+		int i = limit-ptr;
+		memcpy((char*)ptr,(char*)buf,i);
+		memcpy((char*)base,(char*)(buf+i),size-i);
+	}
+
+	ptr += size;
+	if (ptr >= limit)
+	{
+		ptr = base + (ptr-limit);
+	}
+	return ptr;
 }
 
 // create PCM instance
 static int __init snd_card_create_PCM_instance(
-RTK_snd_card_t *pSnd, 
-int instance_idx, 
-int playback_substreams, 
+RTK_snd_card_t *pSnd,
+int instance_idx,
+int playback_substreams,
 int capture_substreams)
 {
-    snd_pcm_t *pcm = NULL;
-    struct snd_pcm_substream *p = NULL;
-    int err;
-    int i;
+	snd_pcm_t *pcm = NULL;
+	struct snd_pcm_substream *p = NULL;
+	int err;
+	int i;
 
-    TRACE_CODE("[%s %s %d]\n", __FILE__, __FUNCTION__, __LINE__);
-    RTK_TRACE_ALSA("%d %d @ %s %d\n", playback_substreams, capture_substreams, __func__, __LINE__);
+	printk("[%s %s %d]\n", __FILE__, __FUNCTION__, __LINE__);
+	RTK_TRACE_ALSA("%d %d @ %s %d\n", playback_substreams, capture_substreams, __func__, __LINE__);
 
-    // create PCM instance
-    if ((err = snd_pcm_new(pSnd->card
-        , snd_pcm_id[instance_idx] /* id string */
-        , instance_idx
-        , playback_substreams
-        , capture_substreams, 
-        &pcm)) < 0)    // for Jupiter Capture Count = 0 (ie. there is no ain)
-    {
-        ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
-        return err;
-    }
-    
-    // set OPs
-    switch(instance_idx)
-    {
-        case 0:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_card_rtk_playback_ops);
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER);
-            break;
-        case 1:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_i2s_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER_I2S_IN);
-            break;
-        case 2:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_nonpcm_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER_NONPCM_IN);
-            break;
-        case 3:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_IN);
-            break;
-        case 4:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_v2_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_V2_IN);
-            break;
-        case 5:
-            snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_v3_ops);
-            sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_V3_IN);
-            break;
-        default:
-        ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
-            break;
-    }
+	// create PCM instance
+	if ((err = snd_pcm_new(pSnd->card
+		, snd_pcm_id[instance_idx] /* id string */
+		, instance_idx
+		, playback_substreams
+		, capture_substreams
+		, &pcm)) < 0)    // for Jupiter Capture Count = 0 (ie. there is no ain)
+	{
+		ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+		return err;
+	}
 
-    pcm->private_data = pSnd;
-    pcm->info_flags = 0;
+	// set OPs
+	switch(instance_idx)
+	{
+		case 0:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_card_rtk_playback_ops);
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER);
+			break;
+		case 1:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_i2s_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER_I2S_IN);
+			break;
+		case 2:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_nonpcm_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER_NONPCM_IN);
+			break;
+		case 3:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_IN);
+			break;
+		case 4:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_v2_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_V2_IN);
+			break;
+		case 5:
+			snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &snd_card_rtk_capture_audio_v3_ops);
+			sprintf(pcm->name, SND_REALTEK_DRIVER_AUDIO_V3_IN);
+			break;
+		default:
+			ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
+			break;
+	}
 
-    p = pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream;
-    for (i = 0; i < playback_substreams; i++)
-    {
-        p->dma_buffer.dev.dev = snd_dma_continuous_data(GFP_KERNEL);
+	pcm->private_data = pSnd;
+	pcm->info_flags = 0;
+
+	p = pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream;
+	for (i = 0; i < playback_substreams; i++)
+	{
+		p->dma_buffer.dev.dev = snd_dma_continuous_data(GFP_KERNEL);
 #ifdef USE_ION_AUDIO_HEAP
-        p->dma_buffer.dev.type = SNDRV_DMA_TYPE_ION_PLAYBACK;
+		p->dma_buffer.dev.type = SNDRV_DMA_TYPE_ION_PLAYBACK;
 #else
-        p->dma_buffer.dev.type = SNDRV_DMA_TYPE_CONTINUOUS;
+		p->dma_buffer.dev.type = SNDRV_DMA_TYPE_CONTINUOUS;
 #endif
-        p = p->next;
-    }
+		p = p->next;
+	}
 
-    p = pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream;
-    for (i = 0; i < capture_substreams; i++) 
-    {
-        p->dma_buffer.dev.dev = snd_dma_continuous_data(GFP_KERNEL);
+	p = pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream;
+	for (i = 0; i < capture_substreams; i++)
+	{
+		p->dma_buffer.dev.dev = snd_dma_continuous_data(GFP_KERNEL);
 #ifdef USE_ION_AUDIO_HEAP
-        p->dma_buffer.dev.type = SNDRV_DMA_TYPE_ION_CAPTURE;
+		p->dma_buffer.dev.type = SNDRV_DMA_TYPE_ION_CAPTURE;
 #else
-        p->dma_buffer.dev.type = SNDRV_DMA_TYPE_CONTINUOUS;
+		p->dma_buffer.dev.type = SNDRV_DMA_TYPE_CONTINUOUS;
 #endif
-        p = p->next;
-    }
-	
+		p = p->next;
+	}
+
 	snd_pcm_add_chmap_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,snd_pcm_alt_chmaps, 8, 0, NULL);
-    pSnd->pcm = pcm;
+	pSnd->pcm = pcm;
 
 #if 0
-    /* NOTE: this may fail */
-    if (err = snd_pcm_lib_preallocate_pages_for_all(pcm, 
-              SNDRV_DMA_TYPE_CONTINUOUS, 
-              snd_dma_continuous_data(GFP_KERNEL),
-              32*1024, 
-              32*1024))
-    {
-        printk("snd_pcm_lib_preallocate_pages failed\n");
-    }
+	/* NOTE: this may fail */
+	if (err = snd_pcm_lib_preallocate_pages_for_all(pcm,
+			SNDRV_DMA_TYPE_CONTINUOUS,
+			snd_dma_continuous_data(GFP_KERNEL),
+			32*1024,
+			32*1024))
+	{
+		printk("snd_pcm_lib_preallocate_pages failed\n");
+	}
 #endif
 
-    return 0;
+	return 0;
 }
 
 void snd_realtek_hw_playback_volume_work(struct work_struct *work) {
-    RTK_snd_card_t *mars = container_of(work, RTK_snd_card_t, work_volume);     
-    TRACE_CODE("[���� %s %d]\n", __FUNCTION__, __LINE__);
-    RPC_TOAGENT_SET_VOLUME(mars->mixer_volume[MIXER_ADDR_MASTER][0]);
+	RTK_snd_card_t *mars = container_of(work, RTK_snd_card_t, work_volume);
+	printk("[%s %d]\n", __FUNCTION__, __LINE__);
+	RPC_TOAGENT_SET_VOLUME(mars->mixer_volume[MIXER_ADDR_MASTER][0]);
 }
 
 static int __init snd_card_mars_new_mixer(RTK_snd_card_t * pRTK_card)
@@ -4152,7 +4181,7 @@ static int snd_RTK_volume_info(snd_kcontrol_t * kcontrol, snd_ctl_elem_info_t * 
     uinfo->value.integer.max = 31;
     return 0;
 }
- 
+
 static int snd_RTK_volume_get(snd_kcontrol_t * kcontrol, snd_ctl_elem_value_t * ucontrol)
 {
     RTK_snd_card_t *mars = snd_kcontrol_chip(kcontrol);
@@ -4160,15 +4189,15 @@ static int snd_RTK_volume_get(snd_kcontrol_t * kcontrol, snd_ctl_elem_value_t * 
     int addr = kcontrol->private_value;
 
     //printk("[ALSA %s %d\n", __FUNCTION__, __LINE__);
-    
+
     spin_lock_irqsave(&mars->mixer_lock, flags);
     switch(addr) {
         case MIXER_ADDR_MASTER:
             mars->mixer_volume[addr][1] = mars->mixer_volume[addr][0] ;
             break;
-        default: 
+        default:
             break;
-    }   
+    }
     ucontrol->value.integer.value[0] = mars->mixer_volume[addr][0];
     ucontrol->value.integer.value[1] = mars->mixer_volume[addr][1];
     spin_unlock_irqrestore(&mars->mixer_lock, flags);
@@ -4647,5 +4676,3 @@ module_exit(RTK_alsa_card_exit);
 
 EXPORT_SYMBOL(snd_realtek_capture_check_hdmirx_enable);
 EXPORT_SYMBOL(snd_realtek_capture_get_stream_name);
-
-

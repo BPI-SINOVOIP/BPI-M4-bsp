@@ -592,7 +592,7 @@ long rpc_ctrl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		writel(RPC_INT_AS, rpc_int_base+RPC_SB2_INT);
 		writel(RPC_INT_SA, rpc_int_base+RPC_SB2_INT);
 
-		rpc_set_flag(0xffffffff);
+		rpc_set_flag(RPC_AUDIO, 0xffffffff);
 
 		pr_info("[RPC]done...\n");
 		break;

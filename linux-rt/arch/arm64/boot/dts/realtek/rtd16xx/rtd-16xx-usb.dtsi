@@ -153,6 +153,7 @@
 			dr_mode = "peripheral"; /*otg, host, peripheral*/
 			//tx-fifo-resize;
 			//snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
+			snps,dis_u3_susphy_quirk; // DRD port is recommended disable suspend by specification
 			snps,dis_ss_park_mode; // disable usb3.0 park mode
 		};
 
@@ -325,6 +326,7 @@
 			dr_mode = "host"; /*only host*/
 			//tx-fifo-resize;
 			//snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
+			snps,dis_u3_susphy_quirk;
 		};
 	};
 

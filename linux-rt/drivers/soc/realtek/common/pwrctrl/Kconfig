@@ -23,9 +23,6 @@ config POWER_CONTROL_PD_SRAM_CH
 config POWER_CONTROL_PD_SIMPLE
 	bool
 
-config POWER_CONTROL_PD_DUMMY
-	bool
-
 config POWER_CONTROL_RTD129X
 	bool "RTD129X SoC Power Controller"
 	depends on POWER_CONTROL
@@ -59,5 +56,16 @@ config POWER_CONTROL_RTD16XX
 	default y if ARCH_RTD16xx
 	help
 	  Realtek RTD16xx Soc Power Controller Driver.
+
+config POWER_CONTROL_RTD13XX
+	bool "RTD16XX SoC Power Controller"
+	depends on POWER_CONTROL
+	select PM_GENERIC_DOMAINS
+	select POWER_CONTROL_REALTEK
+	select POWER_CONTROL_PD_SRAM
+	select POWER_CONTROL_PD_SIMPLE
+	default y if ARCH_RTD13xx
+	help
+	  Realtek RTD13xx Soc Power Controller Driver.
 
 endmenu

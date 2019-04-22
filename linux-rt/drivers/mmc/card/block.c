@@ -1132,6 +1132,11 @@ static int mmc_blk_cmdq_switch(struct mmc_card *card,
 	    (cmdq_mode == enable))
 		return 0;
 
+#if 0
+	if(enable==1)
+		printk(KERN_ERR "%s: Enable command queue by command 6...\n", __func__);
+	else printk(KERN_ERR "%s: Disable command queue by command 6...\n", __func__);
+#endif
 	if (enable) {
 		ret = mmc_set_blocklen(card, MMC_CARD_CMDQ_BLK_SIZE);
 		if (ret) {
@@ -1176,6 +1181,8 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 			mmc_retune_pause(card->host);
 #if defined(CONFIG_ARCH_RTD13xx) && defined(CONFIG_MMC_RTK_EMMC) && defined(CONFIG_MMC_RTK_EMMC_CMDQ)
 		if (md->part_type) {
+			mmc_cmdq_halt(card->host, true);
+			card->host->cmdq_ops->disable(card->host, true);
 			/* disable CQ mode for non-user data partitions */
 			ret = mmc_blk_cmdq_switch(card, md, false);
 			if (ret)
@@ -1198,6 +1205,18 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 
 		if (main_md->part_curr == EXT_CSD_PART_CONFIG_ACC_RPMB)
 			mmc_retune_unpause(card->host);
+#if defined(CONFIG_ARCH_RTD13xx) && defined(CONFIG_MMC_RTK_EMMC) && defined(CONFIG_MMC_RTK_EMMC_CMDQ)
+		if (md->part_type==0) {
+                        /* disable CQ mode for non-user data partitions */
+                        ret = mmc_blk_cmdq_switch(card, md, true);
+                        if (ret)
+                                return ret;
+
+                        card->host->cmdq_ops->enable(card->host);
+
+                        mmc_cmdq_halt(card->host, false);
+		}
+#endif
 	}
 
 	main_md->part_curr = md->part_type;
@@ -2492,13 +2511,13 @@ static struct mmc_cmdq_req *mmc_blk_cmdq_rw_prep(
 	mqrq->cmdq_req.mrq.cmdq_req = &mqrq->cmdq_req;
 	mqrq->cmdq_req.mrq.data = &mqrq->cmdq_req.data;
 	mqrq->req->special = mqrq;
-
+#if 0
 	printk(KERN_INFO "%s: %s: mrq: 0x%p req: 0x%p mqrq: 0x%p bytes to xf: %d mmc_cmdq_req: 0x%p card-addr: 0x%08x dir(r-1/w-0): %d\n",
 		 mmc_hostname(card->host), __func__, &mqrq->cmdq_req.mrq,
 		 mqrq->req, mqrq, (cmdq_rq->data.blocks * cmdq_rq->data.blksz),
 		 cmdq_rq, cmdq_rq->blk_addr,
 		 (cmdq_rq->cmdq_req_flags & DIR) ? 1 : 0);
-
+#endif
 	return &mqrq->cmdq_req;
 }
 

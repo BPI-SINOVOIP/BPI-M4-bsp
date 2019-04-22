@@ -324,8 +324,6 @@ static int rtk_se_probe(struct platform_device *pdev)
 	struct uio_info *info;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
-
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -410,7 +408,7 @@ static int rtk_se_probe(struct platform_device *pdev)
 	/* init se */
 	rtk_se_init_drv(dev);
 	pm_runtime_put_sync(dev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 
 free_uio_mem:
@@ -427,7 +425,6 @@ static int rtk_se_remove(struct platform_device *pdev)
 	struct se_uio_info *priv = platform_get_drvdata(pdev);
 	struct uio_info *info = &priv->info;
 
-	dev_info(dev, "%s\n", __func__);
 	pm_runtime_disable(dev);
 	uio_reset_control_assert(dev, NULL);
 	platform_set_drvdata(pdev, NULL);
@@ -435,6 +432,7 @@ static int rtk_se_remove(struct platform_device *pdev)
 	uio_mem_dma_free(dev, &info->mem[2]);
 	uio_mem_dma_free(dev, &info->mem[1]);
 	uio_mem_iounmap(dev, &info->mem[0]);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 
@@ -454,4 +452,4 @@ static struct platform_driver rtk_se_driver = {
 		.pm = &rtk_se_pm_ops,
 	},
 };
-module_platform_driver_probe(rtk_se_driver, rtk_se_probe);
+module_platform_driver(rtk_se_driver);

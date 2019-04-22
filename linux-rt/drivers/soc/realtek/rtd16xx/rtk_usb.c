@@ -10,7 +10,6 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
-#include <linux/reset-helper.h> // rstc_get
 #include <linux/reset.h>
 #include <soc/realtek/rtk_usb.h>
 #include <soc/realtek/rtk_chip.h>

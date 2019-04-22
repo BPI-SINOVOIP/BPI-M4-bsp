@@ -18,7 +18,7 @@
 #include <linux/mfd/g2237.h>
 #include "internal.h"
 
-extern struct i2c_driver g2237_regulator_driver;
+extern struct i2c_driver g2237_i2c_driver;
 extern struct i2c_driver apw8889_regulator_driver;
 enum {
 	I2C_SELECTOR_DRIVER_G2237,
@@ -149,7 +149,7 @@ static int selector_probe(struct i2c_client *client,
 	switch (selector_get_selection(client))
 	{
 	case I2C_SELECTOR_DRIVER_G2237:
-		selection_driver = &g2237_regulator_driver;
+		selection_driver = &g2237_i2c_driver;
 		break;
 	case I2C_SELECTOR_DRIVER_APW8889:
 		selection_driver = &apw8889_regulator_driver;

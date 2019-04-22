@@ -1,14 +1,24 @@
 /*
- * g22xx-regulator-core.c - GMT-G22xx series Regulator core functions
+ * GMT-G22XX serise PMIC regulator core functions
  *
- * Copyright (C) 2018 Realtek Semiconductor Corporation
- * Copyright (C) 2018 Cheng-Yu Lee <cylee12@realtek.com>
+ * Copyright (C) 2018-2019 Realtek Semiconductor Corporation
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
-#define pr_fmt(fmt) "g22xx: " fmt
 
 #include <linux/bitops.h>
 #include <linux/of.h>
@@ -230,7 +240,7 @@ void g22xx_prepare_suspend_state(struct regulator_dev *rdev,
 }
 EXPORT_SYMBOL_GPL(g22xx_prepare_suspend_state);
 
-static struct regmap_field *create_regmap_field(struct g22xx_device *gdev,
+static struct regmap_field *create_regmap_field(struct g22xx_regulator_device *grdev,
 	u32 reg, u32 mask)
 {
 	u32 msb = fls(mask) - 1;
@@ -241,31 +251,20 @@ static struct regmap_field *create_regmap_field(struct g22xx_device *gdev,
 	if (reg == 0 && mask == 0)
 		return NULL;
 
-	dev_dbg(gdev->dev, "reg=%02x, mask=%02x, lsb=%d, msb=%d\n",
+	dev_dbg(grdev->dev, "reg=%02x, mask=%02x, lsb=%d, msb=%d\n",
 		reg, mask, lsb, msb);
-	rmap = devm_regmap_field_alloc(gdev->dev, gdev->regmap, map);
+	rmap = devm_regmap_field_alloc(grdev->dev, grdev->regmap, map);
 	if (IS_ERR(rmap)) {
-		dev_err(gdev->dev, "regmap_field_alloc() for (reg=%02x, mask=%02x) returns %ld\n",
+		dev_err(grdev->dev, "regmap_field_alloc() for (reg=%02x, mask=%02x) returns %ld\n",
 			reg, mask, PTR_ERR(rmap));
 	}
 	return rmap;
 }
 
-struct g22xx_regulator_data *g22xx_device_get_regulator_data_by_desc(
-	struct g22xx_device *gdev, struct g22xx_regulator_desc *gd)
+struct regulator_dev *g22xx_regulator_register(struct g22xx_regulator_device *grdev,
+					       struct g22xx_regulator_desc *gd)
 {
-	struct g22xx_regulator_data *pos;
-
-	list_for_each_entry(pos, &gdev->list, list)
-		if (pos->gd == gd)
-			return pos;
-	return NULL;
-}
-
-int g22xx_regulator_register(struct g22xx_device *gdev,
-	struct g22xx_regulator_desc *gd)
-{
-	struct device *dev = gdev->dev;
+	struct device *dev = grdev->dev;
 	struct g22xx_regulator_data *data;
 	struct regulator_config config = {};
 	struct regulation_constraints *c;
@@ -273,27 +272,27 @@ int g22xx_regulator_register(struct g22xx_device *gdev,
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
 	data->gd = gd;
 
-	data->nmode = create_regmap_field(gdev, gd->nmode_reg, gd->nmode_mask);
+	data->nmode = create_regmap_field(grdev, gd->nmode_reg, gd->nmode_mask);
 	if (IS_ERR(data->nmode))
-		return PTR_ERR(data->nmode);
-	data->smode = create_regmap_field(gdev, gd->smode_reg, gd->smode_mask);
+		return ERR_CAST(data->nmode);
+	data->smode = create_regmap_field(grdev, gd->smode_reg, gd->smode_mask);
 	if (IS_ERR(data->smode))
-		return PTR_ERR(data->smode);
-	data->svsel = create_regmap_field(gdev, gd->svsel_reg, gd->svsel_mask);
+		return ERR_CAST(data->smode);
+	data->svsel = create_regmap_field(grdev, gd->svsel_reg, gd->svsel_mask);
 	if (IS_ERR(data->svsel))
-		return PTR_ERR(data->svsel);
+		return ERR_CAST(data->svsel);
 
-	config.dev         = gdev->dev;
-	config.regmap      = gdev->regmap;
+	config.dev         = grdev->dev;
+	config.regmap      = grdev->regmap;
 	config.driver_data = data;
 
 	data->rdev = devm_regulator_register(dev, &gd->desc, &config);
 	if (IS_ERR(data->rdev))
-		return PTR_ERR(data->rdev);
+		return data->rdev;
 
 	c = data->rdev->constraints;
 
@@ -317,49 +316,10 @@ int g22xx_regulator_register(struct g22xx_device *gdev,
 		c->valid_modes_mask |= REGULATOR_MODE_FAST;
 	c->valid_ops_mask |= REGULATOR_CHANGE_MODE;
 
-	list_add_tail(&data->list, &gdev->list);
+	list_add_tail(&data->list, &grdev->list);
 
-	return 0;
+	return data->rdev;
 }
 EXPORT_SYMBOL_GPL(g22xx_regulator_register);
 
-
-/* softoff */
-enum {
-	SOFTOFF_POWER_ON  = 0,
-	SOFTOFF_POWER_OFF = 1,
-};
-
-
-static struct regmap_field *g22xx_softoff;
-
-static void g22xx_pm_power_off(void)
-{
-	pr_emerg("%s: set softoff\n", __func__);
-	regmap_field_write(g22xx_softoff, SOFTOFF_POWER_OFF);
-}
-
-int g22xx_setup_pm_power_off(struct g22xx_device *gdev, u32 reg, u32 mask)
-{
-	struct device *dev = gdev->dev;
-
-	if (!of_device_is_system_power_controller(dev->of_node)) {
-		dev_info(dev, "not a system power controller\n");
-		return 0;
-	}
-
-	if (!pm_power_off) {
-		dev_err(dev, "pm_power_off is already assigned with %pf\n",
-			pm_power_off);
-		return -EINVAL;
-	}
-
-	g22xx_softoff = create_regmap_field(gdev, reg, mask);
-	if (IS_ERR(g22xx_softoff))
-		return PTR_ERR(g22xx_softoff);
-
-	pm_power_off = g22xx_pm_power_off;
-	return 0;
-}
-EXPORT_SYMBOL_GPL(g22xx_setup_pm_power_off);
 

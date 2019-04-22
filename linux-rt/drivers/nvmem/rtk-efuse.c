@@ -227,8 +227,6 @@ static int rtk_efuse_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct resource *res;
 
-	dev_info(dev, "%s\n", __func__);
-
 	edev = devm_kzalloc(dev, sizeof(*edev), GFP_KERNEL);
 	if (!edev)
 		return -ENOMEM;
@@ -248,7 +246,7 @@ static int rtk_efuse_probe(struct platform_device *pdev)
 	rtk_efuse_init_reg(edev);
 	list_add(&edev->list, &efuse_device_list);
 	platform_set_drvdata(pdev, edev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
@@ -259,7 +257,7 @@ static int rtk_efuse_remove(struct platform_device *pdev)
 	list_del(&edev->list);
 	platform_set_drvdata(pdev, NULL);
 	nvmem_unregister(edev->nvmem);
-
+	dev_info(&pdev->dev, "removed\n");
 	return 0;
 }
 

@@ -100,6 +100,7 @@ static void rtk_sata_init(struct ahci_host_priv *hpriv)
 
 	if (ahci_dev->chip_id == CHIP_ID_RTD1619) {
 		writel(0x40, mmio + 0xf18);
+		writel(0xc0c300, mmio + 0xf20);
 		// COMINIT waveform adjustment
 		writel(0x0506373e, mmio + 0xf2c);
 		// COMINIT detect enable

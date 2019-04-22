@@ -293,4 +293,9 @@
 		led1-gpio-active-low = <1>;
 		status = "okay";
 	};
+	
+	&powerkey {
+		compatible = "gmt,g22xx-powerkey";
+		status = "okay";
+	};
 };

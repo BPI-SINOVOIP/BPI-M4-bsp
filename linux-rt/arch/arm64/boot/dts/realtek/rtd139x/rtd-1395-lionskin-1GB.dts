@@ -187,3 +187,7 @@
 		fps = <60>;
 	};
 };
+
+&powerkey {
+	status = "okay";
+};

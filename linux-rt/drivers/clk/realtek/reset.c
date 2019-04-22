@@ -18,7 +18,6 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/reset-controller.h>
-#include <linux/reset-helper.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
 #include <soc/realtek/rtk_mmio.h>
@@ -314,7 +313,6 @@ static int rtk_reset_probe(struct platform_device *pdev)
 	int offset = 0;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct reset_priv), GFP_KERNEL);
 	if (!priv)
@@ -362,6 +360,7 @@ static int rtk_reset_probe(struct platform_device *pdev)
 		return ret;
 
 	platform_set_drvdata(pdev, priv);
+	dev_info(dev, "initialized\n");
 
 	return ret;
 }
@@ -385,57 +384,4 @@ static int __init rtk_reset_init(void)
 	return platform_driver_register(&rtk_reset_driver);
 }
 core_initcall(rtk_reset_init);
-
-/*
- * deprecated api
- */
-static struct device_node *__rcp_np;
-
-struct reset_control *rstc_get(const char *name)
-{
-	struct reset_control *rstc = ERR_PTR(-EINVAL);
-	struct device_node *child;
-
-	pr_notice("Deprecated API rstc_get is used by %s, PLEASE use of_reset_control_get\n",
-		name);
-
-	if (!__rcp_np)
-		return ERR_PTR(-ENOENT);
-
-	for_each_child_of_node(__rcp_np, child) {
-		rstc = of_reset_control_get(child, name);
-		if (!IS_ERR(rstc))
-			return rstc;
-	}
-
-	pr_err("Failed to get rstc for %s\n", name);
-	return rstc;
-}
-EXPORT_SYMBOL(rstc_get);
-
-static const struct of_device_id rtk_rcp_match[] = {
-	{.compatible = "realtek,reset-control-provider"},
-	{}
-};
-
-static int rtk_rcp_probe(struct platform_device *pdev)
-{
-	dev_info(&pdev->dev, "deprecated API OK\n");
-	__rcp_np = pdev->dev.of_node;
-	return 0;
-}
-
-static struct platform_driver rtk_rcp_driver = {
-	.probe = rtk_rcp_probe,
-	.driver = {
-		.name   = "rtk-rcp",
-		.of_match_table = rtk_rcp_match,
-	},
-};
-
-static int __init rtk_rcp_init(void)
-{
-	return platform_driver_register(&rtk_rcp_driver);
-}
-core_initcall(rtk_rcp_init);
 

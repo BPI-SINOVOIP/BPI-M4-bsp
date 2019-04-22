@@ -75,14 +75,14 @@
 		//speed-mode = <1>; // 0:GEN1, 1:GEN2
 		ranges = <0x02000000 0x00000000 0x98062000 0x0 0x98062000 0x00000000 0x0001E000
 			0x01000000 0x00000000 0x00030000 0x0 0x00030000 0x00000000 0x00010000>;
-		resets = <&rst2 RSTN_PCIE0>,
-			<&rst2 RSTN_PCIE0_CORE>,
-			<&rst2 RSTN_PCIE0_POWER>,
-			<&rst2 RSTN_PCIE0_NONSTITCH>,
-			<&rst2 RSTN_PCIE0_STITCH>,
-			<&rst2 RSTN_PCIE0_PHY>,
-			<&rst2 RSTN_PCIE0_PHY_MDIO>,
-			<&rst2 RSTN_PCIE0_SGMII_MDIO>;
+		resets = <&crst RSTN_PCIE0>,
+			<&crst RSTN_PCIE0_CORE>,
+			<&crst RSTN_PCIE0_POWER>,
+			<&crst RSTN_PCIE0_NONSTITCH>,
+			<&crst RSTN_PCIE0_STITCH>,
+			<&crst RSTN_PCIE0_PHY>,
+			<&crst RSTN_PCIE0_PHY_MDIO>,
+			<&crst RSTN_PCIE0_SGMII_MDIO>;
 
 		reset-names = "rstn",
 			"core",
@@ -172,13 +172,13 @@
 		//speed-mode = <1>; // 0:GEN1, 1:GEN2
 		ranges = <0x02000000 0x00000000 0x980A2000 0x0 0x980A2000 0x00000000 0x0001E000
 			0x01000000 0x00000000 0x00040000 0x0 0x00040000 0x00000000 0x00010000>;
-		resets = <&rst4 RSTN_PCIE1>,
-			<&rst4 RSTN_PCIE1_CORE>,
-			<&rst4 RSTN_PCIE1_POWER>,
-			<&rst4 RSTN_PCIE1_NONSTITCH>,
-			<&rst4 RSTN_PCIE1_STITCH>,
-			<&rst4 RSTN_PCIE1_PHY>,
-			<&rst4 RSTN_PCIE1_PHY_MDIO>;
+		resets = <&crst RSTN_PCIE1>,
+			<&crst RSTN_PCIE1_CORE>,
+			<&crst RSTN_PCIE1_POWER>,
+			<&crst RSTN_PCIE1_NONSTITCH>,
+			<&crst RSTN_PCIE1_STITCH>,
+			<&crst RSTN_PCIE1_PHY>,
+			<&crst RSTN_PCIE1_PHY_MDIO>;
 
 		reset-names = "rstn",
 			"core",

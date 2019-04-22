@@ -15,6 +15,10 @@
 #include <linux/atomic.h>
 
 #include "i2c-rtk.h"
+#if defined(CONFIG_OPTEE) && defined(CONFIG_ARCH_RTD16xx)
+extern int ta_i2c_init(void);
+extern void ta_hdcp_lib_set_i2c_enable(unsigned int  i2c_enable_value);
+#endif
 
 #define FIFO_THRESHOLD 4
 #define ADDR_10BITS_MASK 0x3FF
@@ -68,8 +72,13 @@
 
 /* SPINLOCK */
 #ifdef SPIN_LOCK_PROTECT_EN
+#if defined(CONFIG_OPTEE) && defined(CONFIG_ARCH_RTD16xx)
+#define LOCK_RTK_I2C(a, b) spin_lock(a)
+#define UNLOCK_RTK_I2C(a, b) spin_unlock(a)
+#else
 #define LOCK_RTK_I2C(a, b) spin_lock_irqsave(a, b)
 #define UNLOCK_RTK_I2C(a, b) spin_unlock_irqrestore(a, b)
+#endif
 #else
 #define LOCK_RTK_I2C(a, b) do {} while (0)
 #define UNLOCK_RTK_I2C(a, b) do {} while (0)

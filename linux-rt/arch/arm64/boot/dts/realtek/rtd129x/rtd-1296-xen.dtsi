@@ -692,7 +692,6 @@
 	rtc@9801B600 {
 		compatible = "realtek,rtk-rtc";
 		reg = <0x9801B600 0x100>,
-			<0x98000000 0x100>,
 			<0x98007000 0x100>;
 		rtc-base-year = <2014>;
 		clocks = <&clk_en_2 CLK_EN_MISC_RTC>;

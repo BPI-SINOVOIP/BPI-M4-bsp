@@ -1200,6 +1200,9 @@ static int mmc_select_hs400(struct mmc_card *card)
 	int err = 0;
 	u8 val;
 
+#ifdef CONFIG_MMC_RTK_EMMC
+	if(host->doing_retune==1) return 0;
+#endif
 	/*
 	 * HS400 mode requires 8-bit bus width
 	 */
@@ -1323,6 +1326,9 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 	int err;
 	u8 val;
 
+#ifdef CONFIG_MMC_RTK_EMMC
+	if(host->doing_retune==1) return 0;
+#endif
 	/* Reduce frequency to HS */
 	max_dtr = card->ext_csd.hs_max_dtr;
 	mmc_set_clock(host, max_dtr);

@@ -27,9 +27,20 @@ extern const char *rpc_name;
 
 #define RPC_SB2_INT 0x0
 #define RPC_SB2_INT_EN 0x4
+#define RPC_SB2_INT_ST 0x8
+
 #define RPC_INT_WRITE_1 1
-#define RPC_INT_AS (1 << 3)
 #define RPC_INT_SA (1 << 1)
+
+#ifdef CONFIG_ARCH_RTD13xx
+#define RPC_INT_AS (1 << 1)
+#define RPC_INT_VS (1 << 2)
+#define RPC_INT_SV (1 << 2)
+#else
+#define RPC_INT_AS (1 << 3)
+#endif
+
+
 
 #if 0
 #define __read_32bit_caller_register() \
@@ -69,6 +80,7 @@ __res; \
 #endif
 
 #ifndef RPC_NR_DEVS
+
 /*
  * 2 for S-A,
  * 2 for A-S,
@@ -752,7 +764,7 @@ extern volatile RPC_DEV *rpc_poll_devices;
 extern volatile RPC_DEV *rpc_intr_devices;
 extern volatile RPC_DEV *rpc_kern_devices;
 extern volatile void __iomem *rpc_int_base;
-extern void rpc_set_flag(uint32_t);
+extern void rpc_set_flag(int, uint32_t);
 #ifdef CONFIG_SND_REALTEK
 int RPC_DESTROY_AUDIO_FLOW(int pid);
 #endif
@@ -793,10 +805,19 @@ struct S_RPC_IOC_PROCESS_CONFIG_0 {
 #define VO_DC_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 17))
 #define AUDIO_RPC_SET_NOTIFY (__cpu_to_be32(1U << 24)) /* ACPU write */
 #define AUDIO_RPC_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 25))
+#define VIDEO_RPC_SET_NOTIFY (__cpu_to_be32(1U << 0)) /* VCPU write */
+#define VIDEO_RPC_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 1))
+
+
 
 #define DC_VO_SET_NOTIFY (__cpu_to_be32(1U << 0)) /* SCPU write */
 #define DC_VO_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 1))
 #define RPC_AUDIO_SET_NOTIFY (__cpu_to_be32(1U << 8)) /* SCPU write */
 #define RPC_AUDIO_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 9))
+#define RPC_VIDEO_SET_NOTIFY (__cpu_to_be32(1U << 2)) /* SCPU write */
+#define RPC_VIDEO_FEEDBACK_NOTIFY (__cpu_to_be32(1U << 3))
+
+
+
 
 #endif /* _RTK_RPC_H */

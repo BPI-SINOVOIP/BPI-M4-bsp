@@ -25,8 +25,8 @@ ENTRY(__cpu_do_lowpower)
 	//msr S3_0_C15_C2_7, r12
 	isb
 	dsb sy
+1:
 	wfi
-	ldr r3, [r0] //get entry address, if cpu do not power gating
-	mov pc, r3
+	b 1b
 ENDPROC(__cpu_do_lowpower)
 

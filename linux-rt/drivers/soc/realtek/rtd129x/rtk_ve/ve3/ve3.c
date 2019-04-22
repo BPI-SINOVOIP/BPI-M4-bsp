@@ -28,7 +28,7 @@
 #include <soc/realtek/rtk_cpu.h>
 
 #ifdef CONFIG_POWER_CONTROL
-#include <linux/power-control.h>
+#include <soc/realtek/power-control.h>
 #endif
 
 #include "ve3.h"
@@ -1337,9 +1337,33 @@ void ve3_clk_disable(struct clk *clk)
 }
 
 #ifdef CONFIG_POWER_CONTROL
+
+static int ve3_pcrtl_callback(struct notifier_block *nb,
+			      unsigned long action,
+			      void *p)
+{
+	struct power_control *pctrl = p;
+
+	if (action != POWER_CONTROL_ACTION_POST_POWER_ON)
+		return NOTIFY_DONE;
+
+	reset_control_reset(rstc_ve3);
+	return NOTIFY_OK;
+}
+
+struct notifier_block ve3_pctrl_nb = {
+	.notifier_call = ve3_pcrtl_callback,
+};
+
 struct power_control *ve3_pctrl_get(void)
 {
-	return power_control_get("pctrl_ve3");
+	 struct power_control *pctrl;
+
+	pctrl = power_control_get("pctrl_ve3");
+	if (WARN_ON(IS_ERR_OR_NULL(pctrl)))
+		return NULL;
+	power_control_register_notifier(pctrl, &ve3_pctrl_nb);
+	return pctrl;
 }
 
 void ve3_pctrl_on(struct power_control *pctrl)
@@ -1348,7 +1372,6 @@ void ve3_pctrl_on(struct power_control *pctrl)
 		printk(KERN_INFO "ve3_pctrl_on\n");
 		power_control_power_on(pctrl);
 	}
-	reset_control_reset(rstc_ve3);
 }
 
 void ve3_pctrl_off(struct power_control *pctrl)

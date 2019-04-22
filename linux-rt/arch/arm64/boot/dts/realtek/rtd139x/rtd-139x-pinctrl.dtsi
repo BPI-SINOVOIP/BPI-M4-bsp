@@ -106,20 +106,20 @@
 		"gpio_18",
 		"gpio_19",
 		"gpio_20",
-		"gpio_31";
+				"gpio_31";
 	        realtek,function = "gspi_loc0";
 	};
 
-	gspi_pins_1: gspi_pins_1 {
+		gspi_pins_1: gspi_pins_1 {
 	        realtek,pins = "gspi_loc",
 		"gpio_25",
 		"gpio_26",
 		"gpio_27",
-		"gpio_28";
+				"gpio_28";
 	        realtek,function = "gspi_loc1";
 	};
 
-	smartcard_pins:smartcard_pins{
+		smartcard_pins:smartcard_pins{
 			realtek,pins = "gpio_18",
 		"gpio_19",
 		"gpio_20",

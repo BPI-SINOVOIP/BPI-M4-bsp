@@ -41,352 +41,6 @@ struct cpufreq_driver_data {
 	struct device *dev;
 };
 
-struct rtk_cache_priv;
-struct rtk_hlb_priv;
-struct rtk_dm_priv;
-
-/**
- * struct rtk_dvfs_priv - platform device private data for features
- */
-struct rtk_dvfs_priv {
-	struct rtk_cache_priv *cache;
-	struct rtk_hlb_priv *hlb;
-	struct rtk_dm_priv *dm;
-};
-
-/********************************************************************
- *                          L2 cache DVS                            *
- ********************************************************************/
-struct rtk_cache_priv {
-	struct notifier_block cpu_supply_nb;
-	struct regulator *l2_supply;
-};
-
-static int rtk_cache_notifier(struct notifier_block *nb,
-	unsigned long action, void *data)
-{
-	struct rtk_cache_priv *priv = container_of(nb,
-		struct rtk_cache_priv, cpu_supply_nb);
-	struct pre_voltage_change_data *pvcd = data;
-	int target_uV;
-	int ret;
-
-	if (action != REGULATOR_EVENT_PRE_VOLTAGE_CHANGE)
-		return  NOTIFY_DONE;
-
-	if (pvcd->min_uV > 1050000)
-		target_uV = 1000000;
-	else if (pvcd->min_uV > 1000000)
-		target_uV = 950000;
-	else
-		target_uV = 900000;
-
-	ret = regulator_set_voltage(priv->l2_supply, target_uV, target_uV);
-	if (ret)
-		pr_warn("failed to set l2-supply: %d\n", ret);
-
-	return NOTIFY_OK;
-}
-
-static int rtk_cache_init(struct device *dev)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_cache_priv *priv;
-	struct device *cpu_dev;
-	struct regulator *cpu_supply;
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
-	priv->l2_supply = regulator_get_optional(dev, "l2");
-	if (IS_ERR(priv->l2_supply))
-		goto no_l2_supply;
-
-	priv->cpu_supply_nb.notifier_call = rtk_cache_notifier;
-
-	cpu_dev = get_cpu_device(0);
-
-	cpu_supply = regulator_get_optional(cpu_dev, "cpu");
-	regulator_register_notifier(cpu_supply, &priv->cpu_supply_nb);
-	regulator_put(cpu_supply);
-
-	dvfs->cache = priv;
-	return 0;
-
-no_l2_supply:
-	dev_info(dev, "no L2 cache DVS\n");
-	kfree(priv);
-	return 0;
-}
-
-static int rtk_cache_exit(struct device *dev)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_cache_priv *priv = dvfs->cache;
-	struct device *cpu_dev;
-	struct regulator *cpu_supply;
-
-	if (!priv)
-		return 0;
-
-	cpu_dev = get_cpu_device(0);
-	cpu_supply = regulator_get_optional(cpu_dev, "cpu");
-
-	regulator_unregister_notifier(cpu_supply, &priv->cpu_supply_nb);
-	regulator_put(cpu_supply);
-
-	regulator_put(priv->l2_supply);
-
-	kfree(priv);
-
-	return 0;
-}
-
-/********************************************************************
- *                       High Load Boost                            *
- ********************************************************************/
-struct rtk_hlb_priv {
-	/* common data */
-	struct delayed_work dwork;
-
-	/* sysfs */
-	bool stop;
-	struct device_attribute hlb_ctrl;
-
-	struct notifier_block nb;
-
-	u32 limit;
-	u32 prev_limit;
-	u32 polling_time;
-	u32 load_th;
-	u32 freq_th;
-	u64 prev_update_time[CONFIG_NR_CPUS];
-	u64 prev_idle_time[CONFIG_NR_CPUS];
-};
-
-static ssize_t hlb_ctrl_show(struct device *dev,
-				    struct device_attribute *attr,
-				    char *buf)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_hlb_priv *priv = dvfs->hlb;
-	ssize_t len = 0;
-
-	len += snprintf(buf + len, PAGE_SIZE, "hlb: %s\n", priv->stop ? "stopped" : "running");
-	len += snprintf(buf + len, PAGE_SIZE, "polling_interval: %u ms\n", jiffies_to_msecs(priv->polling_time));
-	len += snprintf(buf + len, PAGE_SIZE, "load_threshold: %u\n",  priv->load_th);
-	len += snprintf(buf + len, PAGE_SIZE, "freq_threshold: %u\n",  priv->freq_th);
-	return len;
-}
-static ssize_t hlb_ctrl_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf,
-				     size_t count)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_hlb_priv *priv = dvfs->hlb;
-	int cpu = cpumask_first(cpu_online_mask);
-
-	if (!strncmp(buf, "stop", 4))
-		priv->stop = 1;
-	if (!strncmp(buf, "start", 5))
-		priv->stop = 0;
-	cpufreq_update_policy(cpu);
-	return count;
-}
-
-static int rtk_hlb_notifier(struct notifier_block *nb,
-	unsigned long action, void *data)
-{
-	struct rtk_hlb_priv *priv = container_of(nb,
-		struct rtk_hlb_priv, nb);
-	struct cpufreq_policy *policy = data;
-
-	if (priv->stop)
-		return NOTIFY_DONE;
-
-	if (action != CPUFREQ_ADJUST)
-		return NOTIFY_DONE;
-
-	if (priv->limit == 1)
-		cpufreq_verify_within_limits(policy, 0, priv->freq_th);
-	return NOTIFY_OK;
-}
-
-static void rtk_hlb_load_worker(struct work_struct *work)
-{
-	int cpu = cpumask_first(cpu_online_mask);
-	struct rtk_hlb_priv *priv = container_of(work,
-		struct rtk_hlb_priv, dwork.work);
-	u32 max_load = 0;
-	struct cpufreq_policy *policy;
-	u32 j;
-
-	if (priv->stop)
-		goto done;
-
-	policy = cpufreq_cpu_get(cpu);
-	if (!policy) {
-		pr_err("%s: cpufreq policy not found, worker stop\n", __func__);
-		return;
-	}
-	for_each_cpu(j, policy->cpus) {
-		u64 update, idle;
-		u32 d_update, d_idle;
-		u32 load;
-
-		idle = get_cpu_idle_time(j, &update, 0);
-
-		d_idle = idle - priv->prev_idle_time[j];
-		priv->prev_idle_time[j] = idle;
-		d_update = update - priv->prev_update_time[j];
-		priv->prev_update_time[j] = update;
-
-		load = 100 * (d_update - d_idle) / d_update;
-		if (load > max_load)
-			max_load = load;
-	}
-	cpufreq_cpu_put(policy);
-
-	pr_debug("%s: max_load = %u\n", __func__, max_load);
-	priv->prev_limit = priv->limit;
-	priv->limit = max_load <= priv->load_th;
-	if (priv->prev_limit != priv->limit)
-		cpufreq_update_policy(cpu);
-done:
-	queue_delayed_work(system_freezable_wq, &priv->dwork, priv->polling_time);
-}
-
-static int rtk_hlb_init(struct device *dev)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_hlb_priv *priv;
-	struct device_node *np = dev->of_node;
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
-	if (!of_find_property(np, "hlb-enable", NULL))
-		goto no_hlb;
-
-	if (of_property_read_u32(np, "hlb-polling-ms", &priv->polling_time))
-		priv->polling_time = 500;
-	if (priv->polling_time <= 0)
-		goto no_hlb;
-	priv->polling_time = msecs_to_jiffies(priv->polling_time);
-
-	if (of_property_read_u32(np, "hlb-load-threshold", &priv->load_th))
-		priv->load_th = 90;
-
-	if (of_property_read_u32(np, "hlb-freq-threshold-khz", &priv->freq_th))
-		priv->freq_th = 1300000;
-
-	priv->nb.notifier_call = rtk_hlb_notifier;
-	cpufreq_register_notifier(&priv->nb, CPUFREQ_POLICY_NOTIFIER);
-
-	dev_info(dev, "hlb: [polling-ms:%u, load:%u, freq:%u]\n",
-		jiffies_to_msecs(priv->polling_time),
-		priv->load_th, priv->freq_th);
-	INIT_DELAYED_WORK(&priv->dwork, rtk_hlb_load_worker);
-	rtk_hlb_load_worker(&priv->dwork.work);
-
-	dvfs->hlb = priv;
-	priv->hlb_ctrl.attr.name = "hlb_ctrl";
-	priv->hlb_ctrl.attr.mode = 0644;
-	priv->hlb_ctrl.show = hlb_ctrl_show;
-	priv->hlb_ctrl.store = hlb_ctrl_store;
-	device_create_file(dev, &priv->hlb_ctrl);
-
-	return 0;
-
-no_hlb:
-	dev_info(dev, "no hlb\n");
-	kfree(priv);
-	return 0;
-}
-
-static int rtk_hlb_exit(struct device *dev)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_hlb_priv *priv = dvfs->hlb;
-
-	if (!priv)
-		return 0;
-
-	device_remove_file(dev, &priv->hlb_ctrl);
-	cancel_delayed_work(&priv->dwork);
-	cpufreq_unregister_notifier(&priv->nb, CPUFREQ_POLICY_NOTIFIER);
-	kfree(priv);
-	return 0;
-}
-
-/********************************************************************
- *                        Dynamic opMode                            *
- ********************************************************************/
-struct rtk_dm_priv {
-	struct regulator *cpu_supply;
-	struct notifier_block nb;
-};
-
-static int rtk_dm_notifier(struct notifier_block *nb,
-	unsigned long action, void *data)
-{
-	struct rtk_dm_priv *priv = container_of(nb, struct rtk_dm_priv, nb);
-	struct cpufreq_freqs *freqs = data;
-	int ret = 0;
-
-	if (action != CPUFREQ_PRECHANGE)
-		return NOTIFY_DONE;
-
-	ret = regulator_set_mode(priv->cpu_supply, freqs->new >= 1000000 ?
-		REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL);
-	if (ret)
-		pr_err("%s: failed to set mode: %d\n", __func__, ret);
-
-	return NOTIFY_OK;
-}
-
-static int rtk_dm_init(struct device *dev)
-{
-	struct rtk_dm_priv *priv;
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
-	priv->cpu_supply = regulator_get_optional(dev, "cpu");
-	if (IS_ERR(priv->cpu_supply))
-		goto fail_regulator_get;
-
-	priv->nb.notifier_call = rtk_dm_notifier;
-	cpufreq_register_notifier(&priv->nb, CPUFREQ_TRANSITION_NOTIFIER);
-
-	dvfs->dm = priv;
-	return 0;
-
-fail_regulator_get:
-	dev_info(dev, "no dynamic opmode\n");
-	kfree(priv);
-	return 0;
-}
-
-static int rtk_dm_exit(struct device *dev)
-{
-	struct rtk_dvfs_priv *dvfs = dev_get_drvdata(dev);
-	struct rtk_dm_priv *priv = dvfs->dm;
-
-	if (!priv)
-		return 0;
-
-	cpufreq_unregister_notifier(&priv->nb, CPUFREQ_TRANSITION_NOTIFIER);
-	regulator_put(priv->cpu_supply);
-	kfree(priv);
-	return 0;
-}
-
 /********************************************************************
  *                 Realtek Generic Cpufreq Driver                   *
  ********************************************************************/
@@ -756,62 +410,28 @@ static int resources_available(void)
 
 static int rtk_dvfs_probe(struct platform_device *pdev)
 {
-	int ret;
-	struct rtk_dvfs_priv *dvfs;
 	struct device *dev = &pdev->dev;
-
-	dev_info(dev, "%s\n", __func__);
+	int ret;
 
 	ret = resources_available();
 	if (ret)
 		return ret;
 
-	dvfs = kzalloc(sizeof(*dvfs), GFP_KERNEL);
-	if (!dvfs)
-		return -ENOMEM;
-
-	platform_set_drvdata(pdev, dvfs);
-
-	/* l2-supply voltage adjusting */
-	rtk_cache_init(dev);
-
-	/* cpu-supply dynamic opmode */
-	rtk_dm_init(dev);
-
 	ret = cpufreq_register_driver(&rtk_cpufreq_driver);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to register cpufreq driver: %d\n",
-			ret);
-		goto fail_cpufreq_register;
+		dev_err(dev, "cpufreq_register_driver() returns %d\n", ret);
+		return ret;
 	}
-
-	cpufreq_enable_boost_support();
-
-	/* auto boost */
-	rtk_hlb_init(dev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
-
-fail_cpufreq_register:
-	rtk_dm_exit(&pdev->dev);
-	rtk_cache_exit(&pdev->dev);
-	kfree(dvfs);
-	return ret;
 }
 
 static int rtk_dvfs_remove(struct platform_device *pdev)
 {
-	struct rtk_dvfs_priv *dvfs = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 
-	dev_info(dev, "%s\n", __func__);
-
-	rtk_hlb_exit(dev);
 	cpufreq_unregister_driver(&rtk_cpufreq_driver);
-	rtk_dm_exit(dev);
-	rtk_cache_exit(dev);
-	platform_set_drvdata(pdev, NULL);
-	kfree(dvfs);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 
@@ -876,8 +496,7 @@ static int rtk_dummy_dvfs_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct cpufreq_driver_data *data;
-
-	dev_info(dev, "%s\n", __func__);
+	int ret;
 
 	/*
 	 * alloc a driver data and set the device of platform device in it,
@@ -890,15 +509,19 @@ static int rtk_dummy_dvfs_probe(struct platform_device *pdev)
 	data->dev = dev;
 	rtk_dummy_cpufreq_driver.driver_data = data;
 
-	return cpufreq_register_driver(&rtk_dummy_cpufreq_driver);
+	ret = cpufreq_register_driver(&rtk_dummy_cpufreq_driver);
+	if (ret)
+		return ret;
+	dev_info(dev, "initialized\n");
+	return 0;
 }
 
 static int rtk_dummy_dvfs_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
-	dev_info(dev, "%s\n", __func__);
 	cpufreq_unregister_driver(&rtk_dummy_cpufreq_driver);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 

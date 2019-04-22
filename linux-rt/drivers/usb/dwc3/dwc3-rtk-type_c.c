@@ -229,12 +229,12 @@ static init_type_c_mode(struct type_c_data *type_c)
 	if (type_c->chip_id == CHIP_ID_RTD1619) {
 		void __iomem *drd_wrap_base = type_c->wrap_base;
 		void __iomem *u3host_u3port_dis = ioremap(0x98013e60, 0x4);
-		int cc_set_offect = 0x194;
+		void __iomem *drd_cc_setting = drd_wrap_base + 0x194;
 
 		dev_info(type_c->dev, "%s: disable u3host u3phy for CHIP_ID_RTD1619\n",
-				    __func__);
+			    __func__);
 		enable_writel(BIT(8), u3host_u3port_dis);
-		enable_writel(BIT(0), drd_wrap_base + cc_set_offect);
+		enable_writel(BIT(0), drd_cc_setting);
 
 		iounmap(u3host_u3port_dis);
 	}
@@ -251,28 +251,80 @@ static void switch_type_c_plug_side(struct type_c_data *type_c, int cc)
 		writel(value, type_c_reg_base);
 	} else if (type_c->chip_id == CHIP_ID_RTD1619) {
 		void __iomem *drd_wrap_base = type_c->wrap_base;
-		void __iomem *u3host_wrap_base = ioremap(0x98013e00, 0xf);
-		int clock_offset = 0xc;
-		int cc_set_offect = 0x194;
+		void __iomem *u3host_wrap_base = ioremap(0x98013e00, 0x100);
+		void __iomem *drd_u3phy_pipe_clock = drd_wrap_base + 0xc;
+		void __iomem *u3host_u3phy_pipe_clock = u3host_wrap_base + 0xc;
+		void __iomem *drd_pclk_u3phy = drd_wrap_base + 0x84;
+		void __iomem *u3host_pclk_u3phy = u3host_wrap_base + 0x84;
+		void __iomem *drd_tc_mux_ctrl =  drd_wrap_base + 0x194;
+		void __iomem *drd_u3_portsc = ioremap(0x98020430, 0x4);
+		void __iomem *drd_u3_sus_en = ioremap(0x980282c0, 0x4);
+		void __iomem *u3host_u3_sus_en = ioremap(0x980582c0, 0x4);
+		int wait_count = 1000;
+		int drd_u3_sus_en_status_save = readl(drd_u3_sus_en) & BIT(17);
+		int u3host_u3_sus_en_status_save = readl(u3host_u3_sus_en) & BIT(17);
+
+		dev_info(type_c->dev, "switch_type_c_plug_side to cc=0x%x\n", cc);
+		/* disable u3phy suspend */
+		disable_writel(BIT(17), drd_u3_sus_en);
+		disable_writel(BIT(17), u3host_u3_sus_en);
+
+		/* check u3phy clock if resume */
+		while (wait_count-- > 0 && (!(readl(drd_pclk_u3phy) & BIT(19)) ||
+			!(readl(u3host_pclk_u3phy) & BIT(19)))) {
+			dev_info(type_c->dev, "wait drd/u3host u3phy clock\n");
+			mdelay(1);
+		};
+
+		if (wait_count < 0) {
+			dev_err(type_c->dev, "wait u3phy clock fail. "
+				    "drd=0x%x u3host=0x%x\n",
+				    readl(drd_pclk_u3phy), readl(u3host_pclk_u3phy));
+		}
 
 		if (cc == disable_cc) {
 			dev_info(type_c->dev, "%s: disable drd u3phy for CHIP_ID_RTD1619\n",
 				__func__);
 		} else {
-			disable_writel(BIT(1), drd_wrap_base + clock_offset);
-			disable_writel(BIT(1), u3host_wrap_base + clock_offset);
+			/* push drd u3 port status to disable */
+			enable_writel(BIT(1), drd_u3_portsc);
+			dev_info(type_c->dev, "%s: disable drd_u3_portsc=0x%x\n",
+				    __func__, readl(drd_u3_portsc));
+
+			/* disable u3phy clock */
+			disable_writel(BIT(1), drd_u3phy_pipe_clock);
+			disable_writel(BIT(1), u3host_u3phy_pipe_clock);
+
 			if (cc == enable_cc1) {
-				disable_writel(BIT(1), drd_wrap_base + cc_set_offect);
+				disable_writel(BIT(1), drd_tc_mux_ctrl);
 				dev_info(type_c->dev, "%s: enable_cc1 drd u3phy for "
 					    "CHIP_ID_RTD1619\n", __func__);
 			} else if (cc == enable_cc2) {
-				enable_writel(BIT(1), drd_wrap_base + cc_set_offect);
+				enable_writel(BIT(1), drd_tc_mux_ctrl);
 				dev_info(type_c->dev, "%s: enable_cc2 drd u3phy for "
 					    "CHIP_ID_RTD1619\n", __func__);
 			}
-			enable_writel(BIT(1), drd_wrap_base + clock_offset);
-			enable_writel(BIT(1), u3host_wrap_base + clock_offset);
+			/* enable u3phy clock */
+			enable_writel(BIT(1), drd_u3phy_pipe_clock);
+			enable_writel(BIT(1), u3host_u3phy_pipe_clock);
+
+			/* push drd u3 port status to rxDetect */
+			writel(BIT(16) | 0xA0 |
+				    (readl(drd_u3_portsc) & (~0x1E0)),
+				    drd_u3_portsc);
+			dev_info(type_c->dev, "%s: drd_u3_portsc=0x%x\n",
+				    __func__, readl(drd_u3_portsc));
 		}
+
+		/* enable u3phy suspend */
+		dev_info(type_c->dev, "u3_sus_en_status_save drd=0x%x u3host=0x%x\n",
+			drd_u3_sus_en_status_save, u3host_u3_sus_en_status_save);
+		enable_writel(drd_u3_sus_en_status_save, drd_u3_sus_en);
+		enable_writel(u3host_u3_sus_en_status_save, u3host_u3_sus_en);
+
+		iounmap(drd_u3_portsc);
+		iounmap(drd_u3_sus_en);
+		iounmap(u3host_u3_sus_en);
 		iounmap(u3host_wrap_base);
 	}
 }
@@ -2189,11 +2241,13 @@ static void dwc3_rtk_type_c_complete(struct device *dev) {
 		dev_info(dev, "[USB] %s S1 (Standby mode)\n", __func__);
 	} else {
 		dev_info(dev, "[USB] %s S3 (Suspend-to-RAM mode)\n", __func__);
-			spin_lock_irqsave(&type_c->lock, flags);
-			switch_type_c_plug_side(type_c, disable_cc);
-			spin_unlock_irqrestore(&type_c->lock, flags);
 
-		if ((type_c->chip_id & 0xFFF0) == CHIP_ID_RTD129X) {
+		spin_lock_irqsave(&type_c->lock, flags);
+		switch_type_c_plug_side(type_c, disable_cc);
+		spin_unlock_irqrestore(&type_c->lock, flags);
+
+		if ((type_c->chip_id & 0xFFF0) == CHIP_ID_RTD129X ||
+			    type_c->chip_id == CHIP_ID_RTD1619) {
 			if (rtk_usb_type_c_power_on_off(dev, false))
 				dev_err(dev, "%s to disable type c power Fail\n", __func__);
 			else
@@ -2268,6 +2322,13 @@ static int dwc3_rtk_type_c_resume(struct device *dev)
 		//For suspend mode
 		dev_info(dev, "[USB] %s Suspend mode\n", __func__);
 
+		spin_lock_irqsave(&type_c->lock, flags);
+		if (type_c->is_attach == IN_ATTACH && type_c->at_cc1 == AT_CC1)
+			switch_type_c_plug_side(type_c, enable_cc1);
+		else if (type_c->is_attach == IN_ATTACH && type_c->at_cc1 == AT_CC2)
+			switch_type_c_plug_side(type_c, enable_cc2);
+		spin_unlock_irqrestore(&type_c->lock, flags);
+
 		if (type_c->cur_mode == USB_DR_MODE_HOST) {
 			writel(USB2_PHY_SWITCH_HOST |
 				    (~USB2_PHY_SWITCH_MASK &
@@ -2285,12 +2346,6 @@ static int dwc3_rtk_type_c_resume(struct device *dev)
 				    type_c->wrap_base + USB2_PHY_reg);
 		}
 
-		spin_lock_irqsave(&type_c->lock, flags);
-		if (type_c->is_attach == IN_ATTACH && type_c->at_cc1 == AT_CC1)
-			switch_type_c_plug_side(type_c, enable_cc1);
-		else if (type_c->is_attach == IN_ATTACH && type_c->at_cc1 == AT_CC2)
-			switch_type_c_plug_side(type_c, enable_cc2);
-		spin_unlock_irqrestore(&type_c->lock, flags);
 	}
 out:
 	dev_info(dev, "[USB] Exit %s\n", __func__);

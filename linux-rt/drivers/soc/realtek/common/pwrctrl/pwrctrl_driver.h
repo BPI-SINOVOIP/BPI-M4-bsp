@@ -41,9 +41,11 @@ struct power_control {
 #ifdef CONFIG_POWER_CONTROL_DEBUGFS
 	struct dentry *debugfs;
 #endif
+	atomic_t power_cnt;
 };
 
 #define POWER_CONTROL_FLAG_ASYNC_POWER_OFF        (0x1)
+#define POWER_CONTROL_FLAG_SHARED_POWER           (0x2)
 
 struct of_phandle_args;
 
@@ -65,16 +67,6 @@ struct power_control *of_power_control_get_from_provider(struct of_phandle_args 
 
 int power_control_get_internal(struct power_control *pwrctrl);
 void power_control_put_internal(struct power_control *pwrctrl);
-
-int power_control_register_notifier(struct power_control *pwrctrl,
-                                    struct notifier_block *nb);
-void power_control_unregister_notifier(struct power_control *pwrctrl,
-                                       struct notifier_block *nb);
-
-#define POWER_CONTROL_ACTION_PRE_POWER_ON         (0x01)
-#define POWER_CONTROL_ACTION_POST_POWER_ON        (0x02)
-#define POWER_CONTROL_ACTION_PRE_POWER_OFF        (0x03)
-#define POWER_CONTROL_ACTION_POST_POWER_OFF       (0x04)
 
 int __power_control_notify_power_off_start(struct power_control *pwrctrl);
 int __power_control_notify_power_off_done(struct power_control *pwrctrl);

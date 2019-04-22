@@ -264,13 +264,16 @@ static int rtkemmc_request_hw_semaphore(void *iomem, unsigned int cnt)
 	unsigned int val;
 	int i;
 
-	for (i=0; i<cnt; i++) {
-		val = readl(iomem);
-		if (val)
-			return 0;
-		msleep(10);
+	while (1) {
+		for (i=0; i<cnt; i++) {
+			val = readl(iomem);
+			if (val)
+				return 0;
+			msleep(100);
+		}
+		pr_err("rtk emmc get hw semaphore timeout\n");
 	}
-	pr_err("rtk emmc get hw semaphore timeout\n");
+
 	return -1;
 }
 
@@ -501,6 +504,8 @@ static int rtkemmc_prepare_hs400_tuning(struct mmc_host *host, struct mmc_ios *i
 #ifdef CONFIG_ARCH_RTD129x
 	unsigned long flags2;
 #endif
+	if(host->doing_retune == 1) return 0;
+
 	struct rtkemmc_host *emmc_port;
         emmc_port = mmc_priv(host);
 	printk(KERN_ERR "Prepare HS400 mode...\n");
@@ -1460,6 +1465,10 @@ void rtkemmc_phase_tuning(struct rtkemmc_host *emmc_port,u32 mode,int flag)
 
 static int mmc_Tuning_SDR50(struct rtkemmc_host *emmc_port)
 {
+
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
 	down_write(&cr_rw_sem);
 	if (!g_bResuming)
 		gCurrentBootMode = MODE_SDR;
@@ -1481,11 +1490,17 @@ static int mmc_Tuning_SDR50(struct rtkemmc_host *emmc_port)
 	udelay(100);
 	up_write(&cr_rw_sem);
 
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_release_hw_semaphore(emmc_port->hw_semaphore);
+#endif
 	return 0;
 }
 
 static int mmc_Tuning_DDR50(struct rtkemmc_host *emmc_port, u32 mode)
 {
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
 	down_write(&cr_rw_sem);
 	if (!g_bResuming)
 		gCurrentBootMode = MODE_DDR;
@@ -1518,14 +1533,18 @@ static int mmc_Tuning_DDR50(struct rtkemmc_host *emmc_port, u32 mode)
 #endif
 	}
 	up_write(&cr_rw_sem);
-
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_release_hw_semaphore(emmc_port->hw_semaphore);
+#endif
 	return 0;
 }
 
 static int mmc_Tuning_HS200(struct rtkemmc_host *emmc_port,u32 mode)
 {
 	MMCPRINTF("%s \n", __func__);
-
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
 	down_write(&cr_rw_sem);
         if (!g_bResuming)
                 gCurrentBootMode = MODE_HS200;
@@ -1561,6 +1580,9 @@ static int mmc_Tuning_HS200(struct rtkemmc_host *emmc_port,u32 mode)
 	sync(emmc_port);
 	mdelay(10);
 	up_write(&cr_rw_sem);
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_release_hw_semaphore(emmc_port->hw_semaphore);
+#endif
 	printk(KERN_ERR "HS200: final phase=0x%x\n", readl(emmc_port->crt_membase + SYS_PLL_EMMC1));
 
 	return 0;
@@ -1569,6 +1591,9 @@ static int mmc_Tuning_HS200(struct rtkemmc_host *emmc_port,u32 mode)
 static int mmc_Tuning_HS400(struct rtkemmc_host *emmc_port,u32 mode)
 {
         MMCPRINTF("%s \n", __func__);
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
 	down_write(&cr_rw_sem);
 	if (!g_bResuming)
 		gCurrentBootMode = MODE_HS400;
@@ -1590,6 +1615,9 @@ static int mmc_Tuning_HS400(struct rtkemmc_host *emmc_port,u32 mode)
 	sync(emmc_port);
 	mdelay(10);
 	up_write(&cr_rw_sem);
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_release_hw_semaphore(emmc_port->hw_semaphore);
+#endif
 	printk(KERN_ERR "HS400 first stage: final phase=0x%x\n", readl(emmc_port->crt_membase + SYS_PLL_EMMC1));
 	return 0;
 }
@@ -1598,6 +1626,9 @@ static int rtkemmc_execute_tuning(struct mmc_host *host, u32 opcode)
 {
 	struct rtkemmc_host *emmc_port;
 	struct sd_cmd_pkt cmd_info;
+
+	if(host->doing_retune == 1) return 0;
+
 	MMCPRINTF("%s \n", __func__);
 
 	emmc_port = mmc_priv(host);
@@ -1737,6 +1768,10 @@ static void rtkemmc_dqs_tuning(struct mmc_host *host)
 		}
 	}
 #endif
+
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+        rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
 	down_write(&cr_rw_sem);
 	g_bTuning = 1;
 
@@ -1854,7 +1889,9 @@ retry:
 	rtkemmc_send_cmd25(emmc_port, 512, emmc_port->emmc_tuning_addr/512-1024, 1, hs400_data);
 
 	up_write(&cr_rw_sem);
-
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_release_hw_semaphore(emmc_port->hw_semaphore);
+#endif
 	set_RTK_initial_flag(1);        //this flag is to use for sd card check for rcu stall
 }
 
@@ -4934,6 +4971,11 @@ static void rtkemmc_request(struct mmc_host *host, struct mmc_request *mrq)
 	emmc_port = mmc_priv(host);
 	BUG_ON(emmc_port->mrq != NULL);
 
+#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
+	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
+#endif
+	down_write(&cr_rw_sem);
+
 	if(mrq->cmd->opcode==MMC_SEND_EXT_CSD)
 	{
 		//====we add the following program becasue we need to read HS400 parameter in specific emmc block in SDR50 mode if exists====
@@ -4968,10 +5010,6 @@ static void rtkemmc_request(struct mmc_host *host, struct mmc_request *mrq)
 		}
 	}
 
-#if defined(CONFIG_MMC_RTK_EMMC_HW_SEMAPHORE)
-	rtkemmc_request_hw_semaphore(emmc_port->hw_semaphore, 5);
-#endif
-	down_write(&cr_rw_sem);
 	cmd = mrq->cmd;
 	emmc_port->mrq = mrq;
 
@@ -5104,6 +5142,37 @@ static ssize_t emmc_info_dev_store(struct device *dev, struct device_attribute *
 }
 DEVICE_ATTR(emmc_info, S_IRUGO | S_IWUSR,
 		emmc_info_dev_show,emmc_info_dev_store);
+
+static int count_class_dev(struct device *dev, const void *data)
+{
+	int *p = (void *)data;
+
+	*p += 1;
+	return 0;
+}
+
+static void rtkemmc_wait_block_dev_ready(struct mmc_host *mmc)
+{
+	int retry = 50;
+	int cb = 0, ca = 0;
+	ktime_t tb, ta;
+
+	tb = ktime_get();
+	class_find_device(&block_class, NULL, &cb, count_class_dev);
+
+	while (--retry > 0) {
+		if (mmc->card && dev_get_drvdata(&mmc->card->dev) != NULL) {
+			break;
+		}
+		msleep(10);
+	}
+
+	class_find_device(&block_class, NULL, &ca, count_class_dev);
+	ta = ktime_get();
+	printk(KERN_INFO "%s: retry_left=%d, block_dev=[%d -> %d], time=%dms\n",
+		mmc_hostname(mmc), retry, cb, ca, (int)ktime_to_ms(ktime_sub(ta, tb)));
+
+}
 
 static int rtkemmc_probe(struct platform_device *pdev)
 {
@@ -5453,6 +5522,9 @@ static int rtkemmc_probe(struct platform_device *pdev)
 #endif
 	printk(KERN_NOTICE "%s: %s driver initialized\n",
 	mmc_hostname(mmc), DRIVER_NAME);
+
+	rtkemmc_wait_block_dev_ready(mmc);
+
 	return 0;
 
 out:

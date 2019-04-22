@@ -222,8 +222,8 @@ struct backupRegs {
 //clear status register, we always keep the card interrupt, card insertion, removal status because the eMMC is unremovable
 #define rtkemmc_clr_int_sta()                                                                              \
 	do {                                                                                                \
-		writew(readw(emmc_port->emmc_membase+EMMC_ERROR_INT_STAT_R)&0xffff, emmc_port->emmc_membase+EMMC_ERROR_INT_STAT_R); \
-		writew(readw(emmc_port->emmc_membase+EMMC_NORMAL_INT_STAT_R)&0xfeff, emmc_port->emmc_membase+EMMC_NORMAL_INT_STAT_R); \
+		rtkemmc_writew(readw(emmc_port->emmc_membase+EMMC_ERROR_INT_STAT_R)&0xffff, emmc_port->emmc_membase+EMMC_ERROR_INT_STAT_R); \
+		rtkemmc_writew(readw(emmc_port->emmc_membase+EMMC_NORMAL_INT_STAT_R)&0xfeff, emmc_port->emmc_membase+EMMC_NORMAL_INT_STAT_R); \
 	} while(0)
 
 //mask all emmc interrupts
@@ -233,10 +233,10 @@ struct backupRegs {
                 writew(0x0,emmc_port->emmc_membase+EMMC_ERROR_INT_SIGNAL_EN_R); \
 	} while(0)
 
-//unmask all emmc interrupt			
-#define rtkemmc_en_int()  \
+//for cmdq, we do not need cmd and xfer done, only cqe event
+#define rtkemmc_en_cqe_int()  \
 	do { \
-		writew(EMMC_ALL_SIGNAL_STAT_EN,emmc_port->emmc_membase+EMMC_NORMAL_INT_SIGNAL_EN_R); \
+		writew(0xfefc,emmc_port->emmc_membase+EMMC_NORMAL_INT_SIGNAL_EN_R); \
 		writew(EMMC_ALL_ERR_SIGNAL_EN,emmc_port->emmc_membase+EMMC_ERROR_INT_SIGNAL_EN_R); \
 	} while(0)
 

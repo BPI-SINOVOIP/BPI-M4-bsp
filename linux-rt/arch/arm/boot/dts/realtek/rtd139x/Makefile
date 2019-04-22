@@ -20,6 +20,14 @@ dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-arete-384MB.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-arete-512MB.CMAx2.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-arete-768MB.CMAx2.dtb
 dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-arete-rescue.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1355-gnarledclub-glinux-1GB.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1355-gnarledclub-glinux-2GB.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1355-qa-rescue.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-glinux-1GB.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-glinux-2GB-tee.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-glinux-2GB.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-nand-glinux-1GB.dtb
+dtb-$(CONFIG_ARCH_RTD139x) += rtd-1395-lionskin-nand-glinux-2GB.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

@@ -997,17 +997,19 @@ int rtk_cec_resume(struct rtk_cec *p_this)
 	if(p_this->chip_id == CHIP_ID_RTD1295 ||
 		p_this->chip_id == CHIP_ID_RTD1296) {
 		write_reg32(reg + CEC_CR0, CEC_MODE(1) |
-					LOGICAL_ADDR(0x4) |
+					LOGICAL_ADDR(p_this->standby_logical_addr) |
 					TIMER_DIV(25) |
 					PRE_DIV(255) |
 					UNREG_ACK_EN);
 	} else {
 		write_reg32(reg + CEC_CR0, CEC_MODE(1) |
-					LOGICAL_ADDR(0x4) |
+					LOGICAL_ADDR(p_this->standby_logical_addr) |
 					TIMER_DIV(20) |
 					PRE_DIV(33) |
 					UNREG_ACK_EN);
 	}
+	val = read_reg32(reg + CEC_CR0);
+	pr_info("resume cec control register = 0x%x, logical addr = %d\n", val, p_this->standby_logical_addr);
 	write_reg32(reg + CEC_RTCR0, CEC_PAD_EN | CEC_PAD_EN_MODE | RETRY_NO(2));
 	write_reg32(reg + CEC_RXCR0, RX_EN | RX_INT_EN);
 

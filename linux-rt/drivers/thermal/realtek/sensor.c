@@ -17,6 +17,7 @@
 #include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
+#include <linux/module.h>
 #include "../thermal_core.h"
 #include "sensor.h"
 
@@ -178,8 +179,6 @@ static int thermal_sensor_probe(struct platform_device *pdev)
 	const struct of_device_id *id;
 	const struct thermal_sensor_desc *desc;
 
-	dev_info(dev, "%s\n", __func__);
-
 	id = of_match_node(thermal_sensor_of_match, np);
 	if (id)
 		desc = id->data;
@@ -195,6 +194,7 @@ static int thermal_sensor_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(dev, "thermal_sensor_add() returns %d\n", ret);
 	platform_set_drvdata(pdev, tdev);
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
@@ -204,7 +204,7 @@ static int thermal_sensor_remove(struct platform_device *pdev)
 
 	thermal_sensor_device_remove(tdev);
 	platform_set_drvdata(pdev, NULL);
-
+	dev_info(&pdev->dev, "removed\n");
 	return 0;
 }
 
@@ -248,18 +248,13 @@ static const struct of_device_id thermal_sensor_of_match[] = {
 
 static struct platform_driver thermal_sensor_drv = {
 	.driver = {
-		.name   = "rtk-thermal-sensor",
-		.owner  = THIS_MODULE,
+		.name           = "rtk-thermal-sensor",
+		.owner          = THIS_MODULE,
 		.of_match_table = of_match_ptr(thermal_sensor_of_match),
-		.pm = &thermal_sensor_pm_ops,
+		.pm             = &thermal_sensor_pm_ops,
 	},
 	.probe    = thermal_sensor_probe,
 	.remove   = thermal_sensor_remove,
 	.shutdown = thermal_sensor_shutdown,
 };
-
-static int __init thermal_sensor_probe_init(void)
-{
-	return platform_driver_register(&thermal_sensor_drv);
-}
-late_initcall(thermal_sensor_probe_init);
+module_platform_driver(thermal_sensor_drv);

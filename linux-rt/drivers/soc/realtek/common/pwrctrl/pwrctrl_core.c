@@ -18,6 +18,7 @@
 #include <linux/mutex.h>
 #include <linux/debugfs.h>
 #include <linux/notifier.h>
+#include <linux/atomic.h>
 #include <soc/realtek/power-control.h>
 #include "pwrctrl_driver.h"
 
@@ -52,14 +53,28 @@ EXPORT_SYMBOL_GPL(__power_control_notify);
 int power_control_power_on(struct power_control *pwrctrl)
 {
 	int ret = 0;
+	int act;
 
 	if (!pwrctrl)
 		return -EINVAL;
 
+	if (pwrctrl->flags & POWER_CONTROL_FLAG_SHARED_POWER) {
+		pr_debug("%s: before on ref:%d\n", pwrctrl->name, atomic_read(&pwrctrl->power_cnt));
+		if (atomic_inc_return(&pwrctrl->power_cnt) != 1)
+			return 0;
+	}
 	__power_control_notify(pwrctrl, POWER_CONTROL_ACTION_PRE_POWER_ON);
 	if (pwrctrl->ops->power_on)
 		ret = pwrctrl->ops->power_on(pwrctrl);
-	__power_control_notify(pwrctrl, POWER_CONTROL_ACTION_POST_POWER_ON);
+
+	if (ret < 0)
+		act = POWER_CONTROL_ACTION_POWER_ON_ABORT;
+	else if (ret == 1)
+		act = POWER_CONTROL_ACTION_POWER_ON_IGNORE;
+	else
+		act = POWER_CONTROL_ACTION_POST_POWER_ON;
+
+	__power_control_notify(pwrctrl, act);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(power_control_power_on);
@@ -71,8 +86,16 @@ int power_control_power_off(struct power_control *pwrctrl)
 	if (!pwrctrl)
 		return -EINVAL;
 
+	if (pwrctrl->flags & POWER_CONTROL_FLAG_SHARED_POWER) {
+		pr_debug("%s: before off ref:%d\n", pwrctrl->name, atomic_read(&pwrctrl->power_cnt));
+		if (atomic_dec_return(&pwrctrl->power_cnt) != 0)
+			return 0;
+	}
+
+	/* should be notify by implementation */
 	if (!(pwrctrl->flags & POWER_CONTROL_FLAG_ASYNC_POWER_OFF))
 		__power_control_notify(pwrctrl, POWER_CONTROL_ACTION_PRE_POWER_OFF);
+
 	if (pwrctrl->ops->power_off)
 		ret = pwrctrl->ops->power_off(pwrctrl);
 
@@ -311,6 +334,7 @@ int power_control_register(struct power_control *pwrctrl)
 	mutex_unlock(&power_control_list_lock);
 
 	atomic_set(&pwrctrl->usage_cnt, 0);
+	atomic_set(&pwrctrl->power_cnt, 0);
 #ifdef CONFIG_POWER_CONTROL_DEBUGFS
 	ret = power_control_add_debugfs(pwrctrl);
 	if (ret)

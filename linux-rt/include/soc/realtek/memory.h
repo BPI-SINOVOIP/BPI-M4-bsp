@@ -46,6 +46,10 @@
 #if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
 /* 0x0002f000 ~ 0x0001ffff */
 #define RPC_COMM_PHYS (0x0002F000)
+
+#elif defined(CONFIG_ARCH_RTD13xx)
+
+#define RPC_COMM_PHYS (0x0003F000)
 #else
 /* 0x0001f000 ~ 0x0001ffff */
 #define RPC_COMM_PHYS (0x0001F000)

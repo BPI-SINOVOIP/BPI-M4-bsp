@@ -32,5 +32,6 @@ config ARCH_RTD16xx
 	select MULTI_IRQ_HANDLER
 	select PCI_DOMAINS if PCI
 	select USE_OF
+	select ARM_GIC_V3_DEBUGFS
 	help
 	  Support for Realtek RTD16xx Platform

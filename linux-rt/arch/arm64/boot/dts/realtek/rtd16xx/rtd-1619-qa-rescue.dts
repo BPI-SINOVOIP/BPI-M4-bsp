@@ -3,10 +3,10 @@
 
 /* DRM protect region */
 /memreserve/ TEE_OS_PHYS TEE_OS_SIZE;
-/* /memreserve/ 0x0F900000 0x00307000; */
-/* /memreserve/ 0x0FC07000 0x001F9000; */
-/* /memreserve/ 0x00000000 0x00001000; */
-/* /memreserve/ 0x00002000 0x00001000; */
+/memreserve/ 0x0F900000 0x00307000;
+/memreserve/ 0x0FC07000 0x001F9000;
+/memreserve/ 0x00000000 0x00001000;
+/memreserve/ 0x00002000 0x00001000;
 /* ION SECURE AUDIO BUFFER */
 /memreserve/ 0x32800000 0x00300000;
 /* ION SECURE BUFFER */

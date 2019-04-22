@@ -43,8 +43,6 @@
 		status = "okay";
 		dwc3_u3host@981F0000 {
 			compatible = "synopsys,dwc3";
-
-			snps,dis_u3_susphy_quirk;
 			status = "okay";
 		};
 

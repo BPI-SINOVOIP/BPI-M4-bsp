@@ -25,11 +25,14 @@
 #include <linux/arm-smccc.h>
 #include <soc/realtek/rtk_regmap.h>
 
+#define RTK_REGMAP_NAME_LENGTH          20
+
 struct rtk_regmap_mmio_context {
 	void __iomem *regs;
 	const struct secure_register_desc *descs;
 	u32 num_descs;
 	u32 addr;
+	char *name;
 };
 
 static void swc_write(struct rtk_regmap_mmio_context *ctx,
@@ -125,7 +128,7 @@ static int rtk_regmap_mmio_write(void *context, unsigned int reg, unsigned int v
 	const struct secure_register_desc *desc = NULL;
 
 	desc = find_desc(ctx, reg, SWC_WRITE);
-	pr_debug("%s: reg=%03x, val=%08x, type=%c\n", __func__, reg, val, desc != NULL ? 'S' : '-');
+	pr_debug("%s: type=W, off=%03x, val=%08x, flag=%c\n", ctx->name, reg, val, desc != NULL ? 'S' : '-');
 	if (desc)
 		swc_write(ctx, desc, val);
 	else
@@ -143,7 +146,7 @@ static int rtk_regmap_mmio_read(void *context, unsigned int reg, unsigned int *v
 		*val = swc_read(ctx, desc);
 	else
 		*val = readl(ctx->regs + reg);
-	pr_debug("%s: reg=%03x, val=%08x, type=%c\n", __func__, reg, *val, desc != NULL ? 'S' : '-');
+	pr_debug("%s: type=R, off=%03x, val=%08x, flag=%c\n", ctx->name, reg, *val, desc != NULL ? 'S' : '-');
 	return 0;
 }
 
@@ -152,6 +155,7 @@ static void rtk_regmap_mmio_free_context(void *context)
 	struct rtk_regmap_mmio_context *ctx = context;
 
 	kfree(ctx->descs);
+	kfree(ctx->name);
 	kfree(ctx);
 }
 
@@ -176,6 +180,8 @@ static struct rtk_regmap_mmio_context *regmap_mmio_gen_context(struct device *de
 	if (!ctx)
 		return ERR_PTR(-ENOMEM);
 
+	if (config->name)
+		ctx->name = kstrdup(config->name, GFP_KERNEL);
 	ctx->regs = regs;
 
 	return ctx;
@@ -225,6 +231,10 @@ static struct rtk_regmap_mmio_context *regmap_secure_mmio_gen_context(struct dev
 	if (IS_ERR(ctx))
 		return ctx;
 
+	if (!ctx->name) {
+		ctx->name = kzalloc(RTK_REGMAP_NAME_LENGTH, GFP_KERNEL);
+		snprintf(ctx->name, RTK_REGMAP_NAME_LENGTH, "regmap-mmio.%x", config->addr);
+	}
 	ctx->addr = config->addr;
 	ctx->num_descs = config->num_descs;
 	ctx->descs = kmemdup(config->descs, sizeof(*config->descs) * config->num_descs, GFP_KERNEL);

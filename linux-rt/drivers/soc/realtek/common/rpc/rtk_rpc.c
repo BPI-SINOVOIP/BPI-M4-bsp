@@ -40,6 +40,13 @@
 #include <xen/xen.h>
 #endif
 
+#include "uapi/ion.h"
+#include "ion/ion.h"
+#include "uapi/ion_rtk.h"
+#include <soc/realtek/kernel-rpc.h>
+
+
+
 #ifdef CONFIG_REALTEK_IR
 extern int venus_irtx_getscancode(u32, u32*, u32*);
 #endif /* CONFIG_REALTEK_IR */
@@ -62,10 +69,12 @@ static DEFINE_SPINLOCK(gASLock);
 volatile void __iomem *rpc_ringbuf_base;
 volatile void __iomem *rpc_common_base;
 volatile void __iomem *rpc_int_base;
-volatile void __iomem *rpc_int_flag;
+volatile void __iomem *rpc_acpu_int_flag;
+volatile void __iomem *rpc_vcpu_int_flag;
 volatile void __iomem *rpc_refclk_base;
 
-static int rpc_irq;
+static int rpc_acpu_irq;
+static int rpc_vcpu_irq;
 int rpc_major;
 
 #ifdef SHOW_TASKS_ON_SYSFS
@@ -218,17 +227,6 @@ int rpc_data_size_array[] = {
  */
 static struct class *rpc_class;
 
-void rpc_set_flag(uint32_t flag)
-{
-	struct rtk_ipc_shm __iomem *ipc = (void __iomem *)IPC_SHM_VIRT;
-
-	writel(__cpu_to_be32(flag), &(ipc->audio_rpc_flag));/* audio RPC flag */
-	//rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
-	//*((int *)phys_to_virt(0x0000b000)) = flag; // audio RPC flag
-	//*((int *)phys_to_virt(0x0000b0d0)) = flag; // audio RPC flag
-	//*((int *)phys_to_virt(0x0000b0d4)) = flag; // video RPC flag
-	//*((int *)phys_to_virt(0x0000b0d8)) = flag;
-}
 
 void rpc_set_ir_wakeup_key(uint32_t uScancode, uint32_t uScancode_msk)
 {
@@ -241,33 +239,65 @@ void rpc_set_ir_wakeup_key(uint32_t uScancode, uint32_t uScancode_msk)
 	writel(__cpu_to_be32(uScancode), &(ipc->ir_wakeup_scancode));
 }
 
-uint32_t rpc_get_flag(void)
+void rpc_set_flag(int type, uint32_t flag)
 {
 	struct rtk_ipc_shm __iomem *ipc = (void __iomem *)IPC_SHM_VIRT;
 
-	return __be32_to_cpu(readl(&(ipc->audio_rpc_flag)));
+	if (type == RPC_AUDIO) {
+		writel(__cpu_to_be32(flag), &(ipc->audio_rpc_flag));/* audio RPC flag */
+	}
+#ifdef CONFIG_ARCH_RTD13xx
+	else if (type == RPC_VIDEO) {
+		writel(__cpu_to_be32(flag), &(ipc->video_rpc_flag));/* audio RPC flag */
+	}
+#endif
 }
 
-void rpc_send_interrupt(void)
+uint32_t rpc_get_flag(int type)
 {
-	if (rpc_int_flag != NULL && RPC_HAS_BIT(rpc_int_flag, AUDIO_RPC_SET_NOTIFY)) {
-		RPC_SET_BIT(rpc_int_flag, AUDIO_RPC_FEEDBACK_NOTIFY);
-#if 0
-		/* audio */
-		writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT);
+	struct rtk_ipc_shm __iomem *ipc = (void __iomem *)IPC_SHM_VIRT;
+
+	if (type == RPC_AUDIO) {
+		return __be32_to_cpu(readl(&(ipc->audio_rpc_flag)));
 	}
-#else
+#ifdef CONFIG_ARCH_RTD13xx
+	else if (type == RPC_VIDEO) {
+		return __be32_to_cpu(readl(&(ipc->video_rpc_flag)));
 	}
-	/* audio */
-	writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT);
 #endif
+
+}
+
+void rpc_send_interrupt(int type)
+{
+	switch (type) {
+	case RPC_AUDIO:
+		if (rpc_acpu_int_flag != NULL && RPC_HAS_BIT(rpc_acpu_int_flag, AUDIO_RPC_SET_NOTIFY)) {
+			RPC_SET_BIT(rpc_acpu_int_flag, AUDIO_RPC_FEEDBACK_NOTIFY);
+		}
+		pr_debug("[%s] send audio interrupt\n", __func__);
+		writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT);
+		break;
+#ifdef CONFIG_ARCH_RTD13xx
+	case RPC_VIDEO:
+		if (rpc_vcpu_int_flag != NULL && RPC_HAS_BIT(rpc_vcpu_int_flag, VIDEO_RPC_SET_NOTIFY)) {
+			RPC_SET_BIT(rpc_vcpu_int_flag, VIDEO_RPC_FEEDBACK_NOTIFY);
+		}
+		pr_debug("[%s] send video interrupt\n", __func__);
+		writel((RPC_INT_SV | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT);
+		break;
+#endif
+	default:
+		break;
+	}
+
 }
 EXPORT_SYMBOL(rpc_send_interrupt);
 
 void dc2vo_send_interrupt(void)
 {
-	if (rpc_int_flag != NULL && RPC_HAS_BIT(rpc_int_flag, VO_DC_SET_NOTIFY)) {
-		RPC_SET_BIT(rpc_int_flag, VO_DC_FEEDBACK_NOTIFY);
+	if (rpc_acpu_int_flag != NULL && RPC_HAS_BIT(rpc_acpu_int_flag, VO_DC_SET_NOTIFY)) {
+		RPC_SET_BIT(rpc_acpu_int_flag, VO_DC_FEEDBACK_NOTIFY);
 		/* audio */
 		writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT);
 	}
@@ -301,7 +331,7 @@ static int rpc_event_notify(struct notifier_block *self, unsigned long action,
 		rpc_intr_pause();
 		rpc_kern_pause();
 		mdelay(10);
-		rpc_set_flag(0x00000000);
+		rpc_set_flag(RPC_AUDIO, 0x00000000);
 		break;
 	case AVCPU_RESET_DONE:
 		pr_debug("[%s]: AVCPU_RESET_DONE...\n", RPC_NAME);
@@ -310,17 +340,15 @@ static int rpc_event_notify(struct notifier_block *self, unsigned long action,
 		rpc_kern_init();
 		/* clear the inter-processor interrupts */
 		//*((int *)REG_SB2_CPU_INT) = 0x0000007e;
-		RPC_SET_BIT(rpc_int_flag, RPC_AUDIO_SET_NOTIFY);
+		RPC_SET_BIT(rpc_acpu_int_flag, RPC_AUDIO_SET_NOTIFY);
 		//rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
 		writel(RPC_INT_AS, rpc_int_base+RPC_SB2_INT);
 		writel(RPC_INT_SA, rpc_int_base+RPC_SB2_INT);
 		/* Enable the interrupt from system to audio & video */
-#if 0
-		writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT_EN);
-#else
-		rpc_send_interrupt();
-#endif
-		rpc_set_flag(0xffffffff);
+
+		rpc_send_interrupt(RPC_AUDIO);
+		rpc_set_flag(RPC_AUDIO, 0xffffffff);
+
 		break;
 	default:
 		break;
@@ -435,30 +463,73 @@ irqreturn_t rpc_isr(int irq, void *dev_id)
 	int itr;
 
 	//pr_debug("irq number %d...\n", irq);
-	itr = readl(rpc_int_base+RPC_SB2_INT);
 
 #ifdef CONFIG_FB_RTK
 	dc_irq_handler();
 #endif /* CONFIG_FB_RTK */
-#if 1
-	if (!RPC_HAS_BIT(rpc_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY)) {
+
+#ifdef CONFIG_ARCH_RTD13xx
+	itr = readl(rpc_int_base+RPC_SB2_INT_ST);
+
+	if (RPC_HAS_BIT(rpc_acpu_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY)) {
+		RPC_RESET_BIT(rpc_acpu_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY);
+	} else if (RPC_HAS_BIT(rpc_vcpu_int_flag, RPC_VIDEO_FEEDBACK_NOTIFY)){
+		RPC_RESET_BIT(rpc_vcpu_int_flag, RPC_VIDEO_FEEDBACK_NOTIFY);
+	} else {
+		/* to clear interrupt, set bit[0] to 0 then we can clear A2S int */
+		if (itr & (RPC_INT_AS))
+			writel(RPC_INT_AS, rpc_int_base + RPC_SB2_INT_ST);
+		if (itr & (RPC_INT_VS))
+			writel(RPC_INT_VS, rpc_int_base + RPC_SB2_INT_ST);
+		return IRQ_HANDLED;
+	}
+
+
+	while ((itr & RPC_INT_AS) || (itr & RPC_INT_VS)) {
+		if (itr & RPC_INT_AS) {
+			/* to clear interrupt, set bit[0] to 0 then we can clear A2S int */
+			writel(RPC_INT_AS, rpc_int_base + RPC_SB2_INT_ST);
+
+			if (rpc_intr_devices[RPC_INTR_DEV_AS_ID1].ringIn != rpc_intr_devices[RPC_INTR_DEV_AS_ID1].ringOut) {
+				pr_debug("[%s] %s intr\n", RPC_NAME, __func__);
+				tasklet_schedule(&(rpc_intr_extra[RPC_INTR_DEV_AS_ID1].tasklet));
+			}
+
+			if (rpc_kern_devices[RPC_KERN_DEV_AS_ID1].ringIn != rpc_kern_devices[RPC_KERN_DEV_AS_ID1].ringOut) {
+				pr_debug("[%s] %s intr\n", RPC_NAME, __func__);
+				wake_up_interruptible(&(rpc_kern_devices[RPC_KERN_DEV_AS_ID1].ptrSync->waitQueue));
+			}
+		}
+		if (itr & RPC_INT_VS) {
+			/* to clear interrupt, set bit[0] to 0 then we can clear A2S int */
+			writel(RPC_INT_VS, rpc_int_base + RPC_SB2_INT_ST);
+
+			if (rpc_intr_devices[RPC_INTR_DEV_V1S_ID3].ringIn != rpc_intr_devices[RPC_INTR_DEV_V1S_ID3].ringOut) {
+				pr_debug("[%s] %s intr\n", RPC_NAME, __func__);
+				tasklet_schedule(&(rpc_intr_extra[RPC_INTR_DEV_V1S_ID3].tasklet));
+			}
+
+			if (rpc_kern_devices[RPC_KERN_DEV_V1S_ID3].ringIn != rpc_kern_devices[RPC_KERN_DEV_V1S_ID3].ringOut) {
+				pr_debug("[%s] %s intr\n", RPC_NAME, __func__);
+				wake_up_interruptible(&(rpc_kern_devices[RPC_KERN_DEV_V1S_ID3].ptrSync->waitQueue));
+			}
+		}
+		itr = readl(rpc_int_base + RPC_SB2_INT_ST);
+	}
+#else
+	itr = readl(rpc_int_base+RPC_SB2_INT);
+	if (!RPC_HAS_BIT(rpc_acpu_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY)) {
 		/* to clear interrupt, set bit[0] to 0 then we can clear A2S int */
 		if (itr & (RPC_INT_AS))
 			writel(RPC_INT_AS, rpc_int_base+RPC_SB2_INT);
-#if 1
 		return IRQ_HANDLED;
-#else
-		return IRQ_NONE;
-#endif
 	} else {
 		//unsigned long flags;
 		//spin_lock_irqsave(&gASLock,flags);
-		RPC_RESET_BIT(rpc_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY);
+		RPC_RESET_BIT(rpc_acpu_int_flag, RPC_AUDIO_FEEDBACK_NOTIFY);
 		//rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
 		//spin_unlock_irqrestore(&gASLock,flags);
 	}
-#endif
-
 	if (itr & (RPC_INT_AS)) {
 		while (itr & (RPC_INT_AS)) {
 			/* ack the interrupt */
@@ -480,12 +551,10 @@ irqreturn_t rpc_isr(int irq, void *dev_id)
 		}
 	} else {
 		//pr_warn("Not RPC interrupt...\n");
-#if 1
+
 		return IRQ_HANDLED;
-#else
-		return IRQ_NONE;
-#endif
 	}
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -550,12 +619,12 @@ static int __maybe_unused rtk_rpc_probe(struct platform_device *pdev)
 	if (WARN_ON(!rpc_int_base))
 		pr_warn("[%s] Could not map registers for %s\n", RPC_NAME, np->name);
 
-#if 0
-	rpc_int_flag = ioremap(DC_VO_SYNC_ADDR, sizeof(unsigned int));
+	rpc_acpu_int_flag = &ipc->vo_int_sync;
+#ifdef CONFIG_ARCH_RTD13xx
+	rpc_vcpu_int_flag = &ipc->video_int_sync;
 #else
-	rpc_int_flag = &ipc->vo_int_sync;
+	rpc_vcpu_int_flag = NULL;
 #endif
-
 	result = rpc_poll_init();
 	result = rpc_intr_init();
 	result = rpc_kern_init();
@@ -593,32 +662,46 @@ static int __maybe_unused rtk_rpc_probe(struct platform_device *pdev)
 	}
 
 	device_create(rpc_class, NULL, MKDEV(rpc_major, 100), NULL, "rpc100");
-	rpc_int_flag = &ipc->vo_int_sync;
-	rpc_irq = irq_of_parse_and_map(np, 0);
-
-	if (WARN_ON(!rpc_irq))
-		pr_warn("[%s] Could not parse IRQ\n", RPC_NAME);
-
-	pr_info("[%s] rpc_int_base:%p irq:%d\n", RPC_NAME, rpc_int_base, rpc_irq);
 
 	spin_lock_irq(&gASLock);
-	RPC_SET_BIT(rpc_int_flag, RPC_AUDIO_SET_NOTIFY);
+	RPC_SET_BIT(rpc_acpu_int_flag, RPC_AUDIO_SET_NOTIFY);
+#ifdef CONFIG_ARCH_RTD13xx
+	RPC_SET_BIT(rpc_vcpu_int_flag, RPC_VIDEO_SET_NOTIFY);
+#endif
 	//rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
-	//writel(readl(rpc_int_flag)|RPC_AUDIO_SET_NOTIFY, rpc_int_flag);
+	//writel(readl(rpc_acpu_int_flag)|RPC_AUDIO_SET_NOTIFY, rpc_acpu_int_flag);
 	spin_unlock_irq(&gASLock);
 
-	result = request_irq(rpc_irq, rpc_isr, IRQF_SHARED|IRQF_NO_SUSPEND, "rpc", (void *)RPC_ID);
+
+	rpc_acpu_irq = irq_of_parse_and_map(np, 0);
+
+	if (WARN_ON(!rpc_acpu_irq))
+		pr_warn("[%s] Could not parse ACPU IRQ\n", RPC_NAME);
+	pr_info("[%s] rpc_int_base:%p\n", RPC_NAME, rpc_int_base);
+	pr_info("[%s] acpu_irq:%d\n", RPC_NAME, rpc_acpu_irq);
+
+	result = request_irq(rpc_acpu_irq, rpc_isr, IRQF_SHARED|IRQF_NO_SUSPEND, "a_rpc", (void *)RPC_ID);
 	if (result != 0)
-		pr_err("[%s] Can't get assigned irq...\n", RPC_NAME);
+		pr_err("[%s] Can't get assigned ACPU irq...\n", RPC_NAME);
 
 	/* Enable the interrupt from system to audio & video */
-#if 0
-	writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT_EN);
-#else
-	rpc_send_interrupt();
-#endif
+	rpc_send_interrupt(RPC_AUDIO);
+	rpc_set_flag(RPC_AUDIO, 0xffffffff);
 
-	rpc_set_flag(0xffffffff);
+#ifdef CONFIG_ARCH_RTD13xx
+	rpc_vcpu_irq = irq_of_parse_and_map(np, 1);
+
+	if (WARN_ON(!rpc_vcpu_irq))
+		pr_warn("[%s] Could not parse VCPU IRQ\n", RPC_NAME);
+	pr_info("[%s] vcpu_irq:%d\n", RPC_NAME, rpc_vcpu_irq);
+
+	result = request_irq(rpc_vcpu_irq, rpc_isr, IRQF_SHARED|IRQF_NO_SUSPEND, "v_rpc", (void *)RPC_ID);
+	if (result != 0)
+		pr_err("[%s] Can't get assigned VCPU irq...\n", RPC_NAME);
+
+	rpc_send_interrupt(RPC_VIDEO);
+	rpc_set_flag(RPC_VIDEO, 0xffffffff);
+#endif
 
 #ifdef CONFIG_REALTEK_AVCPU
 	register_avcpu_notifier(&rpc_event_notifier);
@@ -652,21 +735,21 @@ static int rtk_rpc_pm_suspend(struct device *dev)
 
 	pr_info("[%s] Suspend enter\n", RPC_NAME);
 
-	rpc_set_flag(0xdaedffff); /* STOP AUDIO HAS_CHECK */
+	rpc_set_flag(RPC_AUDIO, 0xdaedffff); /* STOP AUDIO HAS_CHECK */
 
-	while ((rpc_get_flag() != 0x0) && (MaxCount > 0)) {
+	while ((rpc_get_flag(RPC_AUDIO) != 0x0) && (MaxCount > 0)) {
 		mdelay(1);
 		MaxCount--;
 	}
 
 	rpc_event_notify(NULL, AVCPU_SUSPEND, NULL); /* STOP SYSTEM RPC */
 
-	RPC_RESET_BIT(rpc_int_flag, RPC_AUDIO_SET_NOTIFY); /* Disable Interrupt */
+	RPC_RESET_BIT(rpc_acpu_int_flag, RPC_AUDIO_SET_NOTIFY); /* Disable Interrupt */
 	rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
 
-	rpc_set_flag(0xdeadffff); /* WAIT AUDIO RPC SUSPEND READY */
+	rpc_set_flag(RPC_AUDIO, 0xdeadffff); /* WAIT AUDIO RPC SUSPEND READY */
 
-	while ((rpc_get_flag() != 0x0) && (MaxCount > 0)) {
+	while ((rpc_get_flag(RPC_AUDIO) != 0x0) && (MaxCount > 0)) {
 		mdelay(1);
 		MaxCount--;
 	}
@@ -695,21 +778,21 @@ static void rtk_rpc_pm_shutdown(struct platform_device *pdev)
 
 	dev_info(dev, "Enter %s\n", __func__);
 
-	rpc_set_flag(0xdaedffff); /* STOP AUDIO HAS_CHECK */
+	rpc_set_flag(RPC_AUDIO, 0xdaedffff); /* STOP AUDIO HAS_CHECK */
 
-	while ((rpc_get_flag() != 0x0) && (MaxCount > 0)) {
+	while ((rpc_get_flag(RPC_AUDIO) != 0x0) && (MaxCount > 0)) {
 		mdelay(1);
 		MaxCount--;
 	}
 
 	rpc_event_notify(NULL, AVCPU_SUSPEND, NULL); /* STOP SYSTEM RPC */
 
-	RPC_RESET_BIT(rpc_int_flag, RPC_AUDIO_SET_NOTIFY); /* Disable Interrupt */
+	RPC_RESET_BIT(rpc_acpu_int_flag, RPC_AUDIO_SET_NOTIFY); /* Disable Interrupt */
 	rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
 
-	rpc_set_flag(0xdeadffff); /* WAIT AUDIO RPC SUSPEND READY */
+	rpc_set_flag(RPC_AUDIO, 0xdeadffff); /* WAIT AUDIO RPC SUSPEND READY */
 
-	while ((rpc_get_flag() != 0x0) && (MaxCount > 0)) {
+	while ((rpc_get_flag(RPC_AUDIO) != 0x0) && (MaxCount > 0)) {
 		mdelay(1);
 		MaxCount--;
 	}
@@ -738,9 +821,9 @@ static int rtk_rpc_pm_resume(struct device *dev)
 	pr_info("[%s] Resume enter\n", RPC_NAME);
 
 #if 1
-	RPC_SET_BIT(rpc_int_flag, RPC_AUDIO_SET_NOTIFY);
+	RPC_SET_BIT(rpc_acpu_int_flag, RPC_AUDIO_SET_NOTIFY);
 	//rtk_rpc_wmb(rpc_common_base, RPC_COMM_SIZE);
-	rpc_set_flag(0xffffffff);
+	rpc_set_flag(RPC_AUDIO, 0xffffffff);
 #else
 	writel((RPC_INT_SA | RPC_INT_WRITE_1), rpc_int_base+RPC_SB2_INT_EN);
 	//writel((RPC_INT_SV | RPC_INT_WRITE_1), (void *)REG_SB2_CPU_INT_EN);

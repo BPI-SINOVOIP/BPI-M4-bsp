@@ -1,16 +1,27 @@
 /*
- * g22xx-regulator.h - GMT-G22xx series Regulator
+ * G22XX series PMIC regulator common
  *
- * Copyright (C) 2017 Realtek Semiconductor Corporation
- * Copyright (C) 2017 Cheng-Yu Lee <cylee12@realtek.com>
+ * Copyright (C) 2017-2019 Realtek Semiconductor Corporation
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __G22XX_REGULATOR_H__
-#define __G22XX_REGULATOR_H__
+#ifndef __G22XX_REGULATOR_H
+#define __G22XX_REGULATOR_H
 
 #include <linux/i2c.h>
 #include <linux/bitops.h>
@@ -20,17 +31,7 @@
 #include <linux/regmap.h>
 #include <soc/realtek/rtk_regmap.h>
 #include <dt-bindings/regulator/gmt,g22xx.h>
-
-struct g22xx_device {
-	struct i2c_client *client;
-	struct device *dev;
-	struct regmap *regmap;
-	struct list_head list;
-
-	int g2237_int_gpio;
-	struct delayed_work work;
-	struct input_dev *input_dev;
-};
+#include <linux/mfd/g22xx.h>
 
 struct g22xx_regulator_desc {
 	struct regulator_desc desc;
@@ -57,50 +58,28 @@ struct g22xx_regulator_data {
 	u32 fixed_uV;
 };
 
-#define to_g22xx_regulator_desc(_desc) container_of(_desc, struct g22xx_regulator_desc, desc)
-
-
-static inline struct g22xx_device *devm_g22xx_create_device(struct i2c_client *client,
-	const struct regmap_config *config)
-{
-	struct device *dev = &client->dev;
-	struct g22xx_device *gdev;
-
-	gdev = devm_kzalloc(dev, sizeof(*gdev), GFP_KERNEL);
-	if (!gdev)
-		return ERR_PTR(-ENOMEM);
-
-	gdev->regmap = devm_rtk_regmap_init_i2c(client, config);
-	if (IS_ERR(gdev->regmap))
-		return ERR_CAST(gdev->regmap);
-
-	gdev->client = client;
-	gdev->dev    = dev;
-	INIT_LIST_HEAD(&gdev->list);
-
-	return gdev;
-}
-
+struct g22xx_regulator_device {
+	struct device *dev;
+	struct regmap *regmap;
+	struct list_head list;
+};
 
 extern const struct regulator_ops g22xx_regulator_ops;
 extern const struct regulator_ops g22xx_regulator_fixed_uV_ops;
 
 int g22xx_regulator_of_parse_cb(struct device_node *np,
-	const struct regulator_desc *desc, struct regulator_config *config);
+				const struct regulator_desc *desc,
+				struct regulator_config *config);
 unsigned int g22xx_regulator_dc_of_map_mode(unsigned int mode);
 unsigned int g22xx_regulator_ldo_of_map_mode(unsigned int mode);
 void g22xx_prepare_suspend_state(struct regulator_dev *rdev, int is_coldboot);
-struct g22xx_regulator_data *g22xx_device_get_regulator_data_by_desc(
-        struct g22xx_device *gdev, struct g22xx_regulator_desc *gd);
-int g22xx_regulator_register(struct g22xx_device *gdev, struct g22xx_regulator_desc *gd);
+struct regulator_dev *g22xx_regulator_register(struct g22xx_regulator_device *gdev,
+					       struct g22xx_regulator_desc *gd);
 
 static inline int g22xx_regulator_type_is_ldo(struct g22xx_regulator_desc *gd)
 {
 	return gd->desc.of_map_mode == g22xx_regulator_ldo_of_map_mode;
 }
 
-
-/* pm_power_off setup */
-int g22xx_setup_pm_power_off(struct g22xx_device *gdev, u32 reg, u32 mask);
 
 #endif

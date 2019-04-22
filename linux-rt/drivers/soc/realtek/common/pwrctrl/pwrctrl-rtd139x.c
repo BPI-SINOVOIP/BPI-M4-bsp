@@ -2,11 +2,22 @@
  * Power Controller for RTD-139x SoC
  *
  * Copyright (C) 2017-2019 Realtek Semiconductor Corporation
- * Copyright (C) 2017-2019 Cheng-Yu Lee <cylee12@realtek.com>
+ *
+ * Author:
+ *	Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -130,8 +141,6 @@ static int power_controller_probe(struct platform_device *pdev)
 	struct power_controller_data *pcd;
 	const struct of_device_id *id;
 
-	dev_info(dev, "%s\n", __func__);
-
 	/* get controller data */
 	id = of_match_node(power_controller_match, dev->of_node);
 	if (!id)
@@ -140,7 +149,7 @@ static int power_controller_probe(struct platform_device *pdev)
 	pcd = (struct power_controller_data *)id->data;
 	dev_set_drvdata(dev, pcd);
 	power_controller_init_pds(dev, pcd);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
@@ -152,7 +161,7 @@ static const struct of_device_id power_controller_match[] = {
 static struct platform_driver power_controller_driver = {
 	.probe = power_controller_probe,
 	.driver = {
-		.name   = "rtd139x-pc",
+		.name = "rtk-rtd139x-power",
 		.of_match_table = power_controller_match,
 		.pm = &power_controller_pm_ops,
 	},

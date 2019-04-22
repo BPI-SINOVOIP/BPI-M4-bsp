@@ -256,8 +256,6 @@ static int dcsys_probe(struct platform_device *pdev)
 	struct resource res;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
-
 	dcdev = devm_kzalloc(dev, sizeof(*dcdev), GFP_KERNEL);
 	if (!dcdev)
 		return -ENOMEM;
@@ -298,6 +296,7 @@ static int dcsys_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, dcdev);
+	dev_info(dev, "initialized\n");
 	return 0;
 error:
 	perfcnt_unregister(&dcdev->pcdev);
@@ -307,7 +306,9 @@ error:
 static int dcsys_remove(struct platform_device *pdev)
 {
 	struct dcsys_device *dcdev = platform_get_drvdata(pdev);
+
 	misc_deregister(&dcdev->mdev);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 

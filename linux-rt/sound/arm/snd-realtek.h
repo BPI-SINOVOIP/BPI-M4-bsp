@@ -776,6 +776,14 @@ enum AUDIO_VOLUME_CTRL {
 };
 typedef enum AUDIO_VOLUME_CTRL AUDIO_VOLUME_CTRL;
 
+enum ENUM_GBL_VAR_EQUALIZER_ID {
+	ENUM_EQUALIZER_PP = 0,
+	ENUM_EQUALIZER_MIC = 1,
+	ENUM_EQUALIZER_AUX = 2,
+	ENUM_EQUALIZER_AO = 3,
+};
+typedef enum ENUM_GBL_VAR_EQUALIZER_ID ENUM_GBL_VAR_EQUALIZER_ID;
+
 /************************************************************************/
 /* typedef                                                                     */
 /************************************************************************/
@@ -818,6 +826,18 @@ typedef struct {
     int instanceID;
     int privateInfo[16];
 }AUDIO_RPC_PRIVATEINFO_RETURNVAL;
+
+typedef struct AUDIO_RPC_EQUALIZER_MODE {
+	long mode;
+	long gain[10];
+}AUDIO_RPC_EQUALIZER_MODE;
+
+typedef struct AUDIO_EQUALIZER_CONFIG {
+	int instanceID;
+	int gbl_var_eq_ID;
+	unsigned char ena;
+	AUDIO_RPC_EQUALIZER_MODE app_eq_config;
+}AUDIO_EQUALIZER_CONFIG;
 
 typedef struct AUDIO_RPC_INSTANCE {
     int instanceID;
@@ -1305,5 +1325,6 @@ int RPC_TOAGENT_SET_AI_FLASH_VOLUME(snd_card_RTK_capture_pcm_t *dpcm, unsigned i
 int RPC_TOAGENT_SET_SOFTWARE_AI_FLASH_VOLUME(snd_card_RTK_capture_pcm_t *dpcm, unsigned int volume);
 int RPC_TOAGENT_SET_LOW_WATER_LEVEL(bool isLowWater);
 int RPC_TOAGENT_GET_AI_AGENT(snd_card_RTK_capture_pcm_t *dpcm);
+int RPC_TOAGENT_SET_EQ(snd_card_RTK_pcm_t *dpcm, AUDIO_RPC_EQUALIZER_MODE equalizer_mode);
 
 #endif //SND_REALTEK_H

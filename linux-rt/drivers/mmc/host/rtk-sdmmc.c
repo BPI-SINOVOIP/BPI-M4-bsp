@@ -2634,6 +2634,8 @@ void rtk_sdmmc_close_clk(struct mmc_host *host)
 	if ((card_exist & 0x8) && !clk_disabled) {
 		clk_disabled=1;
 		printk(KERN_INFO "SD card does not exist and sd clk is disabled...\n");
+		writel(readl(pll_base + CR_PLL_SD1) & 0xfffffffc ,pll_base + CR_PLL_SD1);
+		writel(readl(pll_base + CR_PLL_SD2) & 0xfffffffe ,pll_base + CR_PLL_SD2);
 		writel(0x00000000, pll_base + CR_PLL_SD4);
 		clk_disable_unprepare(clk_cr);
 		clk_disable_unprepare(clk_sd_ip);

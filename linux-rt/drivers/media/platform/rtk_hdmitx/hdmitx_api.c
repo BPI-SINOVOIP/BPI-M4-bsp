@@ -20,9 +20,9 @@
 #include <sound/asound.h>
 #include <asm/cacheflush.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #include <soc/realtek/power-control.h>
-#include <linux/reset-helper.h> /* rstc_get */
 #include <linux/reset.h>
 #include <linux/clk.h> /* clk_get */
 #include <linux/clk-provider.h>
@@ -195,6 +195,7 @@ int hdmitx_send_AVmute(void __iomem *reg_base, int flag)
 									HDMI_GCPCR_gcp_setavmute(1) |
 									HDMI_GCPCR_write_data(1));
 
+		msleep(50);/* Makes sure sink device can receive mute */
 		return 0;
 	} else if (flag == HDMI_CLRAVM) {
 
@@ -1212,6 +1213,7 @@ int ops_get_extension_blk_count(void __user *arg, asoc_hdmi_t *data)
 int ops_get_extended_edid(void __user *arg, asoc_hdmi_t *data)
 {
 	int ret = 0;
+	unsigned char number;
 	struct ext_edid ext = {0};
 
 	HDMI_DEBUG("%s", __func__);
@@ -1234,12 +1236,12 @@ int ops_get_extended_edid(void __user *arg, asoc_hdmi_t *data)
 	HDMI_DEBUG("ext.extension=%d ext.current_blk=%d",
 		ext.extension, ext.current_blk);
 
-	if (ext.current_blk%2 == 0)
-		memcpy(ext.data, data->edid_ptr + EDID_LENGTH*(ext.current_blk),
-			sizeof(ext.data));
-	else
-		memcpy(ext.data, data->edid_ptr + EDID_LENGTH*ext.current_blk,
-			EDID_LENGTH*sizeof(unsigned char));
+	number = ext.extension - ext.current_blk + 1;
+	if (number > 2)
+		number = 2;
+
+	memcpy(ext.data, data->edid_ptr + EDID_LENGTH*(ext.current_blk),
+		EDID_LENGTH*number);
 
 	if (copy_to_user(arg, &ext, sizeof(struct ext_edid))) {
 		HDMI_ERROR("%s:failed to copy to user ! ", __func__);
@@ -1302,6 +1304,16 @@ int ops_set_output_format(void __user *arg)
 	}
 
 	ret = set_hdmitx_format(&format_setting);
+
+#ifdef CONFIG_ARCH_RTD139x
+#ifdef CONFIG_RTK_HDCP_1x_TEE
+	if ((format_setting.mode != FORMAT_MODE_OFF) &&
+		(format_setting.vic == VIC_720X480P60)) {
+		ta_hdcp14_init();
+		ta_hdcp_fix480p();
+	}
+#endif
+#endif
 
 	return ret;
 }

@@ -130,6 +130,7 @@ struct rtk_fb {
 
 enum rtk_fb_memory_flags {
 	RTK_FB_MEM_ALLOC_ALGO_LAST_FIT = 0x1 << 0,
+	RTK_FB_MEM_FREE_FB = 0x1 << 1,
 };
 
 __maybe_unused static int rtk_fb_set_size (struct rtk_fb *fb, int width, int height, int count, int byte_per_pixel, int flags);
@@ -319,7 +320,7 @@ static int rtk_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long ar
 			struct fb_resize sNewSize;
 
 			if (copy_from_user(&sNewSize, (void *)arg, sizeof(sNewSize)) == 0) {
-				rtk_fb_set_size(fb, sNewSize.width, sNewSize.height, sNewSize.count, sNewSize.byte_per_pixel, 0);
+				rtk_fb_set_size(fb, sNewSize.width, sNewSize.height, sNewSize.count, sNewSize.byte_per_pixel, RTK_FB_MEM_FREE_FB);
 			}
 			gat_cmd = 1;
 			break;
@@ -623,6 +624,14 @@ static int rtk_fb_set_size (struct rtk_fb *fb, int width, int height,
 	struct rtk_fb_memory *pMem = NULL;
 	int byte_per_pixel = ANDROID_BYTES_PER_PIXEL;
 
+    if (flags == RTK_FB_MEM_FREE_FB) {
+        if (fb->pMem != NULL) {
+            rtk_fb_memory_destroy(&fb->pMem);
+        }
+        fb->pMem = NULL;
+        goto done;
+    }
+
 	/* Only support 4 byte or 2 byte */
 	switch (_byte_per_pixel) {
 	case 4:
@@ -775,7 +784,8 @@ static int rtk_fb_remove(struct platform_device *pdev)
 #endif
 	DC_Deinit(&fb->video_info);
 	unregister_framebuffer(&fb->fb);
-	rtk_fb_memory_destroy(&fb->pMem);
+    if (fb->pMem != NULL)
+        rtk_fb_memory_destroy(&fb->pMem);
 	if (fb != NULL)
 		kfree(fb);
 	dev_set_drvdata(&pdev->dev, NULL);

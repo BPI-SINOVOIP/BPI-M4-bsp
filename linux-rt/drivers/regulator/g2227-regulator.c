@@ -1,17 +1,27 @@
 /*
- * g2227-regulator.c - GMT-G2227 Regulator Driver
+ * GMT-G2227 PMIC Regulator driver
  *
- * Copyright (C) 2016-2018 Realtek Semiconductor Corporation
- * Copyright (C) 2016-2018 Cheng-Yu Lee <cylee12@realtek.com>
- * Copyright (C) 2016 Simon Hsu <simon_hsu@realtek.com>
+ * Copyright (C) 2016-2019 Realtek Semiconductor Corporation
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
+ *      Simon Hsu <simon_hsu@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
-#define pr_fmt(fmt) "g2227: " fmt
 
-#include <linux/i2c.h>
+#include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
@@ -19,7 +29,6 @@
 #include <linux/suspend.h>
 #include <linux/mfd/g2227.h>
 #include <soc/realtek/rtk_cpu.h>
-#include <soc/realtek/rtk_regmap.h>
 #include "g22xx-regulator.h"
 
 /* regulator id */
@@ -114,71 +123,11 @@ static struct g22xx_regulator_desc desc[G2227_ID_MAX] = {
 	[G2227_ID_LDO3] = G2227_DESC(LDO3, "ldo3", ldo_vtbl,   ldo),
 };
 
-/* regmap */
-static const struct reg_default g2227_regmap_defaults[] = {
-	{ .reg = G2227_REG_ONOFF,            .def = 0xff, },
-	{ .reg = G2227_REG_DISCHG,           .def = 0xff, },
-	{ .reg = G2227_REG_DC1DC2_MODE,      .def = 0x22, },
-	{ .reg = G2227_REG_DC3DC4_MODE,      .def = 0x22, },
-	{ .reg = G2227_REG_DC5DC6_MODE,      .def = 0x22, },
-	{ .reg = G2227_REG_LDO2LDO3_MODE,    .def = 0x22, },
-	{ .reg = G2227_REG_DC2_NRMVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC3_NRMVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC5_NRMVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC1DC6_NRMVOLT,   .def = 0xd0, },
-	{ .reg = G2227_REG_LDO2LDO3_NRMVOLT, .def = 0xa2, },
-	{ .reg = G2227_REG_DC2_SLPVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC3_SLPVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC5_SLPVOLT,      .def = 0x10, },
-	{ .reg = G2227_REG_DC1DC6_SLPVOLT,   .def = 0xd0, },
-	{ .reg = G2227_REG_LDO2LDO3_SLPVOLT, .def = 0xa2, },
-};
-
-static bool g2227_regmap_readable_reg(struct device *dev, unsigned int reg)
-{
-	switch (reg) {
-	case G2227_REG_ONOFF ... G2227_REG_LDO2LDO3_MODE:
-	case G2227_REG_DC2_NRMVOLT ... G2227_REG_VERSION:
-		return true;
-	}
-	return false;
-}
-
-static bool g2227_regmap_writeable_reg(struct device *dev, unsigned int reg)
-{
-	switch (reg) {
-	case G2227_REG_ONOFF ... G2227_REG_LDO2LDO3_MODE:
-	case G2227_REG_DC2_NRMVOLT ... G2227_REG_LDO2LDO3_SLPVOLT:
-		return true;
-	}
-	return false;
-}
-
-static bool g2227_regmap_volatile_reg(struct device *dev, unsigned int reg)
-{
-	switch (reg) {
-	case G2227_REG_VERSION:
-		return true;
-	}
-	return false;
-}
-
-static const struct regmap_config g2227_regmap_config = {
-	.reg_bits         = 8,
-	.val_bits         = 8,
-	.max_register     = 0x20,
-	.cache_type       = REGCACHE_FLAT,
-	.reg_defaults     = g2227_regmap_defaults,
-	.num_reg_defaults = ARRAY_SIZE(g2227_regmap_defaults),
-	.readable_reg     = g2227_regmap_readable_reg,
-	.writeable_reg    = g2227_regmap_writeable_reg,
-	.volatile_reg     = g2227_regmap_volatile_reg,
-};
 
 /* pm */
 static int g2227_regulator_suspend(struct device *dev)
 {
-	struct g22xx_device *gdev = dev_get_drvdata(dev);
+	struct g22xx_regulator_device *grdev = dev_get_drvdata(dev);
 	struct g22xx_regulator_data *pos;
 
 #ifdef CONFIG_SUSPEND
@@ -187,7 +136,7 @@ static int g2227_regulator_suspend(struct device *dev)
 #endif
 
 	dev_info(dev, "Enter %s\n", __func__);
-	list_for_each_entry(pos, &gdev->list, list)
+	list_for_each_entry(pos, &grdev->list, list)
 		g22xx_prepare_suspend_state(pos->rdev, 0);
 	regulator_suspend_prepare(PM_SUSPEND_MEM);
 	dev_info(dev, "Exit %s\n", __func__);
@@ -199,43 +148,30 @@ static const struct dev_pm_ops g2227_regulator_pm_ops = {
 	.suspend = g2227_regulator_suspend,
 };
 
-static int g2227_regulator_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+static int g2227_regulator_probe(struct platform_device *pdev)
 {
-	struct device *dev = &client->dev;
-	struct g22xx_device *gdev;
-	struct regmap *regmap;
+	struct device *dev = &pdev->dev;
+	struct g22xx_device *gdev = dev_get_drvdata(dev->parent);
+	struct g22xx_regulator_device *grdev;
 	int i, ret;
-	unsigned int val;
 	int chip_rev;
 
-	dev_info(dev, "%s\n", __func__);
+	grdev = devm_kzalloc(dev, sizeof(*grdev), GFP_KERNEL);
+	if (!grdev)
+		return -ENOMEM;
 
-	gdev = devm_g22xx_create_device(client, &g2227_regmap_config);
-	if (IS_ERR(gdev)) {
-		ret = PTR_ERR(gdev);
-		dev_err(dev, "g22xx_create_device() returns %d\n", ret);
-		return ret;
-	}
-
+	grdev->regmap = gdev->regmap;
+	grdev->dev = dev;
+	INIT_LIST_HEAD(&grdev->list);
 	chip_rev = get_rtd129x_cpu_revision();
-	regmap = gdev->regmap;
-
-	/* workaround */
-	regmap_read(regmap, G2227_REG_VERSION, &val);
-
-	/* show version */
-	ret = regmap_read(regmap, G2227_REG_VERSION, &val);
-	if (ret) {
-		dev_err(dev, "failed to read version: %d\n", ret);
-		return ret;
-	}
-	dev_info(dev, "g2227 rev%d\n", val);
 
 	for (i = 0; i < ARRAY_SIZE(desc); i++) {
-		ret = g22xx_regulator_register(gdev, &desc[i]);
-		if (ret) {
-			dev_err(dev, "Failed to register %s: %d\n",
+		struct regulator_dev *rdev;
+
+		rdev = g22xx_regulator_register(grdev, &desc[i]);
+		if (IS_ERR(rdev)) {
+			ret = PTR_ERR(rdev);
+			dev_err(dev, "failed to register %s: %d\n",
 				desc[i].desc.name, ret);
 			return ret;
 		}
@@ -244,8 +180,7 @@ static int g2227_regulator_probe(struct i2c_client *client,
 		if (desc[i].desc.id == G2227_ID_DC6 &&
 			(chip_rev == RTD129x_CHIP_REVISION_A00 ||
 			chip_rev == RTD129x_CHIP_REVISION_B00)) {
-			struct g22xx_regulator_data *data =
-				g22xx_device_get_regulator_data_by_desc(gdev, &desc[i]);
+			struct g22xx_regulator_data *data = rdev_get_drvdata(rdev);
 
 			BUG_ON(!data);
 			data->state_mem.enabled = true;
@@ -253,43 +188,44 @@ static int g2227_regulator_probe(struct i2c_client *client,
 		}
 	}
 
-	i2c_set_clientdata(client, gdev);
-	g22xx_setup_pm_power_off(gdev, G2227_REG_SYS_CONTROL, G2227_SOFTOFF_MASK);
+	platform_set_drvdata(pdev, grdev);
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
-static void g2227_regulator_shutdown(struct i2c_client *client)
+static void g2227_regulator_shutdown(struct platform_device *pdev)
 {
-	struct device *dev = &client->dev;
-	struct g22xx_device *gdev = i2c_get_clientdata(client);
+	struct device *dev = &pdev->dev;
+	struct g22xx_regulator_device *grdev = platform_get_drvdata(pdev);
 	struct g22xx_regulator_data *pos;
 
 	dev_info(dev, "Enter %s\n", __func__);
-	list_for_each_entry(pos, &gdev->list, list)
+	list_for_each_entry(pos, &grdev->list, list)
 		g22xx_prepare_suspend_state(pos->rdev, 1);
 	regulator_suspend_prepare(PM_SUSPEND_MEM);
 	dev_info(dev, "Exit %s\n", __func__);
 }
 
-static const struct i2c_device_id g2227_regulator_ids[] = {
-	{"g2227", 0},
+
+static const struct of_device_id g2227_regulator_ids[] = {
+	{ .compatible = "gmt,g2227-regulator", },
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, g2227_regulator_ids);
 
-static struct i2c_driver g2227_regulator_driver = {
+struct platform_driver g2227_regulator_driver = {
 	.driver = {
-		.name = "gmt-g2227",
+		.name = "g2227-regulator",
 		.owner = THIS_MODULE,
 		.pm = &g2227_regulator_pm_ops,
+		.of_match_table = g2227_regulator_ids,
 	},
-	.id_table = g2227_regulator_ids,
 	.probe    = g2227_regulator_probe,
 	.shutdown = g2227_regulator_shutdown,
 };
-module_i2c_driver(g2227_regulator_driver);
+module_platform_driver(g2227_regulator_driver);
 
-MODULE_DESCRIPTION("GMT G2227 PMIC Driver");
+MODULE_DESCRIPTION("GMT G2237 Regulator Driver");
 MODULE_AUTHOR("Simon Hsu <simon_hsu@realtek.com>");
 MODULE_AUTHOR("Cheng-Yu Lee <cylee12@realtek.com>");
 MODULE_LICENSE("GPL");

@@ -199,8 +199,6 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 	int ret;
 	struct resource res;
 
-	dev_info(dev, "%s\n", __func__);
-
 	rrdev = devm_kzalloc(dev, sizeof(*rrdev), GFP_KERNEL);
 	if (!rrdev)
 		return -ENOMEM;
@@ -250,6 +248,7 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rrdev);
 	pm_runtime_set_suspended(dev);
 	pm_runtime_enable(dev);
+	dev_info(dev, "initialized\n");
 
 	return 0;
 }
@@ -262,6 +261,7 @@ static int rtk_r2rdsc_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 	platform_set_drvdata(pdev, NULL);
 	misc_deregister(&rrdev->mdev);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 
@@ -275,6 +275,7 @@ static struct platform_driver rtk_r2rdsc_driver = {
 	.probe = rtk_r2rdsc_probe,
 	.remove = rtk_r2rdsc_remove,
 	.driver = {
+		.owner = THIS_MODULE,
 		.name = "rtk-r2rdsc",
 		.of_match_table = rtk_r2rdsc_ids,
 		.pm = &rtk_r2rdsc_pm_ops,

@@ -214,8 +214,6 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	int ret;
 	struct resource res;
 
-	dev_info(dev, "%s\n", __func__);
-
 	tpdev = devm_kzalloc(dev, sizeof(*tpdev), GFP_KERNEL);
 	if (!tpdev)
 		return -ENOMEM;
@@ -293,7 +291,7 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, tpdev);
 	pm_runtime_set_suspended(dev);
 	pm_runtime_enable(dev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 }
 
@@ -305,6 +303,7 @@ static int rtk_tp_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 	platform_set_drvdata(pdev, NULL);
 	misc_deregister(&tpdev->mdev);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 
@@ -318,9 +317,11 @@ static struct platform_driver rtk_tp_driver = {
 	.probe = rtk_tp_probe,
 	.remove = rtk_tp_remove,
 	.driver = {
+		.owner = THIS_MODULE,
 		.name = "rtk-tp",
 		.of_match_table = rtk_tp_ids,
 		.pm = &rtk_tp_pm_ops,
+
 	},
 };
 module_platform_driver(rtk_tp_driver);

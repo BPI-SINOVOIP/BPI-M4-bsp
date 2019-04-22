@@ -84,8 +84,6 @@ static int rtk_uio_probe(struct platform_device *pdev)
 	struct rtk_uio_data *priv;
 	struct uio_info *info;
 
-	dev_info(dev, "%s\n", __func__);
-
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -132,7 +130,7 @@ static int rtk_uio_probe(struct platform_device *pdev)
 
 	pm_runtime_set_suspended(dev);
 	pm_runtime_enable(dev);
-
+	dev_info(dev, "initialized\n");
 	return 0;
 unmap:
 	uio_mem_iounmap(dev, &info->mem[0]);
@@ -147,15 +145,13 @@ static int rtk_uio_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct uio_info *info = platform_get_drvdata(pdev);
 
-	dev_info(dev, "%s\n", __func__);
-
 	pm_runtime_disable(dev);
 	uio_unregister_device(info);
 	platform_set_drvdata(pdev, NULL);
 	uio_reset_control_assert(dev, NULL);
 	uio_mem_iounmap(dev, &info->mem[0]);
 	pm_clk_destroy(dev);
-
+	dev_info(dev, "removed\n");
 	return 0;
 }
 

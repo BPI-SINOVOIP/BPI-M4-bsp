@@ -51,7 +51,7 @@
 #endif
 
 #ifdef CONFIG_POWER_CONTROL
-#include <linux/power-control.h>
+#include <soc/realtek/power-control.h>
 #endif
 
 #include "ve1config.h"
@@ -2428,12 +2428,40 @@ module_init(vpu_init);
 module_exit(vpu_exit);
 
 #ifdef CONFIG_POWER_CONTROL
+
+static int vpu_pcrtl_callback(struct notifier_block *nb,
+			      unsigned long action,
+			      void *p)
+{
+	struct power_control *pctrl = p;
+
+	if (action != POWER_CONTROL_ACTION_POST_POWER_ON)
+		return NOTIFY_DONE;
+
+	if (s_pctrl_ve1 == pctrl)
+		reset_control_reset(rstc_ve1);
+	if (s_pctrl_ve2 == pctrl)
+		reset_control_reset(rstc_ve2);
+	return NOTIFY_OK;
+}
+
+struct notifier_block vpu_pctrl_nb = {
+	.notifier_call = vpu_pcrtl_callback,
+};
+
 struct power_control *vpu_pctrl_get(u32 coreIdx)
 {
+	struct power_control *pctrl;
+
 	if (coreIdx == 0)
-		return power_control_get("pctrl_ve1");
+		pctrl = power_control_get("pctrl_ve1");
 	else
-		return power_control_get("pctrl_ve2");
+		pctrl = power_control_get("pctrl_ve2");
+
+	if (WARN_ON(IS_ERR_OR_NULL(pctrl)))
+		return NULL;
+	power_control_register_notifier(pctrl, &vpu_pctrl_nb);
+	return pctrl;
 }
 
 void vpu_pctrl_on(struct power_control *pctrl)
@@ -2442,11 +2470,6 @@ void vpu_pctrl_on(struct power_control *pctrl)
 		DPRINTK("%s vpu_pctrl_on\n", DEV_NAME);
 		power_control_power_on(pctrl);
 	}
-
-	if (s_pctrl_ve1 == pctrl)
-		reset_control_reset(rstc_ve1);
-	if (s_pctrl_ve2 == pctrl)
-		reset_control_reset(rstc_ve2);
 }
 
 void vpu_pctrl_off(struct power_control *pctrl)

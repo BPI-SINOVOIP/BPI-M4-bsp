@@ -25,7 +25,6 @@
 #include <linux/resource.h>
 #include <linux/signal.h>
 #include <linux/types.h>
-#include <linux/reset-helper.h>
 #include <linux/reset.h>
 #include <linux/suspend.h>
 #include <linux/kthread.h>

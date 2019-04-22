@@ -263,8 +263,6 @@ static int dmc_probe(struct platform_device *pdev)
 	struct resource res;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
-
 	dmcdev = devm_kzalloc(dev, sizeof(*dmcdev), GFP_KERNEL);
 	if (!dmcdev)
 		return -ENOMEM;
@@ -308,6 +306,7 @@ static int dmc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, dmcdev);
+	dev_info(dev, "initialized\n");
 	return 0;
 
 unregister_prefcnt:
@@ -325,6 +324,7 @@ static int dmc_remove(struct platform_device *pdev)
 	misc_deregister(&dmcdev->mdev);
 	perfcnt_unregister(&dmcdev->pcdev);
 	sysfs_remove_group(&dev->kobj, &dmc_attr_group);
+	dev_info(dev, "removed\n");
 	return 0;
 }
 

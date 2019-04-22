@@ -107,8 +107,8 @@ void pwrctrl_pd_init(struct device *dev,
 	power_control_init(&pd->pc);
 	power_control_register(&pd->pc);
 	if (pd->flags & RTK_PD_NO_GENPD) {
-		pr_info("%s: %s: not using genpd (power_control=%s)\n",
-			pd->pd.name, __func__, pd->pc.name);
+		pr_debug("%s: initialize as power_control %s\n",
+			pd->pd.name, pd->pc.name);
 		return;
 	}
 
