@@ -45,6 +45,7 @@
 #define BT_WAKEUP_IGPIO(n) (0x1 << n)//n:0 to 20
 #define CPU0_RESUME_ADDR 0x000006A4
 
+unsigned int poweroff_suspend = 0;
 static int suspend_version = 2;
 static unsigned int suspend_context;
 unsigned int pm_state;
@@ -1082,6 +1083,21 @@ int __init rtk_suspend_init(void)
 
 		rtk_gpio_init(p_suspend_nd);
 
+		/*
+		 * bpi, enable poweroff suspend mode
+		 */
+		prop = of_get_property(p_suspend_nd, "poweroff-suspend", &size);
+		if (prop) {
+			int temp = of_read_number(prop, 1);
+			if (temp < 0) {
+				pr_err("[%s] set poweroff-suspend error! %d (default:%d) \n",
+					DEV_NAME, temp, poweroff_suspend);
+			} else {
+				poweroff_suspend = temp;
+				pr_err("[%s] set poweroff-suspend mode = %d\n", DEV_NAME, poweroff_suspend);
+			}
+		}
+
 		/* wakeup flags */
 		prop = of_get_property(p_suspend_nd, "wakeup-flags", &size);
 		if (prop) {
@@ -1112,13 +1128,16 @@ int __init rtk_suspend_init(void)
 
 	suspend_set_ops(&rtk_suspend_ops);
 
-	if (of_device_is_system_power_controller(p_suspend_nd)) {
-		if (!pm_power_off) {
-			pr_info("[%s] as system-power-controller\n", DEV_NAME);
-			pm_power_off = rtk_poweroff;
-		} else {
-			pr_warn("[%s] pm_power_off is already defined\n",
-				DEV_NAME);
+	if (poweroff_suspend) {
+		pr_info("[%s] Enable Poweroff Suspend\n", DEV_NAME);
+		if (of_device_is_system_power_controller(p_suspend_nd)) {
+			if (!pm_power_off) {
+				pr_info("[%s] as system-power-controller\n", DEV_NAME);
+				pm_power_off = rtk_poweroff;
+			} else {
+				pr_warn("[%s] pm_power_off is already defined\n",
+					DEV_NAME);
+			}
 		}
 	}
 

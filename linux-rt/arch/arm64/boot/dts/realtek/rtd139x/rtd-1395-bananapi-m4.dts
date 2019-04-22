@@ -277,7 +277,8 @@
 	};
 
 	rtk_usb_power_manager@0 {
-                compatible = "Realtek,usb-manager";
+		compatible = "Realtek,usb-manager";
+		poweroff-suspend = <0>;
 		realtek,port0-power-gpio;
 		realtek,port1-power-gpio;
 		realtek,port2-power-gpio;
