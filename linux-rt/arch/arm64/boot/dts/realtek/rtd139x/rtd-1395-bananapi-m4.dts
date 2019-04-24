@@ -226,7 +226,7 @@
 
 	i2c_1: i2c@0x98007C00 {
 		compatible = "Realtek,rtk-i2c";
-		status = "disabled";
+		status = "okay";
 	};
 
 	i2c_5: i2c@0x9801BB00 {
