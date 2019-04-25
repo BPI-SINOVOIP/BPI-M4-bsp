@@ -43,7 +43,6 @@ $(K_DOT_CONFIG): linux-rt
 	$(Q)$(MAKE) -C linux-rt ARCH=arm64 $(KERNEL_CONFIG)
 
 kernel: $(K_DOT_CONFIG)
-#	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output UIMAGE_LOADADDR=0x40008000 uImage dtbs
 	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output UIMAGE_LOADADDR=0x40008000 Image dtbs
 	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules
 	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output modules_install
@@ -52,6 +51,7 @@ kernel: $(K_DOT_CONFIG)
 	$(Q)$(MAKE) -C phoenix/system/src/drivers ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} TARGET_KDIR=$(TARGET_KDIR) -j$J INSTALL_MOD_PATH=output install
 	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J INSTALL_MOD_PATH=output _depmod
 #	$(Q)$(MAKE) -C linux-rt ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} -j$J headers_install
+	$(Q)scripts/install_kernel_headers.sh $(K_CROSS_COMPILE)
 
 kernel-clean:
 	$(Q)$(MAKE) -C phoenix/system/src/drivers ARCH=arm64 CROSS_COMPILE=${K_CROSS_COMPILE} TARGET_KDIR=$(TARGET_KDIR) -j$J INSTALL_MOD_PATH=output clean

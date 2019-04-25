@@ -7,6 +7,7 @@ ALL_SOC="bpi-m4"
 BOARD=BPI-M4-720P
 board="bpi-m4"
 kernel="4.9.119-BPI-M4-Kernel"
+headers="linux-headers-4.9.119-BPI-M4-Kernel"
 MODE=$1
 BPILINUX=linux-rt
 BPIPACK=rt-pack
@@ -44,19 +45,21 @@ R="${SD}/BPI-ROOT"
 	cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd139x/rtd-1395-bananapi-m4.dtb $B/bananapi/${board}/linux/
 	#
 	cp -a $T/u-boot-rt/u-boot.bin $B/bananapi/${board}/linux/u-boot-bpi-m4.bin
-	#BPI
-	#cp -a $T/${BPILINUX}/arch/arm64/boot/Image $B/uImage
-	#cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd-1296-bananapi-w2-2GB-HDMI.dtb $B/bpi-w2.dtb
-	#cp -a $T/${BPIPACK}/${BPISOC}/${TARGET_PRODUCT}/configs/default/linux/bluecore.audio $B/bluecore.audio
-
 	#
 	## copy files to BPI-ROOT
 	#
 	mkdir -p $R/usr/lib/u-boot/bananapi/${board}
 	cp -a $U/*.gz $R/usr/lib/u-boot/bananapi/${board}/
+	#
+	## modules
 	rm -rf $R/lib/modules
 	mkdir -p $R/lib/modules
 	cp -a $T/${BPILINUX}/output/lib/modules/${kernel} $R/lib/modules
+	#
+	## headers
+	rm -rf $R/usr/src
+	mkdir -p $R/usr/src
+	cp -a $T/${BPILINUX}/output/usr/src/${headers} $R/usr/src/
 	#
 	## create files for bpi-tools & bpi-migrate
 	#
@@ -65,6 +68,7 @@ R="${SD}/BPI-ROOT"
 	(cd $R ; mv lib/modules/${kernel}/kernel/net $R/net)
 	(cd $R ; tar czvf $SD/${kernel}.tgz lib/modules)
 	(cd $R ; mv $R/net lib/modules/${kernel}/kernel/net)
+	(cd $R ; tar czvf $SD/${headers}.tgz usr/src/${headers})
 	(cd $R ; tar czvf $SD/BOOTLOADER-${board}.tgz usr/lib/u-boot/bananapi)
 
 	return #SKIP
