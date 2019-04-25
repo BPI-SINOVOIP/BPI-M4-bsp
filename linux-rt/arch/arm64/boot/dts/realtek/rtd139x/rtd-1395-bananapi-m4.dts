@@ -241,13 +241,32 @@
 
 	pwm: pwm@980070D0 {
 		compatible = "Realtek,rtd1295-pwm";
-		pinctrl-names = "default";
+		pinctrl-names = "default",
+				"default",
+				"default";
 		pinctrl-0 = <&pwm1_1_pins>;
-		status = "disabled";
+		pinctrl-1 = <&pwm2_1_pins>;
+		pinctrl-2 = <&pwm3_1_pins>;
+		status = "okay";
 
 		pwm_1 {
 			enable = <1>;
 		};
+
+		pwm_2 {
+                        enable = <1>;
+                };
+
+		pwm_3 {
+                        enable = <1>;
+                };
+	};
+
+	rtk_fan: rtk_fan@9801BC00 {
+                compatible = "Realtek,rtd129x-fan";
+		status = "disabled";
+
+		pwms = <&pwm 1 37878>; // (1) pwm node (2) pwm id (3) out period_ns (1/26400 ns)
 	};
 
 	rfkill: rfkilligpio {
