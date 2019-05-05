@@ -65,7 +65,6 @@
 		#define CONFIG_HOSTAPD_MLME
 	#endif
 	/*#define CONFIG_FIND_BEST_CHANNEL*/
-	#define CONFIG_TX_MCAST2UNI	/* Support IP multicast->unicast */
 #endif
 
 #define CONFIG_P2P
@@ -135,9 +134,9 @@
  * Software feature Related Config
  */
 #define RTW_HALMAC		/* Use HALMAC architecture, necessary for 8822B */
-//#define CONFIG_RECV_THREAD_MODE
+#define CONFIG_RECV_THREAD_MODE
 #ifdef CONFIG_RECV_THREAD_MODE
-//#define RTW_RECV_THREAD_HIGH_PRIORITY
+#define RTW_RECV_THREAD_HIGH_PRIORITY
 #endif/*CONFIG_RECV_THREAD_MODE*/
 
 /*
@@ -145,8 +144,9 @@
  */
 #define CONFIG_TX_AGGREGATION
 #define CONFIG_XMIT_THREAD_MODE	/* necessary for SDIO */
-//#define RTW_XMIT_THREAD_HIGH_PRIORITY
+#define RTW_XMIT_THREAD_HIGH_PRIORITY
 #define RTW_XMIT_THREAD_HIGH_PRIORITY_AGG
+#define CONFIG_SDIO_HOOK_DEV_SHUTDOWN
 /*#define CONFIG_SDIO_TX_ENABLE_AVAL_INT*/ /* not implemented yet */
 /* #define CONFIG_SDIO_TX_FORMAT_DUMMY_AUTO */
 #define CONFIG_SDIO_RX_COPY

@@ -27,6 +27,9 @@
 
 #define MALI_GPU_NAME_UTGARD "mali-utgard"
 
+#ifdef CONFIG_ARCH_RTD119X
+#include "mali_reg_rtd119x.h"
+#else /* CONFIG_ARCH_RTD119X */
 
 #define MALI_OFFSET_GP                    0x00000
 #define MALI_OFFSET_GP_MMU                0x03000
@@ -67,6 +70,8 @@
 
 #define MALI_OFFSET_PMU                   0x02000
 #define MALI_OFFSET_DMA                   0x12000
+
+#endif /* CONFIG_ARCH_RTD119X */
 
 /* Mali-300 */
 

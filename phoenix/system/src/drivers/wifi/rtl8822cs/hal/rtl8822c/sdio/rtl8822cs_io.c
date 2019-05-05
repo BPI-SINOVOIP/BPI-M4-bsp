@@ -257,7 +257,7 @@ static struct recv_buf *sd_recv_rxfifo(PADAPTER adapter, u32 size)
 	recvbuf = rtw_dequeue_recvbuf(&recvpriv->free_recv_buf_queue);
 	if (recvbuf == NULL) {
 #ifndef CONFIG_RECV_THREAD_MODE
-	/*	RTW_WARN("%s:alloc recvbuf FAIL!\n", __FUNCTION__); */ //DHCWIFI-219
+		RTW_WARN("%s:alloc recvbuf FAIL!\n", __FUNCTION__);
 #endif /* !CONFIG_RECV_THREAD_MODE */
 		return NULL;
 	}
@@ -432,7 +432,7 @@ void sd_int_dpc(PADAPTER adapter)
 					continue;
 				}
 				#else /* !CONFIG_RECV_THREAD_MODE */
-				/* RTW_WARN("%s: recv fail!(time=%d)\n", __FUNCTION__, rx_fail_time); */ //DHCWIFI-219 
+				RTW_WARN("%s: recv fail!(time=%d)\n", __FUNCTION__, rx_fail_time);
 				if (rx_fail_time >= 10)
 					break;
 				#endif /* !CONFIG_RECV_THREAD_MODE */

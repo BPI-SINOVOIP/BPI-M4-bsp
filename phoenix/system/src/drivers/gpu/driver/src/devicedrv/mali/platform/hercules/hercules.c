@@ -367,9 +367,8 @@ int mali_platform_device_init(struct platform_device *pdev)
 	}
 
 	if (dev->type)
-		dev_err(dev, "dev->type existed: %s\n", dev->type->name);
-	else
-		dev->type = &gpu_device_type;
+		dev_warn(dev, "dev->type existed: %p\n", dev->type);
+	dev->type = &gpu_device_type;
 
 	priv->rstc = reset_control_get(dev, NULL);
 	if (IS_ERR(priv->rstc)) {

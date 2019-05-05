@@ -534,6 +534,12 @@ static void process_c2h_event(PADAPTER adapter, u8 *c2h, u32 size)
 			break;
 		}
 #endif
+		else if (C2H_HDR_GET_C2H_SUB_CMD_ID(pc2h_data) == 0x1B) {
+			/* C2H_SUB_CMD_ID_C2H_PKT_FW_STATUS_NOTIFY */
+			break;
+		}
+
+
 		/* indicate c2h pkt + rx desc to halmac */
 		rtw_halmac_c2h_handle(adapter_to_dvobj(adapter), c2h, size);
 		break;

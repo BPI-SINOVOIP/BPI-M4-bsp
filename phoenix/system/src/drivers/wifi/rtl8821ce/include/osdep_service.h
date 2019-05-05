@@ -44,6 +44,10 @@
 #endif
 
 #ifdef PLATFORM_LINUX
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
+	#include <linux/sched/signal.h>
+	#include <linux/sched/types.h>
+#endif
 	#include <osdep_service_linux.h>
 #endif
 
