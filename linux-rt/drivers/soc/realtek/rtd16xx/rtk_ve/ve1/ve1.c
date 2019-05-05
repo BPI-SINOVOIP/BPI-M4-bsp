@@ -463,19 +463,13 @@ int vpu_hw_reset(u32 coreIdx)
 	DPRINTK("%s request vpu reset from application\n", DEV_NAME);
 
 	if (coreIdx == 0)
-		rstc = reset_control_get(p_vpu_dev, "ve1");
+		rstc = rstc_ve1;
 	else if (coreIdx == 1)
-		rstc = reset_control_get(p_vpu_dev, "ve2");
+		rstc = rstc_ve2;
 	else
-		rstc = reset_control_get(p_vpu_dev, "ve3");
-	if (IS_ERR_OR_NULL(rstc))
-	{
-		DPRINTK("%s failed to get reset control for core %d\n", DEV_NAME, coreIdx);
-	}
-	else {
-		reset_control_reset(rstc);
-		reset_control_put(rstc);
-	}
+		rstc = rstc_ve3;
+
+	reset_control_reset(rstc);
 
 	ve1_wrapper_setup((1 << coreIdx));
 #endif

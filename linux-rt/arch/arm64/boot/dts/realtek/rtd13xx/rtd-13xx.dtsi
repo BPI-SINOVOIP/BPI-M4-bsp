@@ -376,7 +376,7 @@
 	};
 
 	crst: soft-reset@98000000 {
-		compatible = "realtek,grouped-reset-controller";
+		compatible = "realtek,rtd13xx-reset-controller";
 		reg = <0x0 0x98000000 0x0 0x1000>;
 		#reset-cells = <1>;
 		realtek,mmio = <&crt_mmio 0x0>;
@@ -400,8 +400,6 @@
 	pd: power-domain@98007000 {
 		compatible = "realtek,rtd16xx-power-controller", "simple-bus";
 		reg = <0x0 0x98007000 0x0 0x1000>;
-		resets = <&crst RSTN_VE1>, <&crst RSTN_VE2>, <&crst RSTN_VE3>;
-		reset-names = "ve1", "ve2", "ve3";
 		#power-domain-cells = <1>;
 		#powerctrl-cells = <1>;
 	};

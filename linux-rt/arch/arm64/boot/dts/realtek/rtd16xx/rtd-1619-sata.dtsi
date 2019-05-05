@@ -25,7 +25,7 @@
 					<0x88aa2111>, <0x88aa6111>, <0x88aaa111>;
 			rx-sense-tbl = // user can define rx sensitivity here //
 					<0x42100911>, <0x42104911>, <0x42108911>,
-					<0x276a0311>, <0x276a4311>, <0x27688311>;
+					<0x276a0311>, <0x276a4311>, <0x27668311>;
 		};
 		sata-phy@1 {
 			reg = <1>;
@@ -45,13 +45,14 @@
 					<0x88aa2111>, <0x88aa6111>, <0x88aaa111>;
 			rx-sense-tbl = // user can define rx sensitivity here //
 					<0x42100911>, <0x42104911>, <0x42108911>,
-					<0x276a0311>, <0x276a4311>, <0x27688311>;
+					<0x276a0311>, <0x276a4311>, <0x27668311>;
 		};
 	};
 
 	ahci_sata: sata@9803F000 {
 		clocks = <&clk_en_4 CLK_EN_SATA_MAC_SYSH>;
 		resets = <&crst RSTN_SATA_MAC_COM>;
+		hostinit-mode = <0>;
 		sata-port@0 {
 			reg = <0>;
 			phys = <&sata_phy 0>;

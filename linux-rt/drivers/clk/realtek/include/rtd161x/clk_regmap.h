@@ -12,6 +12,8 @@
 #define PLL_VE1_2                       (0x118)
 #define PLL_DDSA1                       (0x120)
 #define PLL_DDSA2                       (0x128)
+#define PLL_PSAUDA1                     (0x130)
+#define PLL_PSAUDA2                     (0x134)
 #define PLL_GPU1                        (0x1C0)
 #define PLL_GPU2                        (0x1C4)
 #define PLL_VE2_1                       (0x1D0)

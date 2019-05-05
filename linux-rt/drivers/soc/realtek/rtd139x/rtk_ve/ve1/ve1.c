@@ -450,15 +450,8 @@ int vpu_hw_reset(u32 coreIdx)
 #if 1 /* RTK, workaround for demo */
 	DPRINTK("%s request vpu reset from application\n", DEV_NAME);
 
-	rstc = reset_control_get(p_vpu_dev, coreIdx == 0 ? "ve1" : "ve2");
-	if (IS_ERR_OR_NULL(rstc))
-	{
-		DPRINTK("%s failed to get reset control for core %d\n", DEV_NAME, coreIdx);
-	}
-	else {
-		reset_control_reset(rstc);
-		reset_control_put(rstc);
-	}
+	rstc = (coreIdx == 0 ? rstc_ve1 : rstc_ve2);
+	reset_control_reset(rstc);
 
 	ve1_wrapper_setup((1 << coreIdx));
 #endif

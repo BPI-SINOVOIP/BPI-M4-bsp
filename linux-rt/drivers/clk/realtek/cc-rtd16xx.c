@@ -1,8 +1,10 @@
 /*
  * cc-rtd16xx.c - RTD16xx clock controller
  *
- * Copyright (C) 2018 Realtek Semiconductor Corporation
- * Copyright (C) 2018 Cheng-Yu Lee <cylee12@realtek.com>
+ * Copyright (C) 2018-2019 Realtek Semiconductor Corporation
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -13,6 +15,7 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/bitops.h>
+#include <linux/platform_device.h>
 #include "common.h"
 #include "clk-pll.h"
 #include "clk-mmio-gate.h"
@@ -409,16 +412,39 @@ static struct clk_composite_init_data clk_ve2_bpu_init = {
 	.flags        = CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 };
 
-static struct clk_pll pll_dif = {
+static struct clk_pll_dif pll_dif = {
 	.ssc_offset   = PLL_SSC_DIG_PLLDIF0,
 	.pll_offset   = PLL_DIF1,
-	.freq_tbl     = NULL,
 	.base.hw.init = &(struct clk_init_data) {
 		.name         = "pll_dif",
 		.ops          = &clk_pll_dif_ops,
 		.parent_names = DEFAULT_PARENT_OSC27M,
 		.num_parents  = 1,
 		.flags        = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_pll_psaud pll_psaud1a = {
+	.reg = PLL_PSAUDA1,
+	.id  = CLK_PLL_PSAUD1A,
+	.base.hw.init = & (struct clk_init_data) {
+		.name         = "pll_psaud1a",
+		.ops          = &clk_pll_psaud_ops,
+		.parent_names = DEFAULT_PARENT_OSC27M,
+		.num_parents  = 1,
+		.flags        = CLK_IGNORE_UNUSED | CLK_SET_RATE_UNGATE,
+	},
+};
+
+static struct clk_pll_psaud pll_psaud2a = {
+	.reg = PLL_PSAUDA1,
+	.id  = CLK_PLL_PSAUD2A,
+	.base.hw.init = & (struct clk_init_data) {
+		.name         = "pll_psaud2a",
+		.ops          = &clk_pll_psaud_ops,
+		.parent_names = DEFAULT_PARENT_OSC27M,
+		.num_parents  = 1,
+		.flags        = CLK_IGNORE_UNUSED | CLK_SET_RATE_UNGATE,
 	},
 };
 
@@ -430,10 +456,12 @@ static struct clk_hw *clk_reg_list[] = {
 	[CC_PLL_GPU]     = &__clk_pll_hw(&pll_gpu),
 	[CC_PLL_VE1]     = &__clk_pll_hw(&pll_ve1),
 	[CC_PLL_VE2]     = &__clk_pll_hw(&pll_ve2),
-	[CC_PLL_DIF]     = &__clk_pll_hw(&pll_dif),
+	[CC_PLL_DIF]     = &__clk_pll_dif_hw(&pll_dif),
 	[CC_CLK_SYS_SB2] = &__clk_mmio_mux_hw(&clk_sys_sb2),
 	[CC_CLK_SYS]     = &clk_sys.hw,
 	[CC_CLK_SYSH]    = &clk_sysh.hw,
+	[CC_PLL_PSAUD1A] = &__clk_pll_psaud_hw(&pll_psaud1a),
+	[CC_PLL_PSAUD2A] = &__clk_pll_psaud_hw(&pll_psaud2a),
 };
 
 static  struct clk_composite_init_data *composite_clks[] = {
@@ -444,9 +472,9 @@ static  struct clk_composite_init_data *composite_clks[] = {
 	[CC_CLK_VE2_BPU] = &clk_ve2_bpu_init,
 };
 
-int cc_init_clocks(struct device *dev)
+static int rtd16xx_cc_init_clocks(struct device *dev)
 {
-	struct cc_desc *ccd = dev_get_drvdata(dev);
+	struct cc_platform_data *ccd = dev_get_drvdata(dev);
 	int i;
 	int ret;
 
@@ -460,7 +488,7 @@ int cc_init_clocks(struct device *dev)
 		name = hw->init->name;
 		ret = cc_init_hw(dev, ccd, i, hw);
 		if (ret) {
-			dev_err(dev, "%s: cc_init_hw() returns %d\n",
+			dev_err(dev, "%s: failed in cc_init_hw: %d\n",
 				name, ret);
 			continue;
 		}
@@ -476,7 +504,7 @@ int cc_init_clocks(struct device *dev)
 		name = data->name;
 		ret = cc_init_composite_clk(dev, ccd, i, data);
 		if (ret) {
-			dev_err(dev, "%s: cc_init_composite_clk() returns %d\n",
+			dev_err(dev, "%s: failed in cc_init_composite_clk: %d\n",
 				name, ret);
 			continue;
 		}
@@ -488,7 +516,34 @@ int cc_init_clocks(struct device *dev)
 	return 0;
 }
 
-int cc_clock_num(void)
+static int rtd16xx_cc_probe(struct platform_device *pdev)
 {
-	return CC_CLK_MAX;
+	struct cc_platform_data *ccd;
+
+	ccd = devm_cc_alloc_platform_data(&pdev->dev, CC_CLK_MAX);
+	if (!ccd)
+		return -ENOMEM;
+
+	platform_set_drvdata(pdev, ccd);
+	return cc_probe_platform(pdev, ccd, rtd16xx_cc_init_clocks);
 }
+
+static struct of_device_id rtd16xx_cc_match[] = {
+	{ .compatible = "realtek,clock-controller", },
+	{}
+};
+
+static struct platform_driver rtd16xx_cc_driver = {
+	.probe = rtd16xx_cc_probe,
+	.driver = {
+		.name = "rtk-rtd16xx-cc",
+		.of_match_table = rtd16xx_cc_match,
+		.pm = &cc_pm_ops,
+	},
+};
+
+static int __init rtd16xx_cc_init(void)
+{
+	return platform_driver_register(&rtd16xx_cc_driver);
+}
+core_initcall(rtd16xx_cc_init);

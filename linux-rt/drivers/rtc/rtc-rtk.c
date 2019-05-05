@@ -40,6 +40,7 @@
 #define REG_RTCACR 0x28
 #define REG_RTCEN 0x2C
 #define REG_RTCCR 0x30
+#define REG_RTCACR2 0x34
 
 #define REG_ISO_ISR 0x00
 #define REG_ISO_RTC 0x34
@@ -52,6 +53,7 @@ static struct clk *rtc_clk;
 static struct reset_control *rtc_rstc;
 
 static long rtk_base_year;
+static int rtk_bias;
 
 DEFINE_SPINLOCK(rtk_rtc_lock);
 
@@ -80,6 +82,7 @@ static void rtk_rtc_check_rtcacr(struct device *dev)
 	/* we set sefault 0 , 0 , 0 , 0 */
 	writel(0x40, rtk_rtc_base + REG_RTCCR);
 	writel(0x0, rtk_rtc_base + REG_RTCCR);
+	writel(rtk_bias, rtk_rtc_base + REG_RTCACR2);
 	writel(0, rtk_rtc_base + REG_RTCMIN);
 	writel(0, rtk_rtc_base + REG_RTCHR);
 	writel(0, rtk_rtc_base + REG_RTCDATE_LOW);
@@ -449,6 +452,12 @@ static int rtk_rtc_probe(struct platform_device *pdev)
 
 	dev_info(dev, "rtk_base_year = %ld\n", rtk_base_year);
 	rtk_base_year -= 1900;
+
+	prop = of_get_property(pdev->dev.of_node, "rtc-bias", NULL);
+	if (prop)
+		rtk_bias = of_read_number(prop, 1);
+	else
+		rtk_bias = 0x2;
 
 	rtk_rtc_base = of_iomap(pdev->dev.of_node, 0);
 	rtk_iso_base = of_iomap(pdev->dev.of_node, 1);

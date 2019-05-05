@@ -642,9 +642,9 @@ static int rtk_pcie2_16xx_hw_initial(struct device *dev)
 	/* #translate for MMIO R/W */
 	rtk_pcie2_16xx_ctrl_write(0xD04, 0x00000000);
 
-#ifdef CONFIG_R8125
-	/*pcie timeout extend to 250us*/
-	rtk_pcie2_16xx_ctrl_write(0xC78, 0x7A1201);
+#if defined(CONFIG_R8125) || defined(CONFIG_R8125_MODULE)
+	/*pcie timeout extend to 500us*/
+	rtk_pcie2_16xx_ctrl_write(0xC78, 0xF42401);
 #else
 	/* prevent pcie hang if dllp error occur*/
 	rtk_pcie2_16xx_ctrl_write(0xC78, 0x200001);

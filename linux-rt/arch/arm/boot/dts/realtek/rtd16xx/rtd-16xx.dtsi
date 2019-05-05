@@ -395,7 +395,7 @@
 	};
 
 	crst: soft-reset@98000000 {
-		compatible = "realtek,grouped-reset-controller";
+		compatible = "realtek,rtd16xx-reset-controller";
 		reg = <0x0 0x98000000 0x0 0x1000>;
 		#reset-cells = <1>;
 		realtek,mmio = <&crt_mmio 0x0>;
@@ -589,6 +589,12 @@
 		wake-crc1 = <0x8d25>;
 		wake-mask2 = [3f 30 80 c0 3f 10 00 00 00 00 00 00 80 ff ff 1f];
 		wake-crc2 = <0x8d25>;
+		wake-mask3 = [3f 30 10 00 c0 ff ff 03 01 f8 ff ff 01 00 00 00];
+		wake-crc3 = <0x11da>;
+		wake-mask4 = [3f 30 10 00 c0 ff ff 03 01 00 00 fc ff ff 00 00];
+		wake-crc4 = <0x11da>;
+		wake-mask5 = [3f 30 10 00 c0 ff ff 03 01 00 00 00 00 00 00 f8];
+		wake-crc5 = <0x15f8>;
 		output-mode = <0>; /* 0:embedded PHY, 1:SGMII to MAC, 2:SGMII to PHY */
 		ext-phy-id = <3>; /* 0 ~ 31, only valid when output-mode = 2 */
 		sgmii-swing = <0>; /* 0:640mV, 1:380mV, 2:250mV, 3:190mV */
@@ -1269,7 +1275,7 @@
 		};
 		i2s {
 			compatible = "i2s";
-			channel = <8>;
+			channel = <2>;
 			status = "okay";
 		};
 		hdmi {

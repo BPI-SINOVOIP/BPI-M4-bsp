@@ -75,7 +75,7 @@ struct ipc_shm_irda pcpu_data_irda;
 
 extern char wu_en[SUSPEND_ISO_GPIO_SIZE];
 extern char wu_act[SUSPEND_ISO_GPIO_SIZE];
-
+#ifdef CONFIG_RTK_RPC
 static unsigned int rtk_acpu_check_rpc_flag(void);
 
 static unsigned int rtk_acpu_check_rpc_flag(void)
@@ -95,9 +95,11 @@ static unsigned int rtk_acpu_check_rpc_flag(void)
 
 	return ret;
 }
+#endif
 
 static void rtk_acpu_set_flag(uint32_t flag)
 {
+#ifdef CONFIG_RTK_RPC
 	struct rtk_ipc_shm __iomem *ipc = (void __iomem *)IPC_SHM_VIRT;
 
 	writel(__cpu_to_be32(SUSPEND_VERSION_MASK(suspend_version)),
@@ -108,10 +110,12 @@ static void rtk_acpu_set_flag(uint32_t flag)
 	else
 		writel(__cpu_to_be32(flag | AUTHOR_MASK(AUTHOR_SCPU)),
 			&(ipc->suspend_flag));
+#endif
 }
 
 static void rtk_notify_acpu(enum _notify_flag flag)
 {
+#ifdef CONFIG_RTK_RPC
 	pr_info("[%s] Notify ACPU, flag= %d\n", DEV, flag);
 
 	switch (flag) {
@@ -136,6 +140,7 @@ static void rtk_notify_acpu(enum _notify_flag flag)
 	}
 
 	rtk_acpu_set_flag(NOTIFY_MASK(flag));
+#endif
 }
 
 static int rtk_suspend_wakeup_acpu(void)
@@ -151,10 +156,6 @@ static int rtk_suspend_wakeup_acpu(void)
 
 	return 0;
 }
-
-#if defined(CONFIG_THOR_PM_WORKARURD)
-extern void __iomem *wdt_base_export;
-#endif /* CONFIG_THOR_PM_WORKARURD */
 
 static void setup_restart_action(RESET_ACTION action)
 {
@@ -172,11 +173,11 @@ static void setup_restart_action(RESET_ACTION action)
 static void rtk_sys_reset(enum reboot_mode reboot_mode, const char *cmd)
 {
 	if (cmd) {
-		set_wdt_oe();
-
 		if (!strncmp("bootloader", cmd, 11)) {
+			set_wdt_oe();
 			setup_restart_action(RESET_ACTION_FASTBOOT);
 		} else if (!strncmp("recovery", cmd, 9)) {
+			set_wdt_oe();
 			setup_restart_action(RESET_ACTION_RECOVERY);
 		} else {
 			setup_restart_action(RESET_ACTION_NO_ACTION);
@@ -187,10 +188,10 @@ static void rtk_sys_reset(enum reboot_mode reboot_mode, const char *cmd)
 
 	pr_info("[%s] Power reset\n", DEV);
 #if defined(CONFIG_THOR_PM_WORKARURD)
-	writel(0xA5, wdt_base_export + 0x0);
-	writel(0x01, wdt_base_export + 0x4);
-	writel(0x0, wdt_base_export + 0xC);
-	writel(0xFF, wdt_base_export + 0x0);
+	writel(0xA5, RTK_ISO_BASE + 0x680);
+	writel(0x01, RTK_ISO_BASE + 0x684);
+	writel(0x100, RTK_ISO_BASE + 0x68C);
+	writel(0xFF, RTK_ISO_BASE + 0x680);
 #else
 	rtk_notify_acpu(NOTIFY_SUSPEND_TO_COOLBOOT);
 	psci_sys_reset(reboot_mode, cmd);
@@ -297,13 +298,13 @@ static int rtk_suspend_enter(suspend_state_t state)
 		break;
 	case PM_SUSPEND_MEM:
 		rtk_notify_acpu(NOTIFY_SUSPEND_TO_RAM);
-
+#ifdef CONFIG_RTK_RPC
 		if (!rtk_acpu_check_rpc_flag()) {
 			pr_err("[%s] ACPU FW not ready to suspend !\n", DEV);
 			ret = -EINVAL;
 			break;
 		}
-
+#endif
 		pcpu_data->wakeup_source = htonl(pcpu_data->wakeup_source);
 		pcpu_data->timerout_val = htonl(pcpu_data->timerout_val);
 		pcpu_data->irda_info.dev_count = pcpu_data_irda.dev_count;
@@ -336,10 +337,10 @@ static int rtk_suspend_enter(suspend_state_t state)
 #if RTK_DDR_CALIBRATION
 	rtk_ddr_calibration_restore();
 #endif /* RTK_DDR_CALIBRATION */
-
+#ifdef CONFIG_RTK_RPC
 	/* Enable ACPU clock*/
 	writel(readl(RTK_CRT_BASE + 0x58) | 0x000000C0, RTK_CRT_BASE + 0x58);
-
+#endif
 	writel(readl(RTK_ISO_BASE + 0x0418) | BIT(0), RTK_ISO_BASE + 0x0418);
 	writel(readl(RTK_ISO_BASE + 0x0410) & ~BIT(10), RTK_ISO_BASE + 0x0410);
 

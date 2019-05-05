@@ -4679,7 +4679,7 @@ static void rtl_write_wakeup_pattern(struct rtl8169_private *tp, u32 idx)
 	u8 i,j;
 	u32 reg_mask, reg_shift, reg_offset;
 
-	reg_offset = idx / 4;
+	reg_offset = idx & ~(BIT(0) | BIT(1));
 	reg_shift = (idx % 4) * 8;
 	switch (reg_shift) {
 	case 0:
@@ -4700,12 +4700,13 @@ static void rtl_write_wakeup_pattern(struct rtl8169_private *tp, u32 idx)
 	}
 
 	for (i = 0, j = 0; i < 0x80; i += 8, j++) {
-		rtl_eri_write(tp, i + reg_offset, reg_mask, tp->wol_mask[idx][j] << reg_shift, ERIAR_EXGMAC);
 		/*
-		pr_err("%s:%d: addr 0x%x mask 0x%04x, val 0x%04x\n",
+		pr_err("%s:%d: idx %d, j %02d, addr 0x%x mask 0x%04x, val 0x%04x, type 0x%x\n",
 			__func__, __LINE__,
-			i + reg_offset, reg_mask,  tp->wol_mask[idx][j] << reg_shift);
+			idx, j,
+			i + reg_offset, reg_mask,  tp->wol_mask[idx][j] << reg_shift, ERIAR_EXGMAC);
 		*/
+		rtl_eri_write(tp, i + reg_offset, reg_mask, tp->wol_mask[idx][j] << reg_shift, ERIAR_EXGMAC);
 	}
 
 	reg_offset = idx * 2;
@@ -4717,12 +4718,13 @@ static void rtl_write_wakeup_pattern(struct rtl8169_private *tp, u32 idx)
 		reg_mask = ERIAR_MASK_0011;
 		reg_shift = 0;
 	}
-	rtl_eri_write(tp, 0x80 + reg_offset, reg_mask, tp->wol_crc[idx] << reg_shift, ERIAR_EXGMAC);
 	/*
-	pr_err("%s:%d: CRC addr 0x%x mask 0x%04x, val 0x%04x\n",
+	pr_err("%s:%d: idx %d, CRC addr 0x%x mask 0x%04x, val 0x%04x, type 0x%x\n",
 		__func__, __LINE__,
-		0x80 + reg_offset, reg_mask,  tp->wol_crc[idx] << reg_shift);
+		idx,
+		0x80 + reg_offset, reg_mask,  tp->wol_crc[idx] << reg_shift, ERIAR_EXGMAC);
 	*/
+	rtl_eri_write(tp, (int)(0x80 + reg_offset), reg_mask, tp->wol_crc[idx] << reg_shift, ERIAR_EXGMAC);
 }
 
 static void rtl_mdns_crc_wakeup(struct rtl8169_private *tp)
@@ -8139,27 +8141,15 @@ static void rtl_hw_initialize(struct rtl8169_private *tp)
 	}
 }
 #ifdef RTL_PROC
-static ssize_t read_proc(struct file *filp,char *buf,size_t count,loff_t *offp )
+static int wol_read_proc(struct seq_file *m, void *v)
 {
-
-	ssize_t len = 0;
-	static int finished = 0;
-
-	if ( finished ) {
-		printk(KERN_INFO "procfs_read: END\n");
-		finished = 0;
-		return 0;
-	}
-
-	finished = 1;
-
 	printk(KERN_INFO "read procfs ethernet wol_enable = %x \n",wol_enable);
 
-	len = sprintf(buf,"%d\n", wol_enable);
-	return len;
+	seq_printf(m, "%d\n", wol_enable);
+	return 0;
 }
 
-static ssize_t write_proc(struct file *file, const char __user *buffer, size_t count, loff_t *pos)
+static ssize_t wol_write_proc(struct file *file, const char __user *buffer, size_t count, loff_t *pos)
 {
 	char tmp[32];
 	u32 val,num;
@@ -8173,10 +8163,21 @@ static ssize_t write_proc(struct file *file, const char __user *buffer, size_t c
 	return count;
 }
 
-static const struct file_operations proc_fops = {
-.read= read_proc,
-.write= write_proc,
+static int wol_proc_open(struct inode *inode, struct file *file)
+{
+	struct net_device *dev = proc_get_parent_data(inode);
+
+	return single_open(file, wol_read_proc, dev);
+}
+
+static const struct file_operations wol_proc_fops = {
+	.open           = wol_proc_open,
+	.read           = seq_read,
+	.write          = wol_write_proc,
+	.llseek         = seq_lseek,
+	.release        = single_release,
 };
+
 
 static int eee_read_proc(struct seq_file *m, void *v)
 {
@@ -8474,7 +8475,7 @@ static void r8169soc_reset_phy_gmac(struct rtl8169_private *tp)
 		reset_control_put(rstc_pcie0_phy_mdio);
 	}
 
-	mdelay(100);
+	mdelay(1);
 
 	/* release resource */
 	reset_control_put(rstc_gphy);
@@ -8603,7 +8604,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	/* ISO spec, reset bit of gphy */
 	reset_control_deassert(rstc_gphy);
 
-	mdelay(10);	/* wait 10ms for PHY PLL stable */
+	mdelay(1);	/* wait 1ms for PHY PLL stable */
 
 	/* In Hercules, EPHY need choose the bypass mode or Non-bypass mode */
 	/* Bypass mode : ETN MAC bypass efuse update flow. SW need to take this sequence. */
@@ -8634,7 +8635,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	clk_prepare_enable(clk_etn_sys);
 	clk_prepare_enable(clk_etn_250m);
 
-	mdelay(10);	/* wait 10ms for GMAC uC to be stable */
+	mdelay(1);	/* wait 1ms for GMAC uC to be stable */
 
 	/* release resource */
 	reset_control_put(rstc_gphy);
@@ -9172,7 +9173,7 @@ static void r8169soc_reset_phy_gmac(struct rtl8169_private *tp)
 	}
 
 
-	mdelay(100);
+	mdelay(1);
 
 	/* release resource */
 	if (tp->output_mode != OUTPUT_EMBEDDED_PHY) {
@@ -9353,7 +9354,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	/* ISO spec, reset bit of gphy */
 	reset_control_deassert(rstc_gphy);
 
-	mdelay(10);	/* wait 10ms for PHY PLL stable */
+	mdelay(1);	/* wait 1ms for PHY PLL stable */
 
 	/* Thor only supports the bypass mode */
 	/* Bypass mode : ETN MAC bypass efuse update flow. SW need to take this sequence. */
@@ -9374,7 +9375,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	clk_prepare_enable(clk_etn_sys);
 	clk_prepare_enable(clk_etn_250m);
 
-	mdelay(10);	/* wait 10ms for GMAC uC to be stable */
+	mdelay(1);	/* wait 1ms for GMAC uC to be stable */
 
 	/* release resource */
 	reset_control_put(rstc_gphy);
@@ -10328,7 +10329,7 @@ rtl_init_one(struct platform_device *pdev)
 
 
 		entry = proc_create_data("wol_enable", S_IFREG | S_IRUGO,
-				   dir_dev, &proc_fops, NULL);
+				   dir_dev, &wol_proc_fops, NULL);
 		if (!entry) {
 			printk(KERN_INFO "procfs:create /proc/net/eth0/r8169/wol_enable failed\n");
 			break;

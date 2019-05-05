@@ -110,7 +110,6 @@ static enum hrtimer_restart snd_card_capture_lpcm_timer_function(struct hrtimer 
 static void snd_card_capture_timer_function(unsigned long data);
 static void snd_card_capture_calculate_pts(snd_pcm_runtime_t *runtime, long nPeriodCount);
 
-static unsigned long valid_free_size(unsigned long base, unsigned long limit, unsigned long rp, unsigned long wp);
 static unsigned long ring_add(unsigned long ring_base, unsigned long ring_limit, unsigned long ptr, unsigned int bytes);
 static unsigned long ring_valid_data(unsigned long ring_base, unsigned long ring_limit, unsigned long ring_rp, unsigned long ring_wp);
 static unsigned long buf_memcpy2_ring(unsigned long base, unsigned long limit, unsigned long ptr, char* buf, unsigned long size);
@@ -3023,8 +3022,10 @@ static int snd_card_playback_prepare(snd_pcm_substream_t * substream)
 		ALSA_WARNING("[SNDRV_PCM_STATE_XRUN appl_ptr %d hw_ptr %d]\n", (int)runtime->control->appl_ptr, (int)runtime->status->hw_ptr);
 	}
 
-	/* Setup the hr timer using ktime */
-	dpcm->ktime = ktime_set(0 ,(runtime->period_size * 1000) / runtime->rate * 1000 * 1000); //ms to ns
+	/* Setup the hr timer using ktime .
+	 * For more precise compute the ktime in us.
+	 */
+	dpcm->ktime = ktime_set(0 ,(runtime->period_size * 1000) * 1000 / runtime->rate * 1000); //ms to ns
 
 	if (dpcm->bInitRing) {
 		/* Reset the information about playback.
@@ -3034,6 +3035,7 @@ static int snd_card_playback_prepare(snd_pcm_substream_t * substream)
 		dpcm->nTotalRead = 0;
 		dpcm->nTotalWrite = 0;
 		dpcm->nPreHWPtr = 0;
+		dpcm->nPre_appl_ptr = 0;
 		/*	DHCKYLIN-2193:
 			1.  pasue and stop AO and decoder, then destory the decoder for re-sending NewFormat.
 			2.  re-send NewFormat cmd to audio f/w when alsa is reconfigured.
@@ -3646,8 +3648,6 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 	snd_pcm_uframes_t nReadAddSize = 0;
 	unsigned int nPeriodCount = 0;
 	unsigned int HWRingRp;
-	unsigned int HWRingFreeSize;
-	unsigned int HWRingFreeFrame;
 	static unsigned long dbg_count = 0;
 	int dec_out_valid_size = 0;
 
@@ -3659,13 +3659,12 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 			(unsigned int)ntohl(dpcm->decOutRing[0].beginAddr) + rtk_dec_ao_buffer,
 			(unsigned int)ntohl(dpcm->decOutRing[0].readPtr[0]),
 			(unsigned int)ntohl(dpcm->decOutRing[0].writePtr));
-		//ALSA_VitalPrint("dec_out_valid_size %d\n", dec_out_valid_size);
+		//printk("dec_out_valid_size %d\n", dec_out_valid_size);
 		if (dec_out_valid_size > 0 && dec_out_valid_size <= dpcm->nRingSize)
 			dec_out_msec = ((dec_out_valid_size >> 2) * 1000) / runtime->rate;
 		else
 			dec_out_msec = 0;
-		//ALSA_VitalPrint("dec_out_msec %d\n", dec_out_msec);
-		//////////////////////////////////////////////////////////////////////////////////
+		//printk("dec_out_msec %d\n", dec_out_msec);
 
 		if (runtime->control->appl_ptr == runtime->status->hw_ptr)
 		{
@@ -3673,7 +3672,7 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 			ALSA_WARNING("Need to check why data didn't send to alsa\n");
 		}
 
-		// update HW rp
+		// update HW rp (the pointer of AFW read)
 		HWRingRp = (unsigned int)(ntohl(dpcm->decInRing[0].readPtr[0]));//physical address
 		dpcm->decInRing_LE[0].readPtr[0] = HWRingRp;
 		dpcm->nHWPtr = bytes_to_frames(runtime, (unsigned long)HWRingRp - (unsigned long)dpcm->decInRing_LE[0].beginAddr);
@@ -3697,20 +3696,21 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 		}
 #endif
 
-		// update HW read size
+		// update HW read size (the pointer of AFW read and update to application can send data)
 		if (dpcm->nHWPtr != dpcm->nPreHWPtr)
 		{
 			nReadAddSize = ring_valid_data(0, runtime->buffer_size, dpcm->nPreHWPtr, dpcm->nHWPtr);
-#if 1
-			if (nReadAddSize > (runtime->buffer_size >> 1))
+
+			/* For sending data more stable,
+			 * limit the data in one period size every time in timer function.
+			 */
+			if (nReadAddSize > runtime->period_size)
 			{
-#ifdef WORK_AROUND_BUG34499
-				nReadAddSize = runtime->buffer_size >> 1;
+				nReadAddSize = runtime->period_size;
 				dpcm->nHWPtr = ring_add(0, runtime->buffer_size, dpcm->nPreHWPtr, nReadAddSize);
-#endif
-				//ALSA_WARNING("[ALSA maybe hang because Jitter %d, runtime->buffer size %d %s %d]\n", (int)nReadAddSize, (int)runtime->buffer_size, __FUNCTION__, __LINE__);
+				//printk("[ALSA maybe hang because Jitter %d, runtime->buffer size %d]\n", (int)nReadAddSize, (int)runtime->buffer_size);
 			}
-#endif
+
 			dpcm->nHWReadSize += nReadAddSize;
 			dpcm->nTotalRead = ring_add(0,
 				runtime->boundary,
@@ -3719,28 +3719,14 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 		}
 
 #ifndef USE_COPY_OPS
-		// update wp
+		// update wp (the pointer application send data to alsa)
 		nPeriodCount = ring_valid_data(0, runtime->boundary, dpcm->nTotalWrite, runtime->control->appl_ptr) / runtime->period_size;
-		if (nPeriodCount == runtime->periods)
-			nPeriodCount--;
 
-		//printk("\033[0;33;33m [INRING LE %d] base %x limit %x\033[m\n",
-		//    __LINE__, dpcm->decInRing_LE[0].beginAddr, dpcm->decInRing_LE[0].beginAddr + dpcm->decInRing_LE[0].size);
-		//printk("\033[0;33;33m [INRING LE %d] wp %x rp %x HWRingRp %x\033[m\n",
-		//    __LINE__, dpcm->decInRing_LE[0].writePtr, dpcm->decInRing_LE[0].readPtr[0], HWRingRp);
-
-		HWRingFreeSize = valid_free_size(dpcm->decInRing_LE[0].beginAddr,
-			dpcm->decInRing_LE[0].beginAddr + dpcm->decInRing_LE[0].size,
-			HWRingRp,
-			dpcm->decInRing_LE[0].writePtr);
-
-		HWRingFreeFrame = bytes_to_frames(runtime, HWRingFreeSize);
-
-		if ((runtime->period_size * nPeriodCount) > HWRingFreeFrame)
-			nPeriodCount = HWRingFreeFrame / runtime->period_size;
-
-		if (HWRingFreeSize <= dpcm->nPeriodBytes)
-			nPeriodCount = 0;
+		/* For sending data more stable,
+		 * limit the data in one period size every time in timer function.
+		 */
+		if(nPeriodCount > 1)
+			nPeriodCount = 1;
 
 		if (nPeriodCount)
 		{
@@ -3755,29 +3741,24 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 				dpcm->nTotalWrite,
 				runtime->period_size * nPeriodCount);
 
-			// update wp
-			//dpcm->decInRing[0].writePtr = htonl(dpcm->decInRing_LE[0].writePtr);
+			// update wp (tell AFW the write pointer from application is update)
 			dpcm->decInRing[0].writePtr = htonl(dpcm->decInRing_LE[0].writePtr);//record physical address
 			//printk("\033[0;33;33m [INRING LE %d update] wp %x rp %x\033[m\n", __LINE__, dpcm->decInRing_LE[0].writePtr, dpcm->decInRing_LE[0].readPtr[0]);
 		}
 #endif
 
-		//ALSA_VitalPrint("[nReadAddSize %d pre %d cur %d %d]\n", nReadAddSize, dpcm->nPreHWPtr, dpcm->nHWPtr, dpcm->nHWReadSize);
-		//ALSA_VitalPrint("[nTotalWrite %d nTotalRead %d nPeriodCount %d]\n", dpcm->nTotalWrite, dpcm->nTotalRead, nPeriodCount);
+		//printk("[nReadAddSize %d pre %d cur %d %d]\n", nReadAddSize, dpcm->nPreHWPtr, dpcm->nHWPtr, dpcm->nHWReadSize);
+		//printk("[nTotalWrite %d nTotalRead %d nPeriodCount %d]\n", dpcm->nTotalWrite, dpcm->nTotalRead, nPeriodCount);
 
 		if (runtime->status->state == SNDRV_PCM_STATE_DRAINING) {
 			switch (dpcm->nEOSState) {
 				case SND_REALTEK_EOS_STATE_NONE:
-					//dpcm->nEOSState = SND_REALTEK_EOS_STATE_PROCESSING;
 					if (RPC_TOAGENT_INBAND_EOS_SVC(dpcm) < 0)
 					{
 						ALSA_WARNING("[%s %d fail]\n", __FUNCTION__, __LINE__);
 					}
 					dpcm->nEOSState = SND_REALTEK_EOS_STATE_FINISH;
 					break;
-				//case SND_REALTEK_EOS_STATE_PROCESSING:
-				//    ALSA_VitalPrint("wilson [ALSA EOS %s %d]\n", __FUNCTION__, __LINE__);
-				//    break;
 				case SND_REALTEK_EOS_STATE_FINISH:
 					if (dpcm->nTotalWrite == dpcm->nTotalRead)
 					{
@@ -3790,7 +3771,6 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 					break;
 			}
 		} else {
-			//printk("dpcm nHWReadSize %lu, runtime->period_size %lu\n", dpcm->nHWReadSize, runtime->period_size);
 			if (dpcm->nHWReadSize >= runtime->period_size) {
 				dpcm->nHWReadSize %= runtime->period_size;
 				DEBUG_CODE("[snd_pcm_period_elapsed]\n");
@@ -3804,9 +3784,9 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 			dbg_count++;
 		else
 			dbg_count = 0;
+
 		if (dbg_count >= (HZ << 1))
 		{
-	        //ALSA_WARNING("[HANG !!! %s %d]\n", __FUNCTION__, __LINE__);
 	        //ALSA_WARNING("[state %d write_state %d]\n", (int)runtime->status->state, (int)dpcm->nWriteState);
 #if 0
 			ALSA_WARNING("[state %d]\n", (int)runtime->status->state);
@@ -3819,12 +3799,12 @@ static enum hrtimer_restart snd_card_timer_function(struct hrtimer *timer)
 			   (unsigned int)(ntohl(dpcm->decInRing[0].readPtr[0])));
 #endif
 	        //ALSA_WARNING("[HWRingRp %x nPeriodCount %d runtime->periods %d]\n", HWRingRp, nPeriodCount, runtime->periods);
-	        //ALSA_WARNING("[HWRingFreeSize %d HWRingFreeFrame %d dpcm->nPeriodBytes %d]\n", HWRingFreeSize, HWRingFreeFrame, dpcm->nPeriodBytes);
 	        //ALSA_WARNING("[snd_pcm_playback_avail %d runtime->control->avail_min %d]\n", snd_pcm_playback_avail(runtime), runtime->control->avail_min);
 			dbg_count = 0;
 		}
 #endif
 		dpcm->nPreHWPtr = dpcm->nHWPtr;
+		dpcm->nPre_appl_ptr = runtime->control->appl_ptr;
 
 		/* Set up the next time */
 		hrtimer_forward_now(timer, dpcm->ktime);
@@ -3997,11 +3977,6 @@ static unsigned long ring_minus(unsigned long ring_base, unsigned long ring_limi
 		ptr = ring_limit-(ring_base-ptr);
 
 	return ptr;
-}
-
-static unsigned long valid_free_size(unsigned long base, unsigned long limit, unsigned long rp, unsigned long wp)
-{
-	return (limit-base)-ring_valid_data(base,limit,rp,wp)-1;
 }
 
 static int ring_check_ptr_valid_32(unsigned int ring_rp, unsigned int ring_wp, unsigned int ptr)

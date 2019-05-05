@@ -10,6 +10,15 @@ config COMMON_CLK_REALTEK_DEBUG
 	help
 	  Add a simple register tracker to clock
 
+config CLK_PLL_PSAUD
+	bool
+
+config CLK_PLL_DIF
+	bool
+
+config RESET_PLATFORM
+	bool
+
 config COMMON_CLK_RTD119X
 	bool "Clock driver for RTD119x"
 	select COMMON_CLK_REALTEK
@@ -28,14 +37,18 @@ config COMMON_CLK_RTD139X
 config COMMON_CLK_RTD16XX
 	bool "Clock driver for RTD16xx"
 	select COMMON_CLK_REALTEK
+	select CLK_PLL_PSAUD
+	select CLK_PLL_DIF
+	select RESET_PLATFORM
 	default y if ARCH_RTD16xx
+
+config COMMON_CLK_RTD13XX
+	bool "Clock driver for RTD13xx"
+	select COMMON_CLK_REALTEK
+	select RESET_PLATFORM
 
 config COMMON_CLK_DUMMY
 	bool "Dummy Clock"
 	help
 	  Dummy Clock, if not sure say N.
-
-config RESET_GROUPED
-	bool "Grouped Reset Controller"
-	default y if (ARCH_RTD16xx || ARCH_RTD13xx)
 

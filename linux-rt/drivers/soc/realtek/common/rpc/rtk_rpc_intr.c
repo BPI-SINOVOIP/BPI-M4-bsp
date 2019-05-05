@@ -45,7 +45,7 @@ volatile RPC_DEV *rpc_intr_devices;
 int rpc_intr_is_paused;
 int rpc_intr_is_suspend;
 
-int timeout = HZ / 40; /* jiffies */
+int timeout = HZ; //HZ / 40; /* jiffies */
 
 RPC_DEV_EXTRA rpc_intr_extra[RPC_NR_DEVS / RPC_NR_PAIR];
 

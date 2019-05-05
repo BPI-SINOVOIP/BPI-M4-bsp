@@ -29,12 +29,20 @@ struct edid_product_info_t {
 };
 
 
-#define PRODUCT_INFO_SIZE 1
+#define PRODUCT_INFO_SIZE 2
 
 static const struct edid_product_info_t product_info[] = {
 	{.mfg_name[0] = 0x2E, .mfg_name[1] = 0x83,
 	.prod_code[0] = 0x00, .prod_code[1] = 0x55,
 	.serial = 1,
+	.vic_mask = 0xFFFFFFFFFFFFFFFF,
+	.vic2_mask = 0x0,
+	.extended_vic_mask = 0x0,
+	.vic2_420_mask = 0x0},
+	/*DENON_AVR-2312CI */
+	{.mfg_name[0] = 0x11, .mfg_name[1] = 0xee,
+	.prod_code[0] = 0x28, .prod_code[1] = 0x00,
+	.serial = 0x01010101,
 	.vic_mask = 0xFFFFFFFFFFFFFFFF,
 	.vic2_mask = 0x0,
 	.extended_vic_mask = 0x0,

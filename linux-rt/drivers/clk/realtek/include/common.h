@@ -18,6 +18,9 @@
 #include <linux/of.h>
 #include <linux/regmap.h>
 
+struct device;
+struct platform_device;
+
 /**
  * struct clk_reg - a clk core with hardware register access, which is provided
  * ether a direct regsiter or a regmap register access. The regmap provides a
@@ -212,13 +215,17 @@ struct clk_pm_data {
 #define CLK_PM_SUSPEND_ENABLE   BIT(2)
 
 #ifdef CONFIG_PM
-int clk_pm_init(struct clk *clk, struct clk_pm_data *pm_data,
-	unsigned int pm_flags);
+int clk_pm_init(struct clk *clk,
+		struct clk_pm_data *pm_data,
+		unsigned int pm_flags);
 int clk_pm_data_save(struct clk_pm_data *pm_data);
 int clk_pm_data_restore(struct clk_pm_data *pm_data);
+
 #else /* CONFIG_PM */
-static inline int clk_pm_init(struct clk *clk, struct clk_pm_data *pm_data,
-	unsigned int pm_flags)
+
+static inline int clk_pm_init(struct clk *clk,
+			      struct clk_pm_data *pm_data,
+			      unsigned int pm_flags)
 {
 	return 0;
 }
@@ -232,66 +239,38 @@ static inline int clk_pm_data_restore(struct clk_pm_data *pm_data)
 {
 	return 0;
 }
+
 #endif /* CONFIG_PM */
 
 /**
- * struct cc_desc - description of clock controller
+ * struct cc_platform_data - description of clock controller
  *
  * @init_data      init data of clk_reg
  * @data           onecell data of clock provider
  * @pm_data        data of clk_pm
  */
-struct cc_desc {
+struct cc_platform_data {
 	struct clk_reg_init_data init_data;
+	int clk_num;
 	struct clk_onecell_data data;
 #ifdef CONFIG_PM
 	struct clk_pm_data *pm_data;
 #endif
 };
 
-static inline struct cc_desc *devm_cc_alloc(struct device *dev, int max_clk)
-{
-	struct cc_desc *ccd;
-
-	ccd = devm_kzalloc(dev, sizeof(*ccd), GFP_KERNEL);
-	if (!ccd)
-		return NULL;
-
-	ccd->data.clk_num = max_clk;
-	ccd->data.clks = devm_kcalloc(dev, max_clk,
-		sizeof(*ccd->data.clks), GFP_KERNEL);
-	if (!ccd->data.clks)
-		return NULL;
-#ifdef CONFIG_PM
-	ccd->pm_data = devm_kcalloc(dev, max_clk,
-		sizeof(*ccd->pm_data), GFP_KERNEL);
-	if (!ccd->pm_data)
-		return NULL;
-#endif
-	return ccd;
-}
-
-int cc_init_hw(struct device *dev, struct cc_desc *ccd, int cc_index,
-	struct clk_hw *hw);
-int cc_init_composite_clk(struct device *dev, struct cc_desc *ccd,
-	int cc_index, struct clk_composite_init_data *init);
-
-/*
- * platform specific functions
- */
-
-/**
- * cc_init_clocks - platform specific init function, should init data and
- *                  pm_data in cc_desc for platform driver.
- *
- * @dev - deivce of cc with cc_desc in drvier data
- */
-int cc_init_clocks(struct device *dev);
-
-/**
- * cc_clock_num - returns clock number in the platform cc
- */
-int cc_clock_num(void);
+struct cc_platform_data *devm_cc_alloc_platform_data(struct device *dev, int max_clk);
+int cc_probe_platform(struct platform_device *pdev,
+		      struct cc_platform_data *ccd,
+		      int (*init_cb)(struct device *dev));
+int cc_init_hw(struct device *dev,
+	       struct cc_platform_data *ccd,
+	       int cc_index,
+	       struct clk_hw *hw);
+int cc_init_composite_clk(struct device *dev,
+			  struct cc_platform_data *ccd,
+			  int cc_index,
+			  struct clk_composite_init_data *init);
+extern const struct dev_pm_ops cc_pm_ops;
 
 #endif /* __CLK_REALTEK_COMMON_H */
 

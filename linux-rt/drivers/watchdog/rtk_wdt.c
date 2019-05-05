@@ -43,10 +43,6 @@ static int watchdog_oe = -1;
 #define ISO_WDT_CLK (27000000) /* 27 MHz */
 #define ISO_WDT_1MS_CNT (27000)
 
-#if defined(CONFIG_THOR_PM_WORKARURD)
-void __iomem *wdt_base_export;
-#endif /* CONFIG_THOR_PM_WORKARURD */
-
 struct rtk_wdt {
 	struct watchdog_device wdt;
 	struct clk *clk;
@@ -307,10 +303,6 @@ static int rtk_wdt_probe(struct platform_device *pdev)
 
 	rtk_wdt->wdt_base = devm_ioremap_resource(&pdev->dev, res);
 
-#if defined(CONFIG_THOR_PM_WORKARURD)
-	wdt_base_export = rtk_wdt->wdt_base;
-#endif /* CONFIG_THOR_PM_WORKARURD */
-
 	if (IS_ERR(rtk_wdt->wdt_base))
 		return PTR_ERR(rtk_wdt->wdt_base);
 
@@ -319,11 +311,6 @@ static int rtk_wdt_probe(struct platform_device *pdev)
 	rtk_wdt->iso_base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(rtk_wdt->iso_base))
 		return PTR_ERR(rtk_wdt->iso_base);
-
-	/* if iso watchdog exists , use iso as wdt_base_export */
-#if defined(CONFIG_THOR_PM_WORKARURD)
-	wdt_base_export = rtk_wdt->iso_base;
-#endif /* CONFIG_THOR_PM_WORKARURD */
 
 	/* set pin direction for pmic reset signal */
 	if (!of_property_read_u32_index(pdev->dev.of_node,

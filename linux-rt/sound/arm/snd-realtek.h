@@ -18,7 +18,6 @@
 // Main Control //
 //////////////////
 #define USE_ION_AUDIO_HEAP
-#define WORK_AROUND_BUG34499
 #define CAPTURE_USE_PTS_RING
 //#define USE_COPY_OPS
 

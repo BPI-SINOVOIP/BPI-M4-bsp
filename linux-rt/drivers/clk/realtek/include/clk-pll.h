@@ -89,7 +89,7 @@ struct clk_pll {
 #define CLK_PLL_DIV_WORKAROUND          BIT(2)
 
 /* clk_pll status */
-#define CLK_PLL_ENABLED                 BIT(0)
+#define CLK_PLL_DISABLED                BIT(0)
 
 /* clk_pll conf & functions */
 #define CLK_PLL_CONF_POW_MASK           (0xf)
@@ -167,11 +167,46 @@ static inline void clk_pll_div_unlock(struct clk_pll_div *plld,
 
 extern const struct clk_ops clk_pll_ops;
 extern const struct clk_ops clk_pll_div_ops;
-#ifdef CONFIG_COMMON_CLK_RTD16XX
-extern const struct clk_ops clk_pll_dif_ops;
-#endif
 
 bool clk_hw_is_pll(struct clk_hw *hw);
 int clk_pll_init(struct clk_hw *hw);
+
+extern unsigned long default_osc_rate;
+
+#ifdef CONFIG_CLK_PLL_PSAUD
+
+struct clk_pll_psaud {
+     struct clk_reg base;
+     int id;
+     int reg;
+     spinlock_t *lock;
+};
+
+#define to_clk_pll_psaud(_hw) \
+    container_of(to_clk_reg(_hw), struct clk_pll_psaud, base)
+#define __clk_pll_psaud_hw(_ptr)  __clk_reg_hw(&(_ptr)->base)
+extern const struct clk_ops clk_pll_psaud_ops;
+
+#define CLK_PLL_PSAUD1A       (0x1)
+#define CLK_PLL_PSAUD2A       (0x2)
+
+#endif /* CONFIG_CLK_PLL_PSAUD */
+
+#ifdef CONFIG_CLK_PLL_DIF
+
+struct clk_pll_dif {
+    struct clk_reg base;
+    int pll_offset;
+    int ssc_offset;
+    unsigned int status;
+    spinlock_t *lock;
+};
+#define to_clk_pll_dif(_hw) \
+    container_of(to_clk_reg(_hw), struct clk_pll_dif, base)
+#define __clk_pll_dif_hw(_ptr)  __clk_reg_hw(&(_ptr)->base)
+
+extern const struct clk_ops clk_pll_dif_ops;
+#endif /* CONFIG_CLK_PLL_DIF */
+
 
 #endif /* __CLK_REALTEK_CLK_PLL_H */

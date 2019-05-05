@@ -134,11 +134,29 @@ static inline int __hw_to_cc_type(struct clk_hw *hw)
 		return CC_CLK_TYPE_CLK_MUX;
 	if (ops == &clk_mmio_gate_ops)
 		return CC_CLK_TYPE_CLK_GATE;
+#ifdef CONFIG_CLK_PLL_DIF
+	/*
+	 * clk_pll_dif is not based struct clk_pll, so
+	 * return as CC_CLK_TYPE_CLK_REG to setup internal
+	 * clk_reg
+	 */
+	if (ops == &clk_pll_dif_ops)
+		return CC_CLK_TYPE_CLK_REG;
+#endif
+#ifdef CONFIG_CLK_PLL_PSAUD
+	/*
+	 * clk_pll_psaud is not based struct clk_pll, so
+	 * return as CC_CLK_TYPE_CLK_REG to setup internal
+	 * clk_reg
+	 */
+	if (ops == &clk_pll_psaud_ops)
+		return CC_CLK_TYPE_CLK_REG;
+#endif
 
 	return CC_CLK_TYPE_OTHERS;
 }
 
-static inline int cc_set_clk_cell(struct cc_desc *ccd, int i, struct clk *clk)
+static inline int cc_set_clk_cell(struct cc_platform_data *ccd, int i, struct clk *clk)
 {
 	if (ccd->data.clks[i]) {
 		pr_warn("%s: failed to fill %s to cell %d, used by %s\n",
@@ -151,7 +169,7 @@ static inline int cc_set_clk_cell(struct cc_desc *ccd, int i, struct clk *clk)
 	return 0;
 }
 
-int cc_init_hw(struct device *dev, struct cc_desc *ccd, int cc_index,
+int cc_init_hw(struct device *dev, struct cc_platform_data *ccd, int cc_index,
 	struct clk_hw *hw)
 {
 	struct clk *clk;
@@ -256,7 +274,7 @@ static struct clk *clk_reg_create_composite_clk(struct device *dev,
 	return clk;
 }
 
-int cc_init_composite_clk(struct device *dev, struct cc_desc *ccd, int cc_index,
+int cc_init_composite_clk(struct device *dev, struct cc_platform_data *ccd, int cc_index,
 	struct clk_composite_init_data *init)
 {
 	struct clk *clk;

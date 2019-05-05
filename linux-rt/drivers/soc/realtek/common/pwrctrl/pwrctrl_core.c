@@ -173,6 +173,10 @@ struct power_control *power_control_get(const char *name)
 	mutex_lock(&power_control_list_lock);
 	ctrl = __power_control_get(name);
 	mutex_unlock(&power_control_list_lock);
+
+	if (!ctrl)
+		return ctrl;
+
 	atomic_inc(&ctrl->usage_cnt);
 	return ctrl;
 }

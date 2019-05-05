@@ -69,6 +69,7 @@ struct ahci_rtk_dev {
 	enum rtd_chip_id chip_id;
 	enum rtd_chip_revision chip_revision;
 	unsigned int state;
+	unsigned int hostinit;
 };
 
 void rtk_sata_phy_poweron(struct ata_link *link)
@@ -137,8 +138,8 @@ static int rtk_sata_dev_fun(void *data)
 			sdev = ap->link.device[0].sdev;
 			if (!sdev)
 				continue;
-			if (ap->scsi_host->shost_state == SHOST_RUNNING)
-				scsi_remove_device(sdev);
+//			if (ap->scsi_host->shost_state == SHOST_RUNNING)
+//				scsi_remove_device(sdev);
 		}
 		set_current_state(TASK_INTERRUPTIBLE);
 	}
@@ -367,6 +368,8 @@ static int ahci_rtk_probe(struct platform_device *pdev)
 		reset_control_deassert(rst);
 	}
 
+	of_property_read_u32(dev->of_node, "hostinit-mode", &ahci_dev->hostinit);
+
 	power_io = of_get_gpio(dev->of_node, 0);
 	if (power_io >= 0) {
 		INIT_WORK(&ahci_dev->gpio, rtk_sata_power_io_ctrl);
@@ -417,7 +420,14 @@ static int ahci_rtk_probe(struct platform_device *pdev)
 	ahci_dev->state = RUNNING;
 
 	INIT_DELAYED_WORK(&ahci_dev->work, rtk_sata_host_ctrl);
-	schedule_delayed_work(&ahci_dev->work, 800);
+	if (ahci_dev->hostinit) {
+		ahci_platform_init_host(pdev,
+			ahci_dev->hpriv, &ahci_port_info,
+			&ahci_platform_sht);
+		if (IS_ENABLED(POWER_SAVEING))
+			schedule_delayed_work(&ahci_dev->work, 2000);
+	} else
+		schedule_delayed_work(&ahci_dev->work, 800);
 
 	rtk_sata_dev_task = kthread_run(rtk_sata_dev_fun,
 				ahci_dev, "rtk sata dev handle");

@@ -74,10 +74,6 @@ static int clk_pll_conf_show(struct seq_file *s, void *data)
 			seq_printf(s, "  %10lu : %2d(0x%02x)\n", dtbl->rate, dtbl->div, dtbl->val);
 	}
 
-#ifdef CONFIG_COMMON_CLK_RTD16XX
-        if (pll->ops == &clk_pll_dif_ops)
-		seq_printf(s, "dif\n");
-#endif
 	return 0;
 }
 
@@ -177,7 +173,7 @@ static int clk_pll_enable(struct clk_hw *hw)
 
 	if (clk_pll_has_pow(pll))
 		__clk_pll_set_pow_reg(pll, 1);
-	pll->status |= CLK_PLL_ENABLED;
+	pll->status &= ~CLK_PLL_DISABLED;
 	return 0;
 }
 
@@ -187,7 +183,7 @@ static void clk_pll_disable(struct clk_hw *hw)
 
 	if (clk_pll_has_pow(pll))
 		__clk_pll_set_pow_reg(pll, 0);
-	pll->status &= ~CLK_PLL_ENABLED;
+	pll->status |= CLK_PLL_DISABLED;
 }
 
 static void clk_pll_disable_unused(struct clk_hw *hw)
@@ -205,7 +201,7 @@ static int clk_pll_is_enabled(struct clk_hw *hw)
 	if (clk_pll_has_pow(pll))
 		val = clk_reg_read(&pll->base, pll->pll_offset + pow);
 	else
-		val = !!(pll->status & CLK_PLL_ENABLED);
+		val = !(pll->status & CLK_PLL_DISABLED);
 	return !!(val & 0x1);
 }
 
@@ -465,80 +461,6 @@ const struct clk_ops clk_pll_div_ops = {
 	.is_enabled       = clk_pll_is_enabled,
 };
 
-#ifdef CONFIG_COMMON_CLK_RTD16XX
-
-static int clk_pll_dif_enable(struct clk_hw *hw)
-{
-	struct clk_pll *pll = to_clk_pll(hw);
-
-	pr_debug("%pC: %s\n", hw->clk, __func__);
-
-	clk_reg_write(&pll->base, pll->pll_offset + 0x0C, 0x00000048);
-	clk_reg_write(&pll->base, pll->pll_offset + 0x08, 0x00020c00);
-	clk_reg_write(&pll->base, pll->pll_offset + 0x04, 0x204004ca);
-	clk_reg_write(&pll->base, pll->pll_offset + 0x00, 0x8000a000);
-	udelay(100);
-
-	clk_reg_write(&pll->base, pll->pll_offset + 0x08, 0x00420c00);
-	udelay(50);
-
-	clk_reg_write(&pll->base, pll->pll_offset + 0x08, 0x00420c03);
-	udelay(200);
-
-	clk_reg_write(&pll->base, pll->pll_offset + 0x0C, 0x00000078);
-	udelay(100);
-
-	clk_reg_write(&pll->base, pll->pll_offset + 0x04, 0x204084ca);
-
-	/* ssc control */
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x00, 0x00000004);
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x04, 0x00006800);
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x0C, 0x00000000);
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x10, 0x00000000);
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x08, 0x001e1f98);
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x00, 0x00000005);
-	pll->status |= CLK_PLL_ENABLED;
-
-	return 0;
-}
-
-static void clk_pll_dif_disable(struct clk_hw *hw)
-{
-	struct clk_pll *pll = to_clk_pll(hw);
-
-	pr_debug("%pC: %s\n", hw->clk, __func__);
-	clk_reg_update(&pll->base, pll->pll_offset + 0x04, 0x00080000, 0x0);
-	clk_reg_update(&pll->base, pll->pll_offset + 0x08, 0x00400C03, 0x0);
-	clk_reg_update(&pll->base, pll->pll_offset + 0x0C, 0x00000038, 0x0);
-
-	clk_reg_write(&pll->base, pll->ssc_offset + 0x00, 0x00000004);
-	pll->status &= ~CLK_PLL_ENABLED;
-}
-
-static int clk_pll_dif_is_enabled(struct clk_hw *hw)
-{
-	struct clk_pll *pll = to_clk_pll(hw);
-
-	pr_debug("%pC: %s\n", hw->clk, __func__);
-	return !!(pll->status & CLK_PLL_ENABLED);
-}
-
-
-static void clk_pll_dif_disable_unused(struct clk_hw *hw)
-{
-	pr_info("%pC: %s\n", hw->clk, __func__);
-	clk_pll_dif_disable(hw);
-}
-
-const struct clk_ops clk_pll_dif_ops = {
-	.enable           = clk_pll_dif_enable,
-        .disable          = clk_pll_dif_disable,
-	.disable_unused   = clk_pll_dif_disable_unused,
-	.is_enabled       = clk_pll_dif_is_enabled,
-};
-
-#endif
-
 bool clk_hw_is_pll(struct clk_hw *hw)
 {
 	const struct clk_init_data *init = hw->init;
@@ -546,11 +468,6 @@ bool clk_hw_is_pll(struct clk_hw *hw)
 	if (init->ops == &clk_pll_ops ||
 	    init->ops == &clk_pll_div_ops)
 		return true;
-
-#ifdef CONFIG_COMMON_CLK_RTD16XX
-	if (init->ops == &clk_pll_dif_ops)
-		return true;
-#endif
 
 	return false;
 }
@@ -562,11 +479,6 @@ int clk_pll_init(struct clk_hw *hw)
 	if (!clk_hw_is_pll(hw))
 		return -EINVAL;
 	pll->ops = hw->init->ops;
-
-#ifdef CONFIG_COMMON_CLK_RTD16XX
-	if (hw->init->ops == &clk_pll_dif_ops)
-		pll->status |= CLK_PLL_ENABLED;
-#endif
 
 #ifndef CONFIG_COMMON_CLK_RTD119X
 	if (pll->flags & CLK_PLL_LSM_STEP_HIGH && SSC_VALID(pll)) {

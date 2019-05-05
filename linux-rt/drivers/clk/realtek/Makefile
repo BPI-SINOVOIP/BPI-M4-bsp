@@ -13,11 +13,19 @@ clk-rtk-y += clk-mmio-gate.o
 clk-rtk-y += cgc.o
 clk-rtk-y += clk-pll.o
 clk-rtk-y += cc-platform.o
+clk-rtk-$(CONFIG_CLK_PLL_PSAUD) += clk-pll-psaud.o
+clk-rtk-$(CONFIG_CLK_PLL_DIF) += clk-pll-dif.o
 clk-rtk-y += reset.o
-clk-rtk-$(CONFIG_RESET_GROUPED) += reset-grouped.o
-clk-rtk-$(CONFIG_COMMON_CLK_RTD119X) += cc-rtd119x.o
-clk-rtk-$(CONFIG_COMMON_CLK_RTD129X) += cc-rtd129x.o
-clk-rtk-$(CONFIG_COMMON_CLK_RTD139X) += cc-rtd139x.o
-clk-rtk-$(CONFIG_COMMON_CLK_RTD16XX) += cc-rtd16xx.o
+clk-rtk-$(CONFIG_RESET_PLATFORM) += reset-platform.o
 
+clk-rtk-$(CONFIG_COMMON_CLK_RTD119X) += cc-rtd119x.o
+
+clk-rtk-$(CONFIG_COMMON_CLK_RTD129X) += cc-rtd129x.o
+
+clk-rtk-$(CONFIG_COMMON_CLK_RTD139X) += cc-rtd139x.o
+
+clk-rtk-$(CONFIG_COMMON_CLK_RTD16XX) += cc-rtd16xx.o
+clk-rtk-$(CONFIG_COMMON_CLK_RTD16XX) += reset-rtd16xx.o
+
+clk-rtk-$(CONFIG_COMMON_CLK_RTD13XX) += reset-rtd13xx.o
 

@@ -58,26 +58,4 @@ Example:
 	};
 
 
-----------------------
-Reset Control Provider
-----------------------
-- compatible : shall contain:
-	"realtek,reset-control-provider"
-
-Example:
-	provider {
-		compatible = "realtek,reset-control-provider";
-		rst_0 {
-			resets = <&asr 0>,  <&asr 1>;
-			reset-names = "reset0", "reset1";
-		};
-		rst_1 {
-			resets = <&asr 2>,  <&asr 3>;
-			reset-names = "reset2", "reset3";
-		};
-	};
-
-
-	use rstc_get("reset0") to get '<&asr 0>';
-
 														 
