@@ -122,6 +122,8 @@ static int iso_power_controller_setup_topology(void)
 
 static int iso_power_controller_ready(struct power_controller_data *data)
 {
+	ve1_pd.core.pc.flags |= POWER_CONTROL_FLAG_SHARED_POWER;
+	ve2_pd.core.pc.flags |= POWER_CONTROL_FLAG_SHARED_POWER;
 	power_control_register_notifier(&ve1_pd.core.pc, &ve1_nb);
 	iso_power_controller_setup_topology();
 	return 0;

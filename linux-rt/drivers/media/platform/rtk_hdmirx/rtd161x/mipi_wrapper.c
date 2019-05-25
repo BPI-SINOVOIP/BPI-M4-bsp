@@ -94,24 +94,25 @@ void stop_mipi_process(void)
 
 unsigned int rx_pitch_measurement(unsigned int output_h, MIPI_OUT_COLOR_SPACE_T output_color)
 {
-	unsigned int pitch, pitch_factor;
+	unsigned int pitch;
 
 	HDMIRX_INFO("rx_pitch_measurement,output_color=%x\n", output_color);
 
 	switch (output_color) {
 	case OUT_8BIT_YUV422:
 	case OUT_8BIT_YUV420:
-		pitch_factor = 1;
+		pitch = output_h;
 		break;
 	case OUT_10BIT_YUV422:
-		pitch_factor = 2;
+	case OUT_10BIT_YUV420:
+		/* YUV_10BIT_4BYTE_3PIXEL, Four bytes-three pixels */
+		pitch = ((roundup16(output_h) + 11)/12)*16;
 		break;
 	default: /* all other RGB case */
-		pitch_factor = 4;
+		pitch = output_h * 4;
 		break;
 	}
 
-	pitch = output_h * pitch_factor;
 	/* pitch has to be n*16 byte */
 	if (output_color < OUT_ARGB)
 		pitch = roundup16(pitch);
@@ -430,8 +431,9 @@ void setup_mipi(void)
 	if (h_input > mipi_top.h_output_len)
 		mipi_reg.hs = 1;
 
-	if (mipi_reg.dst_fmt == OUT_10BIT_YUV422)
-		mipi_reg.yuv420_fmt = 1;
+	if ((mipi_reg.dst_fmt == OUT_10BIT_YUV422) ||
+		(mipi_reg.dst_fmt == OUT_10BIT_YUV420))
+		mipi_reg.yuv420_fmt = YUV_10BIT_4BYTE_3PIXEL;
 
 	/* mipi_reg.ccs_data_format */
 

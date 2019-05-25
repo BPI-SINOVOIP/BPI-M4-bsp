@@ -91,7 +91,7 @@ static void clk_pll_dif_disable_unused(struct clk_hw *hw)
 
 const struct clk_ops clk_pll_dif_ops = {
 	.enable           = clk_pll_dif_enable,
-        .disable          = clk_pll_dif_disable,
+	.disable          = clk_pll_dif_disable,
 	.disable_unused   = clk_pll_dif_disable_unused,
 	.is_enabled       = clk_pll_dif_is_enabled,
 };

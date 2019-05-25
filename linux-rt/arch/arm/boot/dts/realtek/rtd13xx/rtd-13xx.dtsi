@@ -544,52 +544,49 @@
 		status = "disabled"; /* Disable UR2 first since we don't use it now */
 	};
 
-
 	nic: gmac@98016000 {
 		compatible = "Realtek,r8168";
 		reg = <0x0 0x98016000 0x0 0x1000>,   /* ETN */
 			<0x0 0x98007000 0x0 0x1000>, /* ISO */
 			<0x0 0x9801c000 0x0 0x2000>, /* SBX and SC_WRAP for ACP ctrl */
 			<0x0 0x980174f8 0x0 0x20>,    /* EFUSE_OTP_REG */
-			<0x0 0x981c8000 0x0 0x2000>, /* SDS */
 			<0x0 0x9804e000 0x0 0x1000>; /* ISO pinmux */
 		interrupts = <0 22 4>;
-		pinctrl-names = "default",
-				"sgmii";
-		pinctrl-0 = <&etn_led_pins>;
-		//pinctrl-1 = <&sgmii_mdio_pins>;
+		//pinctrl-names = "default",
+		//		"rgmii";
+		//pinctrl-0 = <&etn_led_pins>;
+		//pinctrl-1 = <&rgmii_mdio_pins>,
+		//	<&rgmii_txrx_pins>;
+		force-Gb-off = <1>;
 		local-mac-address = [00 10 20 30 40 50];
 		rtl-config = <1>;
 		mac-version = <42>; /* RTL_GIGA_MAC_VER_42 */
 		rtl-features = <2>; /* BIT(2) GMii */
-		output-mode = <0>; /* 0:embedded PHY, 1:SGMII to MAC, 2:SGMII to PHY */
-		ext-phy-id = <3>; /* 0 ~ 31, only valid when output-mode = 2 */
-		sgmii-swing = <0>; /* 0:640mV, 1:380mV, 2:250mV, 3:190mV */
+		wake-mask0 = [3f 30 80 c0 3f 10 80 ff ff 1f 00 00 00 00 00 00];
+		wake-crc0 = <0x8d25>;
+		wake-mask1 = [3f 30 80 c0 3f 10 00 00 c0 ff ff 0f 00 00 00 00];
+		wake-crc1 = <0x8d25>;
+		wake-mask2 = [3f 30 80 c0 3f 10 00 00 00 00 00 00 80 ff ff 1f];
+		wake-crc2 = <0x8d25>;
+		wake-mask3 = [3f 30 10 00 c0 ff ff 03 01 f8 ff ff 01 00 00 00];
+		wake-crc3 = <0x11da>;
+		wake-mask4 = [3f 30 10 00 c0 ff ff 03 01 00 00 fc ff ff 00 00];
+		wake-crc4 = <0x11da>;
+		wake-mask5 = [3f 30 10 00 c0 ff ff 03 01 00 00 00 00 00 00 f8];
+		wake-crc5 = <0x15f8>;
+		output-mode = <2>; /* 0:embedded PHY, 1:RGMII to MAC, 2:RGMII to PHY, 3:RMII */
+		ext-phy-id = <1>; /* 0 ~ 31, only valid when output-mode = 2 or 4 */
 		bypass = <1>; /* 0: disable, 1: enable */
-		acp = <1>; /* 0: disable, 1: enable */
-		eee = <1>; /* 0: disable, 1: enable */
+		acp = <0>; /* 0: disable, 1: enable */
+		eee = <0>; /* 0: disable, 1: enable */
 		clocks = <&iso_clk_en CLK_EN_ETN_250M>,
-			<&iso_clk_en CLK_EN_ETN_SYS>,
-			<&clk_en_1 CLK_EN_SDS>;
+			<&iso_clk_en CLK_EN_ETN_SYS>;
 		clock-names = "etn_250m",
-			"etn_sys",
-			"sds";
+			"etn_sys";
 		resets = <&iso_rst RSTN_GMAC>,
-			<&iso_rst RSTN_GPHY>,
-			<&crst RSTN_SDS_REG>,
-			<&crst RSTN_SDS>,
-			<&crst RSTN_PCIE0_POWER>,
-			<&crst RSTN_PCIE0_PHY>,
-			<&crst RSTN_PCIE0_SGMII_MDIO>,
-			<&crst RSTN_PCIE0_PHY_MDIO>;
+			<&iso_rst RSTN_GPHY>;
 		reset-names = "gmac",
-			"gphy",
-			"sds_reg",
-			"sds",
-			"pcie0_power",
-			"pcie0_phy",
-			"pcie0_sgmii_mdio",
-			"pcie0_phy_mdio";
+			"gphy";
 		status = "okay";
 	};
 
@@ -698,9 +695,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		interrupt-parent = <&mux_intc>;
-		interrupts = <27 4>; /* SPI_INT */
-		reg = <0x0 0x9801BD00 0x0 0x100>, /* DW SPI */
-			<0x0 0x9801B300 0x0 0x18>; /* SPI wrapper */
+		interrupts = <38 4>; /* SPI1_INT */
+		reg = <0x0 0x98007500 0x0 0x100>, /* DW SPI */
+			<0x0 0x980072E4 0x0 0xC>; /* SPI wrapper */
 		pinctrl-names = "default";
 		pinctrl-0 = <&gspi_pins_0>;
 		/*spi-cs-gpio = <&rtk_iso_gpio 6 1 1>;*/
@@ -748,13 +745,12 @@
 	rtk-lsadc@98007900 {
 		compatible = "Realtek,rtk-lsadc";
 		interrupt-parent = <&mux_intc>;
-		interrupts = <35 4>, <36 4>; /* LSADC0_INT, LSADC1_INT */
+		interrupts = <35 4>; /* LSADC0_INT */
 		reg = <0x0 0x98007000 0x0 0x4>, /* ISO_ISR */
 			<0x0 0x98007900 0x0 0x200>, /* LSADC */
 			<0x0 0x9800034C 0x0 0x4>; /* LSADC_PG */
 		status = "disabled";
-		clk_gating_en = <1>, /* LSADC0 0:disable; 1:enable */
-						<1>; /* LSADC1 0:disable; 1:enable */
+		clk_gating_en = <1>; /* LSADC0 0:disable; 1:enable */
 		vdd_mux_sel = <0>; /* 0:VDD1; 1:VDD2 */
 		vdd_mux1 = <0>; /* 0 ~ 15: VDD_IN source selection */
 		vdd_mux2 = <0>; /* 0 ~ 15: VDD_IN source selection */
@@ -776,24 +772,6 @@
 			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
 			sw_idx = <1>; /* 0:External input pin 0; 1:External input pin 1 */
 			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
-		};
-
-		rtk-lsadc1-pad0 {
-			//compatible = "Realtek,rtk-lsadc1-pad0";
-			activate = <1>; /* 0:in-activate; 1:activate */
-			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
-			sw_idx = <0>; /* 0:VDD; 1:GND */
-			voltage_threshold = <32>; /* 8 bit : 0 ~ 255 */
-			detect_range_ctrl = <0>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
-		};
-
-		rtk-lsadc1-pad1 {
-			//compatible = "Realtek,rtk-lsadc1-pad1";
-			activate = <1>; /* 0: in-activate; 1:activate */
-			ctrl_mode = <0>; /* 0: Voltage mode; 1:Current mode*/
-			sw_idx = <0>; /* 0:VDD; 1:GND */
-			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
-			detect_range_ctrl = <1>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
 		};
 	};
 
@@ -955,7 +933,7 @@
 		compatible = "Realtek,rtk-rpc";
 		reg = <0x0 0x9801a104 0x0 0xc>, /* rpc intr en */
 			<0x0 0x01ffe000 0x0 0x4000>, /* rpc ring buffer */
-			<0x0 0x0002f000 0x0 0x1000>, /* rpc common */
+			<0x0 0x0003f000 0x0 0x1000>, /* rpc common */
 			<0x0 0x9801a020 0x0 0x4>; /* rbus sync */
 		interrupts = <0 33 4>;
 		status = "okay";
@@ -1050,14 +1028,14 @@
 		interrupts = <0 53 4>, <0 54 4>;
 		clocks = <&cc CC_CLK_VE1>,
 			<&cc CC_CLK_VE2>,
-			<&cc CC_CLK_VE2_BPU>,
+			<&cc CC_CLK_VE3_BPU>,
 			<&cc CC_CLK_VE3>,
 			<&cc CC_CLK_SYSH>,
 			<&cc CC_PLL_VE1>,
 			<&cc CC_PLL_VE2>;
 		clock-names = "clk_ve1",
 			"clk_ve2",
-			"clk_ve2_bpu",
+			"clk_ve3_bpu",
 			"clk_ve3",
 			"clk_sysh",
 			"pll_ve1",
@@ -1068,7 +1046,7 @@
 		reset-names = "ve1",
 			"ve2",
 			"ve3";
-		assigned-clocks = <&cc CC_CLK_VE1>, <&cc CC_CLK_VE2>, <&cc CC_CLK_VE2_BPU>, <&cc CC_CLK_VE3>;
+		assigned-clocks = <&cc CC_CLK_VE1>, <&cc CC_CLK_VE2>, <&cc CC_CLK_VE3_BPU>, <&cc CC_CLK_VE3>;
 		assigned-clock-parents = <&cc CC_PLL_VE1>, <&cc CC_PLL_VE2>, <&cc CC_PLL_VE1>, <&cc CC_PLL_VE1>;
 		assigned-clock-rates = <550000000>, <715000000>, <550000000>, <550000000>;
 		status = "okay";

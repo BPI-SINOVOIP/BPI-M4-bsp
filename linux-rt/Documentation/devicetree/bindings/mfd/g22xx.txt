@@ -55,6 +55,12 @@ Required properties:
 regulators
 ----------
 
+Required properties:
+
+* compatible: shall contains one of the following
+	"gmt,g2227-regulator",
+	"gmt,g2237-regulator".
+
 	See also Documentation/devicetree/bindings/regulator/regulator.txt.
 
 Example:

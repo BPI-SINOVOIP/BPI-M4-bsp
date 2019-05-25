@@ -208,7 +208,7 @@ static const struct of_device_id g2237_regulator_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, g2237_regulator_ids);
 
-struct platform_driver g2237_regulator_driver = {
+static struct platform_driver g2237_regulator_driver = {
 	.driver = {
 		.name = "g2237-regulator",
 		.owner = THIS_MODULE,

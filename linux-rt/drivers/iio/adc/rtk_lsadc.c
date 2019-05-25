@@ -415,6 +415,116 @@ ssize_t rtk_lsadc1_store_debounce(struct device *dev, struct device_attribute *a
 	return count;
 }
 
+ssize_t rtk_lsadc0_show_threshold0(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rtk_lsadc_device *pc = platform_get_drvdata(pdev);
+	uint pad_reg;
+	uint threshold;
+
+	pad_reg = LSADC_READL(LSADC0_PAD0_ADDR);
+	threshold = (pad_reg & LSADC_PAD_MASK_THRESHOLD) >> 16;
+
+	pr_info("--- debug : %s : pad_reg = 0x%x\n    threshold = %d (0~63) ---- \n",
+		__func__, pad_reg, threshold);
+
+	return sprintf(buf, "%d\n", threshold);
+}
+
+ssize_t rtk_lsadc0_store_threshold0(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rtk_lsadc_device *pc = platform_get_drvdata(pdev);
+	uint pad_reg;
+	uint threshold;
+	int value = 0;
+
+	pad_reg = LSADC_READL(LSADC0_PAD0_ADDR);
+
+	threshold = (pad_reg & LSADC_PAD_MASK_THRESHOLD) >> 16;
+
+	if(buf ==NULL) {
+		pr_err("--- debug : %s ====  buffer is null, return \n", __func__);
+		return count;
+	}
+	sscanf(buf, "%d", &value);
+
+	pr_err("--- debug : %s : get value = %d \n", __func__, value);
+
+	if(threshold == value) {
+		pr_err("--- debug : %s ====  the same, do nothing (value = %d) \n", __func__, value);
+		return count;
+	}
+	if(value > 63 || value < 0) {
+		pr_err("--- debug : %s ====  value (%d) out of range, (valid data => 0-63) \n", __func__, value);
+		return count;
+	}
+
+	threshold = value;
+
+	pad_reg = (pad_reg & ~LSADC_PAD_MASK_THRESHOLD) | (threshold << 16);
+	LSADC_WRITEL(pad_reg, LSADC0_PAD0_ADDR);
+	pr_err("--- debug : %s : write pad_reg = 0x%x threshold = %d \n", __func__, pad_reg, threshold);
+
+	return count;
+}
+
+ssize_t rtk_lsadc0_show_threshold1(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rtk_lsadc_device *pc = platform_get_drvdata(pdev);
+	uint pad_reg;
+	uint threshold;
+
+	pad_reg = LSADC_READL(LSADC0_PAD1_ADDR);
+	threshold = (pad_reg & LSADC_PAD_MASK_THRESHOLD) >> 16;
+
+	pr_info("--- debug : %s : pad_reg = 0x%x\n    threshold = %d (0~63) ---- \n",
+		__func__, pad_reg, threshold);
+
+	return sprintf(buf, "%d\n", threshold);
+}
+
+ssize_t rtk_lsadc0_store_threshold1(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rtk_lsadc_device *pc = platform_get_drvdata(pdev);
+	uint pad_reg;
+	uint threshold;
+	int value = 0;
+
+	pad_reg = LSADC_READL(LSADC0_PAD1_ADDR);
+
+	threshold = (pad_reg & LSADC_PAD_MASK_THRESHOLD) >> 16;
+
+	if(buf ==NULL) {
+		pr_err("--- debug : %s ====  buffer is null, return \n", __func__);
+		return count;
+	}
+	sscanf(buf, "%d", &value);
+
+	pr_err("--- debug : %s : get value = %d \n", __func__, value);
+
+	if(threshold == value) {
+		pr_err("--- debug : %s ====  the same, do nothing (value = %d) \n", __func__, value);
+		return count;
+	}
+	if(value > 63 || value < 0) {
+		pr_err("--- debug : %s ====  value (%d) out of range, (valid data => 0-63) \n", __func__, value);
+		return count;
+	}
+
+	threshold = value;
+
+	pad_reg = (pad_reg & ~LSADC_PAD_MASK_THRESHOLD) | (threshold << 16);
+	LSADC_WRITEL(pad_reg, LSADC0_PAD1_ADDR);
+	pr_err("--- debug : %s : write pad_reg = 0x%x threshold = %d \n", __func__, pad_reg, threshold);
+
+	return count;
+}
+
 ssize_t rtk_lsadc1_show_vdd_gnd_sel(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -655,6 +765,8 @@ ssize_t rtk_lsadc_store_vdd_mux2(struct device *dev, struct device_attribute *at
 
 static DEVICE_ATTR(debounce0, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc0_show_debounce, rtk_lsadc0_store_debounce);
 static DEVICE_ATTR(debounce1, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc1_show_debounce, rtk_lsadc1_store_debounce);
+static DEVICE_ATTR(threshold00, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc0_show_threshold0, rtk_lsadc0_store_threshold0);
+static DEVICE_ATTR(threshold01, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc0_show_threshold1, rtk_lsadc0_store_threshold1);
 static DEVICE_ATTR(vdd_gnd_mode1, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc1_show_vdd_gnd_sel, rtk_lsadc1_store_vdd_gnd_sel);
 static DEVICE_ATTR(vdd_mux_sel, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc_show_vdd_mux_sel, rtk_lsadc_store_vdd_mux_sel);
 static DEVICE_ATTR(vdd_mux1, ((S_IRUGO | S_IWUGO) & ~S_IWOTH), rtk_lsadc_show_vdd_mux1, rtk_lsadc_store_vdd_mux1);
@@ -667,6 +779,8 @@ static struct attribute *rtk_attr_base[] = {
 	&dev_attr_info1.attr,
 	&dev_attr_debounce0.attr,
 	&dev_attr_debounce1.attr,
+	&dev_attr_threshold00.attr,
+	&dev_attr_threshold01.attr,
 	&dev_attr_vdd_gnd_mode1.attr,
 	&dev_attr_vdd_mux_sel.attr,
 	&dev_attr_vdd_mux1.attr,

@@ -2,10 +2,10 @@ ccflags-y += -I$(src)/include
 ccflags-$(CONFIG_COMMON_CLK_RTD119X) += -I$(src)/include/rtd119x/
 ccflags-$(CONFIG_COMMON_CLK_RTD129X) += -I$(src)/include/rtd129x/
 ccflags-$(CONFIG_COMMON_CLK_RTD139X) += -I$(src)/include/rtd139x/
-ccflags-$(CONFIG_COMMON_CLK_RTD16XX) += -I$(src)/include/rtd161x/
+ccflags-$(CONFIG_COMMON_CLK_RTD16XX) += -I$(src)/include/rtd16xx/
+ccflags-$(CONFIG_COMMON_CLK_RTD13XX) += -I$(src)/include/rtd13xx/
 
 obj-$(CONFIG_COMMON_CLK_REALTEK) += clk-rtk.o
-obj-$(CONFIG_COMMON_CLK_DUMMY) += clk-dummy.o
 
 clk-rtk-y += common.o
 clk-rtk-y += clk-mmio-mux.o
@@ -27,5 +27,6 @@ clk-rtk-$(CONFIG_COMMON_CLK_RTD139X) += cc-rtd139x.o
 clk-rtk-$(CONFIG_COMMON_CLK_RTD16XX) += cc-rtd16xx.o
 clk-rtk-$(CONFIG_COMMON_CLK_RTD16XX) += reset-rtd16xx.o
 
+clk-rtk-$(CONFIG_COMMON_CLK_RTD13XX) += cc-rtd13xx.o
 clk-rtk-$(CONFIG_COMMON_CLK_RTD13XX) += reset-rtd13xx.o
 

@@ -160,8 +160,8 @@ struct i2c_driver g2237_i2c_driver = {
 	.remove = g2237_i2c_remove,
 	.id_table = g2237_i2c_id,
 };
-module_i2c_driver(g2237_i2c_driver);
 EXPORT_SYMBOL_GPL(g2237_i2c_driver);
+module_i2c_driver(g2237_i2c_driver);
 
 MODULE_DESCRIPTION("GMT G237 PMIC MFD Driver");
 MODULE_AUTHOR("Cheng-Yu Lee <cylee12@realtek.com>");

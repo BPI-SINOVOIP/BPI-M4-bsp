@@ -341,6 +341,7 @@ typedef struct RPC_PROCESS {
 	struct list_head threads;
 	struct list_head list;
     bool bStayActive; // If true, then FW will not be notified when process is destroyed.
+    bool bExit;
 } RPC_PROCESS;
 
 #ifdef CONFIG_REALTEK_RPC_PROGRAM_REGISTER
@@ -792,6 +793,7 @@ struct S_RPC_IOC_PROCESS_CONFIG_0 {
     int reserved[16-1];
 };
 #define RPC_IOC_PROCESS_CONFIG_0 _IOW(RPC_IOC_MAGIC, 4, struct S_RPC_IOC_PROCESS_CONFIG_0)
+#define RPC_IOCTEXITLOOP _IO(RPC_IOC_MAGIC, 5)
 
 #define RPC_DBGREG_GET 0
 #define RPC_DBGREG_SET 1

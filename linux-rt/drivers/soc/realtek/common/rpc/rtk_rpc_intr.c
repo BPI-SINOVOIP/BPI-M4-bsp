@@ -951,7 +951,7 @@ ssize_t rpc_intr_read(struct file *filp, char *buf, size_t count, loff_t *f_pos)
 wait_again:
 
 		k = wait_event_interruptible_timeout(proc->waitQueue,
-			(extra->currProc == proc) && (!ring_empty(dev)),
+			((extra->currProc == proc) && (!ring_empty(dev)) || proc->bExit),
 			timeout);
 		if (k == 0)
 			goto done; /* timeout */
@@ -969,6 +969,11 @@ wait_again:
 
 		if (signal_pending(current)) {
 			pr_debug("RPC deblock because of receiving a signal...\n");
+			goto done;
+		}
+
+		if (proc->bExit) {
+			pr_info("user request to exit\n");
 			goto done;
 		}
 	}
@@ -1259,6 +1264,12 @@ long rpc_intr_ioctl(struct file *filp, unsigned int cmd,
 			break;
 		case RPC_IOCQTIMEOUT:
 			return timeout;
+		case RPC_IOCTEXITLOOP: {
+			RPC_PROCESS *proc = filp->private_data;
+			proc->bExit = true;
+			wake_up_interruptible(&proc->waitQueue);
+			return 0;
+		}
 #ifdef CONFIG_REALTEK_RPC_PROGRAM_REGISTER
 		case RPC_IOCTHANDLER: {
 			int found;

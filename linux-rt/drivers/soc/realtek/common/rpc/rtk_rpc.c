@@ -265,7 +265,8 @@ uint32_t rpc_get_flag(int type)
 		return __be32_to_cpu(readl(&(ipc->video_rpc_flag)));
 	}
 #endif
-
+	pr_err("[%s] rpc_get_flag type error!\n", __func__ );
+	return 0xdeaddead;
 }
 
 void rpc_send_interrupt(int type)

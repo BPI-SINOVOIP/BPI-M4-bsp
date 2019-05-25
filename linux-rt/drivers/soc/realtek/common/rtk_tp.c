@@ -157,9 +157,9 @@ static int rtk_tp_runtime_resume(struct device *dev)
 {
 	struct rtk_tp_device *tpdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_tp_power_on(tpdev);
-	dev_dbg(dev, "Exit %s\n", __func__);
+	dev_dbg(dev, "exit %s\n", __func__);
 	return 0;
 }
 
@@ -167,9 +167,9 @@ static int rtk_tp_runtime_suspend(struct device *dev)
 {
 	struct rtk_tp_device *tpdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_tp_power_off(tpdev);
-	dev_dbg(dev, "Exit %s\n", __func__);
+	dev_dbg(dev, "exit %s\n", __func__);
 	return 0;
 }
 
@@ -180,9 +180,9 @@ static int rtk_tp_resume(struct device *dev)
 	if (atomic_read(&tpdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_tp_power_on(tpdev);
-	dev_info(dev, "Exit %s\n", __func__);
+	dev_info(dev, "exit %s\n", __func__);
 	return 0;
 }
 
@@ -193,9 +193,9 @@ static int rtk_tp_suspend(struct device *dev)
 	if (atomic_read(&tpdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_tp_power_off(tpdev);
-	dev_info(dev, "Exit %s\n", __func__);
+	dev_info(dev, "exit %s\n", __func__);
 	return 0;
 }
 
@@ -224,20 +224,20 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	tpdev->clk_tp = devm_clk_get(dev, "tp");
 	if (IS_ERR(tpdev->clk_tp)) {
 		ret = PTR_ERR(tpdev->clk_tp);
-		dev_err(dev, "tp: clk_get() returns %d\n", ret);
+		dev_err(dev, "tp: failed to get clk: %d\n", ret);
 		return ret;
 	}
 
 	tpdev->rstc_tp = devm_reset_control_get(dev, "tp");
 	if (IS_ERR(tpdev->rstc_tp)) {
 		ret = PTR_ERR(tpdev->rstc_tp);
-		dev_err(dev, "reset_control_get() returns %d\n", ret);
+		dev_err(dev, "tp: failed to get reset_control: %d\n", ret);
 		return ret;
 	}
 
 	ret = of_address_to_resource(np, 0, &res);
 	if (ret) {
-		dev_err(dev, "tp: of_address_to_resource() returns %d\n", ret);
+		dev_err(dev, "tp: failed to get address: %d\n", ret);
 		return ret;
 	}
 
@@ -245,7 +245,7 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	tpdev->size_tp = ALIGN(resource_size(&res), PAGE_SIZE);
 	tpdev->base_tp = devm_ioremap(dev, res.start, resource_size(&res));
 	if (!tpdev->base_tp) {
-		dev_err(dev, "tp: ioremap() returns NULL\n");
+		dev_err(dev, "tp: failed to ioremap\n");
 		return -ENOMEM;
 	}
 
@@ -253,27 +253,27 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	tpdev->clk_tpb = devm_clk_get(dev, "tpb");
 	if (IS_ERR(tpdev->clk_tpb)) {
 		ret = PTR_ERR(tpdev->clk_tpb);
-		dev_err(dev ,"tpb: devm_clk_get() returns %d\n", ret);
+		dev_err(dev, "tpb: failed to get clk: %d\n", ret);
 		return ret;
 	}
 
 	tpdev->rstc_tpb = devm_reset_control_get(dev, "tpb");
 	if (IS_ERR(tpdev->rstc_tpb)) {
 		ret = PTR_ERR(tpdev->rstc_tpb);
-		dev_err(dev, "tpb: reset_control_get() returns %d\n", ret);
+		dev_err(dev, "tpb: failed to get reset_control: %d\n", ret);
 		return ret;
 	}
 
 	ret = of_address_to_resource(np, 1, &res);
 	if (ret) {
-		dev_err(dev, "tpb: of_address_to_resource() returns %d\n", ret);
+		dev_err(dev, "tpb: failed to get address: %d\n", ret);
 		return ret;
 	}
 	tpdev->addr_tpb = res.start;
 	tpdev->size_tpb = ALIGN(resource_size(&res), PAGE_SIZE);
 	tpdev->base_tpb = devm_ioremap(dev, res.start, resource_size(&res));
 	if (!tpdev->base_tpb) {
-		dev_err(dev, "tpb: ioremap() returns NULL\n");
+		dev_err(dev, "tpb: failed to ioremap\n");
 		return -ENOMEM;
 	}
 
@@ -284,7 +284,7 @@ static int rtk_tp_probe(struct platform_device *pdev)
 	tpdev->mdev.parent = dev;
 	ret = misc_register(&tpdev->mdev);
 	if (ret) {
-		dev_err(dev, "misc_register() returns %d\n", ret);
+		dev_err(dev, "failed to register misc device: %d\n", ret);
 		return ret;
 	}
 
@@ -297,7 +297,7 @@ static int rtk_tp_probe(struct platform_device *pdev)
 
 static int rtk_tp_remove(struct platform_device *pdev)
 {
-        struct device *dev = &pdev->dev;
+	struct device *dev = &pdev->dev;
 	struct rtk_tp_device *tpdev = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(dev);
@@ -308,7 +308,7 @@ static int rtk_tp_remove(struct platform_device *pdev)
 }
 
 
-static struct of_device_id rtk_tp_ids[] = {
+static const struct of_device_id rtk_tp_ids[] = {
 	{ .compatible = "realtek,tp" },
 	{}
 };

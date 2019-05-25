@@ -37,7 +37,7 @@ struct power_control {
 
 	atomic_t usage_cnt;
 	unsigned long flags;
-	struct blocking_notifier_head notifier_head;
+	struct raw_notifier_head notifier_head;
 #ifdef CONFIG_POWER_CONTROL_DEBUGFS
 	struct dentry *debugfs;
 #endif

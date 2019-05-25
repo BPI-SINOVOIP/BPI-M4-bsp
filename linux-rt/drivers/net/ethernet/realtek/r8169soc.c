@@ -783,10 +783,15 @@ enum rtl_output_mode {
 	#if defined(CONFIG_ARCH_RTD129x)
 	OUTPUT_RGMII_TO_MAC,
 	OUTPUT_RGMII_TO_PHY,
-	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
+	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
 	OUTPUT_SGMII_TO_MAC,
 	OUTPUT_SGMII_TO_PHY,
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	OUTPUT_RGMII_TO_MAC,
+	OUTPUT_RGMII_TO_PHY,
+	OUTPUT_RMII,
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+		  CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 	OUTPUT_MAX
 };
 
@@ -797,6 +802,9 @@ enum iso_registers {
 	ISO_ETN_TESTIO	= 0x0060,
 	ISO_SOFT_RESET = 0x0088,
 	ISO_CLOCK_ENABLE = 0x008c,
+	#if defined(CONFIG_ARCH_RTD13xx)
+	ISO_ETN_DBUS_CTRL = 0x0fc0,
+	#endif /* CONFIG_ARCH_RTD13xx */
 };
 
 #if defined(CONFIG_ARCH_RTD129x)
@@ -812,7 +820,7 @@ enum rtl_rgmii_delay {
 	RGMII_DELAY_2NS,
 	RGMII_DELAY_MAX
 };
-#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
+#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
 enum phy_addr_e {
 	INT_PHY_ADDR = 1,	/* embedded PHY PHY ID */
 	SERDES_DPHY_0 = 0,	/* embedded SerDes DPHY PHY ID 0, RL6481_T28_SGMII.doc ANA00~ANA0F */
@@ -843,6 +851,13 @@ enum testmux_registers {
 	ISO_TESTMUX_MUXPAD0 	= 0x0000,
 	ISO_TESTMUX_MUXPAD1 	= 0x0004,
 	ISO_TESTMUX_MUXPAD2 	= 0x0008,
+	#if defined(CONFIG_ARCH_RTD13xx)
+	ISO_TESTMUX_MUXPAD5	= 0x0014,
+	ISO_TESTMUX_MUXPAD6	= 0x0018,
+	ISO_TESTMUX_PFUNC20	= 0x006c, /* RGMII current */
+	ISO_TESTMUX_PFUNC21	= 0x0070, /* RGMII current */
+	ISO_TESTMUX_PFUNC25	= 0x0090, /* RGMII BIAS */
+	#endif
 };
 
 #if defined(CONFIG_ARCH_RTD16xx)
@@ -873,7 +888,8 @@ enum sbx_sc_wrap_registers {
 	SC_WRAP_INTERFACE_EN		= 0x1124,
 	SC_WRAP_ACP_CTRL		= 0x1800,
 };
-#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+	  CONFIG_ARCH_RTD16xx || CONFIG_ARCH_RTD13xx */
 
 #define RTL_WPD_SIZE		16
 #define RTL_WPD_MASK_SIZE	16
@@ -974,6 +990,7 @@ struct rtl8169_private {
 #define RTL_FIRMWARE_UNKNOWN	ERR_PTR(-EAGAIN)
 
 	u32 ocp_base;
+	u32 led_cfg;
 
 	/* For link status change. */
 	struct task_struct *kthr;
@@ -986,7 +1003,7 @@ struct rtl8169_private {
 	u8 rgmii_voltage; /* 1:1.8V, 2: 2.5V, 3:3.3V */
 	u8 rgmii_tx_delay; /* 0: 0ns, 1: 2ns */
 	u8 rgmii_rx_delay; /* 0: 0ns, 1: 2ns */
-	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
+	#elif defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
 	void __iomem *mmio_sbxaddr;
 	void __iomem *mmio_otpaddr;
 	void __iomem *mmio_sdsaddr;
@@ -997,6 +1014,17 @@ struct rtl8169_private {
 	#if defined(CONFIG_ARCH_RTD16xx)
 	u8 sgmii_swing; /* 0:640mV, 1:380mV, 2:250mV, 3:190mV */
 	#endif /* CONFIG_ARCH_RTD16xx */
+
+	bool bypass_enable; /* 0: disable, 1: enable */
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	u8 output_mode; /* 0:embedded PHY, 1:RGMII to MAC, 2:RGMII to PHY, 3:RMII */
+	u8 rgmii_voltage; /* 1:1.8V, 2: 2.5V, 3:3.3V */
+	u8 rgmii_tx_delay; /* 0: 0ns, 1: 2ns */
+	u8 rgmii_rx_delay; /* 0: 0ns, 1: 2ns */
+
+	void __iomem *mmio_sbxaddr;
+	void __iomem *mmio_otpaddr;
+	void __iomem *mmio_pinmuxaddr;
 
 	bool bypass_enable; /* 0: disable, 1: enable */
 	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
@@ -1727,10 +1755,12 @@ static unsigned int rtl8169_xmii_link_ok(void __iomem *ioaddr)
 	return RTL_R8(PHYstatus) & LinkStatus;
 }
 
+#if defined(CONFIG_ARCH_RTD129x) || defined(CONFIG_ARCH_RTD139x)
 static unsigned int rtl8169_xmii_always_link_ok(void __iomem *ioaddr)
 {
 	return true;
 }
+#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x */
 
 static void rtl8169_tbi_reset_enable(struct rtl8169_private *tp)
 {
@@ -5426,6 +5456,12 @@ static void rtl8169_hw_reset(struct rtl8169_private *tp)
 	}
 
 	rtl_hw_reset(tp);
+
+	#if defined(RTL_TX_NO_CLOSE)
+	/* disable tx no close mode */
+	r8169soc_ocp_reg_write(tp, 0xE610,
+		(r8169soc_ocp_reg_read(tp, 0xE610) & ~(BIT(4) | BIT(6))));
+	#endif /* RTL_TX_NO_CLOSE */
 }
 
 static void rtl_set_rx_tx_config_registers(struct rtl8169_private *tp)
@@ -6177,13 +6213,18 @@ static void rtl_hw_start_8168g_2(struct rtl8169_private *tp)
 	rtl_hw_start_8168g_1(tp);
 
 	// LED setting  add by yukuen
-	#if defined(CONFIG_ARCH_RTD129x)
-	RTL_W32(LEDSEL, 0x000670ca);
-	#elif defined(CONFIG_ARCH_RTD139x)
-	RTL_W32(LEDSEL, 0x000679a9);
-	#elif defined(CONFIG_ARCH_RTD16xx)
-	RTL_W32(LEDSEL, 0x17067ca9);
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+	if (tp->led_cfg)
+		RTL_W32(LEDSEL, 0x00060000 | tp->led_cfg);
+	else {
+		#if defined(CONFIG_ARCH_RTD129x)
+		RTL_W32(LEDSEL, 0x000670ca);
+		#elif defined(CONFIG_ARCH_RTD139x)
+		RTL_W32(LEDSEL, 0x000679a9);
+		#elif defined(CONFIG_ARCH_RTD16xx)
+		RTL_W32(LEDSEL, 0x00067ca9);
+		#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+			  CONFIG_ARCH_RTD16xx */
+	}
 
 	/* disable aspm and clock request before access ephy */
 	RTL_W8(Config2, RTL_R8(Config2) & ~ClkReqEn);
@@ -6326,6 +6367,32 @@ static void rtl_hw_start_8168(struct net_device *dev)
 	RTL_W8(Cfg9346, Cfg9346_Lock);
 
 	RTL_W8(ChipCmd, CmdTxEnb | CmdRxEnb);
+
+	#if defined(CONFIG_ARCH_RTD13xx)
+	if (tp->output_mode == OUTPUT_RGMII_TO_PHY) {
+		u32 tmp;
+		u32 phy_status;
+		/* adjust RGMII interface setting, duplex */
+		phy_status = r8169soc_ocp_reg_read(tp, 0xde40);
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(4) | BIT(3));
+		switch (phy_status & 0x0030) { /* link speed */
+		case 0x0000:	/* 10M, ETN spec, RGMII clock speed = 2.5MHz */
+			break;
+		case 0x0010:	/* 100M, ETN spec, RGMII clock speed = 25MHz */
+			tmp |= BIT(3);
+			break;
+		case 0x0020:	/* 1000M, ETN spec, RGMII clock speed = 125MHz */
+			tmp |= BIT(4);
+			break;
+		}
+		/* adjust RGMII interface setting, duplex */
+		if ((phy_status & BIT(3)) == 0)	/* ETN spec, half duplex */
+			tmp &= ~BIT(2);
+		else	/* ETN spec, full duplex */
+			tmp |= BIT(2);
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+	}
+	#endif /* CONFIG_ARCH_RTD13xx */
 
 	rtl_set_rx_mode(dev);
 
@@ -7183,10 +7250,11 @@ static int rtl_rx(struct net_device *dev, struct rtl8169_private *tp, u32 budget
 {
 	unsigned int cur_rx, rx_left;
 	unsigned int count;
+	const unsigned int num_rx_desc = NUM_RX_DESC;
 
 	cur_rx = tp->cur_rx;
 
-	for (rx_left = min(budget, NUM_RX_DESC); rx_left > 0; rx_left--, cur_rx++) {
+	for (rx_left = min(budget, num_rx_desc); rx_left > 0; rx_left--, cur_rx++) {
 		unsigned int entry = cur_rx % NUM_RX_DESC;
 		struct RxDesc *desc = tp->RxDescArray + entry;
 		u32 status;
@@ -7463,12 +7531,6 @@ static int rtl8169_close(struct net_device *dev)
 
 	rtl8169_down(dev);
 
-	#if defined(RTL_TX_NO_CLOSE)
-	/* disable tx no close mode */
-	r8169soc_ocp_reg_write(tp, 0xE610,
-		(r8169soc_ocp_reg_read(tp, 0xE610) & ~(BIT(4) | BIT(6))));
-	#endif /* RTL_TX_NO_CLOSE */
-
 	rtl_unlock_work(tp);
 
 	free_irq(dev->irq, dev);
@@ -7725,32 +7787,13 @@ static int rtl8169_suspend(struct device *dev)
 static void __rtl8169_resume(struct net_device *dev)
 {
 	struct rtl8169_private *tp = netdev_priv(dev);
+	#if defined(CONFIG_ARCH_RTD129x) || defined(CONFIG_ARCH_RTD139x) || \
+		defined(CONFIG_ARCH_RTD16xx)
 	u32 val;
-	//u32 i,j;
+	#endif
 
 	netif_device_attach(dev);
-/*
-	printk(KERN_INFO "resume r8169 eth0 gphy work \n");
 
-	i=readl(IOMEM(0xFE000000));
-	i = i & 0xffffbfff;
-	writel(i,IOMEM(0xFE000000));
-
-	j=readl(IOMEM(0xFE007088));
-	j = j & 0xfffff9ff;
-	writel(j,IOMEM(0xFE007088));
-
-
-	i=readl(IOMEM(0xFE000000));
-	i = i | 0x00004000;
-	writel(i,IOMEM(0xFE000000));
-
-	j=readl(IOMEM(0xFE007088));
-	j = j | 0x00000600;
-	writel(j,IOMEM(0xFE007088));
-
-	msleep(300);
-*/
 	/* turn on LED */
 	#if defined(CONFIG_ARCH_RTD129x)
 	val = readl(tp->mmio_clkaddr + 0x310) & ~0x3C000000;
@@ -8281,11 +8324,11 @@ static void r8169soc_dump_regs(struct rtl8169_private *tp) {
 	u32 i;
 
 	pr_err("eee = %d\n", tp->eee_enable);
-	#if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx)
+	#if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
 	pr_err("output_mode = %d, bypass = %d, acp = %d\n\n",
 		tp->output_mode, tp->bypass_enable, tp->acp_enable);
 
-	#endif /* CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+	#endif /* CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 
 	pr_err("ISO_UMSK_ISR\t[0x98007004] = %08x\n",
 		readl(tp->mmio_clkaddr + ISO_UMSK_ISR));
@@ -8399,13 +8442,13 @@ static void r8169soc_reset_phy_gmac(struct rtl8169_private *tp)
 		reset_control_get(&tp->pdev->dev, "gphy");
 	struct reset_control *rstc_gmac =
 		reset_control_get(&tp->pdev->dev, "gmac");
-	struct clk *clk_en_sds;
-	struct reset_control *rstc_sds_reg;
-	struct reset_control *rstc_sds;
-	struct reset_control *rstc_pcie0_power;
-	struct reset_control *rstc_pcie0_phy;
-	struct reset_control *rstc_pcie0_sgmii_mdio;
-	struct reset_control *rstc_pcie0_phy_mdio;
+	struct clk *clk_en_sds = NULL;
+	struct reset_control *rstc_sds_reg = NULL;
+	struct reset_control *rstc_sds = NULL;
+	struct reset_control *rstc_pcie0_power = NULL;
+	struct reset_control *rstc_pcie0_phy = NULL;
+	struct reset_control *rstc_pcie0_sgmii_mdio = NULL;
+	struct reset_control *rstc_pcie0_phy_mdio = NULL;
 
 	clk_prepare_enable(clk_etn_sys);
 	clk_prepare_enable(clk_etn_250m);
@@ -8596,7 +8639,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	struct reset_control *rstc_gmac =
 		reset_control_get(&tp->pdev->dev, "gmac");
 
-	/* reg_0x98007004[27] = 0 */
+	/* reg_0x98007004[27] = 1 */
 	/* ISO spec, ETN_PHY_INTR, clear ETN interrupt for ByPassMode */
 	writel(BIT(27), tp->mmio_clkaddr + ISO_UMSK_ISR);
 
@@ -9106,13 +9149,13 @@ static void r8169soc_reset_phy_gmac(struct rtl8169_private *tp)
 		reset_control_get(&tp->pdev->dev, "gphy");
 	struct reset_control *rstc_gmac =
 		reset_control_get(&tp->pdev->dev, "gmac");
-	struct clk *clk_en_sds;
-	struct reset_control *rstc_sds_reg;
-	struct reset_control *rstc_sds;
-	struct reset_control *rstc_pcie0_power;
-	struct reset_control *rstc_pcie0_phy;
-	struct reset_control *rstc_pcie0_sgmii_mdio;
-	struct reset_control *rstc_pcie0_phy_mdio;
+	struct clk *clk_en_sds = NULL;
+	struct reset_control *rstc_sds_reg = NULL;
+	struct reset_control *rstc_sds = NULL;
+	struct reset_control *rstc_pcie0_power = NULL;
+	struct reset_control *rstc_pcie0_phy = NULL;
+	struct reset_control *rstc_pcie0_sgmii_mdio = NULL;
+	struct reset_control *rstc_pcie0_phy_mdio = NULL;
 
 	clk_prepare_enable(clk_etn_sys);
 	clk_prepare_enable(clk_etn_250m);
@@ -9346,7 +9389,7 @@ static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
 	struct reset_control *rstc_gmac =
 		reset_control_get(&tp->pdev->dev, "gmac");
 
-	/* reg_0x98007004[27] = 0 */
+	/* reg_0x98007004[27] = 1 */
 	/* ISO spec, ETN_PHY_INTR, clear ETN interrupt for ByPassMode */
 	writel(BIT(27), tp->mmio_clkaddr + ISO_UMSK_ISR);
 
@@ -9992,6 +10035,864 @@ static void r8169soc_eee_init(struct rtl8169_private *tp, bool enable)
 }
 #endif /* CONFIG_ARCH_RTD16xx */
 
+#if defined(CONFIG_ARCH_RTD13xx)
+static void r8169soc_reset_phy_gmac(struct rtl8169_private *tp)
+{
+	u32 tmp;
+	#if 0
+	struct clk *clk_etn_sys  = clk_get(&tp->pdev->dev, "etn_sys");
+	struct clk *clk_etn_250m = clk_get(&tp->pdev->dev, "etn_250m");
+	struct reset_control *rstc_fephy =
+		reset_control_get(&tp->pdev->dev, "fephy");
+	struct reset_control *rstc_gmac =
+		reset_control_get(&tp->pdev->dev, "gmac");
+	#endif
+
+	//clk_prepare_enable(clk_etn_sys);
+	//clk_prepare_enable(clk_etn_250m);
+
+	/* reg_0x9800708c[12:11] = 00 */
+	/* ISO spec, clock enable bit for etn clock & etn 250MHz */
+	//clk_disable_unprepare(clk_etn_sys);
+	//clk_disable_unprepare(clk_etn_250m);
+	tmp = readl(tp->mmio_clkaddr + ISO_CLOCK_ENABLE);
+	tmp &= ~(BIT(11) | BIT(12));
+	writel(tmp, tp->mmio_clkaddr + ISO_CLOCK_ENABLE);
+
+	/* reg_0x98007088[10:9] = 00 */
+	/* ISO spec, rstn_gphy & rstn_gmac */
+	//reset_control_assert(rstc_fephy);
+	//reset_control_assert(rstc_gmac);
+	tmp = readl(tp->mmio_clkaddr + ISO_SOFT_RESET);
+	tmp &= ~(BIT(9) | BIT(10));
+	writel(tmp, tp->mmio_clkaddr + ISO_SOFT_RESET);
+
+
+	/* reg_0x98007060[1] = 1 */
+	/* ISO spec, bypass mode enable */
+	tmp = readl(tp->mmio_clkaddr + ISO_ETN_TESTIO);
+	tmp |= BIT(1);
+	writel(tmp, tp->mmio_clkaddr + ISO_ETN_TESTIO);
+
+	/* reg_0x9800705c = 0x00216703 */
+	/* ISO spec, default value and specify internal/external PHY ID as 1 */
+	writel(0x00216703, tp->mmio_clkaddr + ISO_POWERCUT_ETN);
+
+	/* reg_0x98007fc0[0] = 0 */
+	/* ISO spec, disable dbus clock gating */
+	tmp = readl(tp->mmio_clkaddr + ISO_ETN_DBUS_CTRL);
+	tmp &= ~BIT(0);
+	writel(tmp, tp->mmio_clkaddr + ISO_ETN_DBUS_CTRL);
+
+
+	mdelay(1);
+
+	#if 0
+	/* release resource */
+	reset_control_put(rstc_fephy);
+	reset_control_put(rstc_gmac);
+	#endif
+}
+
+static void r8169soc_acp_init(struct rtl8169_private *tp)
+{
+#if 0
+	u32 tmp;
+
+	/* SBX spec, Select ETN access DDR path. */
+	if (tp->acp_enable) {
+		/* reg_0x9801c20c[6] = 1 */
+		/* SBX spec, Mask ETN_ALL to SB3 DBUS REQ */
+		tmp = readl(tp->mmio_sbxaddr + SBX_SB3_CHANNEL_REQ_MASK);
+		tmp |= BIT(6);
+		writel(tmp, tp->mmio_sbxaddr + SBX_SB3_CHANNEL_REQ_MASK);
+
+		pr_info("wait all SB3 access finished...");
+		tmp = 0;
+		while (0 != (BIT(6) & readl(tp->mmio_sbxaddr + SBX_SB3_CHANNEL_REQ_BUSY))) {
+			mdelay(10);
+			tmp += 10;
+			if (tmp >= 100) {
+				pr_err("\n wait SB3 access failed (wait %d ms)\n", tmp);
+				break;
+			}
+		}
+		if (tmp < 100)
+			pr_info("done.\n");
+
+		/* reg_0x9801d100[29] = 0 */
+		/* SCPU wrapper spec, CLKACP division, 0 = div 2, 1 = div 3 */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+		tmp &= ~(BIT(29));
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+
+		/* reg_0x9801d124[1:0] = 00 */
+		/* SCPU wrapper spec, ACP master active, 0 = active */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_INTERFACE_EN);
+		tmp &= ~(BIT(1) | BIT(0));
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_INTERFACE_EN);
+
+		/* reg_0x9801d100[30] = 1 */
+		/* SCPU wrapper spec, dy_icg_en_acp */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+		tmp |= BIT(30);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+
+		/* reg_0x9801d100[21] = 1 */
+		/* SCPU wrapper spec, ACP CLK enable */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+		tmp |= BIT(21);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+
+		/* reg_0x9801d100[14] = 1 */
+		/* SCPU wrapper spec, Do not apply reset to ACP port axi3 master */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+		tmp |= BIT(14);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+
+		/* reg_0x9801d800[3:0] = 0111 */
+		/* reg_0x9801d800[7:4] = 0111 */
+		/* reg_0x9801d800[9:8] = 00 */
+		/* reg_0x9801d800[20:16] = 01100 */
+		/* reg_0x9801d800[28:24] = 01110 */
+		/* Configure control of ACP port */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_ACP_CTRL);
+		tmp &= ~((0x1f << 24) | (0x1f << 16) | (0x1 << 9) |
+			(0xf << 4) | (0xf << 0));
+		tmp |= (0x0e << 24) | (0x0c << 16) | (0x1 << 9) | (0x7 << 4) |
+			(0x7 << 0);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_ACP_CTRL);
+
+		/* reg_0x9801d030[28] = 1 */
+		/* SCPU wrapper spec, dy_icg_en_acp */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+		tmp |= BIT(28);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+
+		/* reg_0x9801d030[16] = 1 */
+		/* SCPU wrapper spec, ACP CLK Enable for acp of scpu_chip_top */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+		tmp |= BIT(16);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+
+		/* reg_0x9801d030[0] = 1 */
+		/* SCPU wrapper spec, Do not apply reset to ACP port axi3 master */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+		tmp |= BIT(0);
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+
+		/* reg_0x9801c814[17] = 1 */
+		/* through ACP to SCPU_ACP */
+		tmp = readl(tp->mmio_sbxaddr + SBX_ACP_MISC_CTRL);
+		tmp |= BIT(17);
+		writel(tmp, tp->mmio_sbxaddr + SBX_ACP_MISC_CTRL);
+
+		/* SBX spec, Remove mask ETN_ALL to ACP DBUS REQ */
+		tmp = readl(tp->mmio_sbxaddr + SBX_ACP_CHANNEL_REQ_MASK);
+		tmp &= ~BIT(1);
+		writel(tmp, tp->mmio_sbxaddr + SBX_ACP_CHANNEL_REQ_MASK);
+
+
+		pr_info("ARM ACP on\n.");
+	} else {
+		/* SBX spec, Mask ETN_ALL to ACP DBUS REQ */
+		tmp = readl(tp->mmio_sbxaddr + SBX_ACP_CHANNEL_REQ_MASK);
+		tmp |= BIT(1);
+		writel(tmp, tp->mmio_sbxaddr + SBX_ACP_CHANNEL_REQ_MASK);
+
+		pr_info("wait all ACP access finished...");
+		tmp = 0;
+		while (0 != (BIT(1) & readl(tp->mmio_sbxaddr + SBX_ACP_CHANNEL_REQ_BUSY))) {
+			mdelay(10);
+			tmp += 10;
+			if (tmp >= 100) {
+				pr_err("\n ACP channel is still busy (wait %d ms)\n", tmp);
+				break;
+			}
+		}
+		if (tmp < 100)
+			pr_info("done.\n");
+
+		/* SCPU wrapper spec, Inactive MP4 AINACTS signal */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_INTERFACE_EN);
+		tmp |= (BIT(1) | BIT(0));
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_INTERFACE_EN);
+
+		/* SCPU wrapper spec, nACPRESET_DVFS & CLKENACP_DVFS */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+		tmp &= ~(BIT(21) | BIT(14));
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_CRT_CTRL);
+
+		/* SCPU wrapper spec, nACPRESET & CLKENACP */
+		tmp = readl(tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+		tmp &= ~(BIT(16) | BIT(0));
+		writel(tmp, tp->mmio_sbxaddr + SC_WRAP_ACP_CRT_CTRL);
+
+		/* reg_0x9801c814[17] = 0 */
+		/* SBX spec, Switch ETN_ALL to DC_SYS path */
+		tmp = readl(tp->mmio_sbxaddr + SBX_ACP_MISC_CTRL);
+		tmp &= ~BIT(17);
+		writel(tmp, tp->mmio_sbxaddr + SBX_ACP_MISC_CTRL);
+
+		/* SBX spec, Remove mask ETN_ALL to SB3 DBUS REQ */
+		tmp = readl(tp->mmio_sbxaddr + SBX_SB3_CHANNEL_REQ_MASK);
+		tmp &= ~BIT(6);
+		writel(tmp, tp->mmio_sbxaddr + SBX_SB3_CHANNEL_REQ_MASK);
+
+		pr_info("ARM ACP off\n.");
+	}
+#endif
+}
+
+static void r8169soc_pll_clock_init(struct rtl8169_private *tp)
+{
+	u32 tmp;
+	#if 0
+	struct clk *clk_etn_sys  = clk_get(&tp->pdev->dev, "etn_sys");
+	struct clk *clk_etn_250m = clk_get(&tp->pdev->dev, "etn_250m");
+	struct reset_control *rstc_fephy =
+		reset_control_get(&tp->pdev->dev, "fephy");
+	struct reset_control *rstc_gmac =
+		reset_control_get(&tp->pdev->dev, "gmac");
+	#endif
+
+	/* reg_0x98007004[27] = 1 */
+	/* ISO spec, ETN_PHY_INTR, clear ETN interrupt for ByPassMode */
+	writel(BIT(27), tp->mmio_clkaddr + ISO_UMSK_ISR);
+
+	/* reg_0x98007088[10] = 1 */
+	/* ISO spec, reset bit of fephy */
+	//reset_control_deassert(rstc_fephy);
+	tmp = readl(tp->mmio_clkaddr + ISO_SOFT_RESET);
+	tmp |= BIT(10);
+	writel(tmp, tp->mmio_clkaddr + ISO_SOFT_RESET);
+
+	mdelay(1);	/* wait 1ms for PHY PLL stable */
+
+	/* reg_0x98007060[1] = 1 */
+	/* ISO spec, bypass mode enable */
+	tmp = readl(tp->mmio_clkaddr + ISO_ETN_TESTIO);
+	tmp |= BIT(1);
+	writel(tmp, tp->mmio_clkaddr + ISO_ETN_TESTIO);
+
+	/* reg_0x98007088[9] = 1 */
+	/* ISO spec, reset bit of gmac */
+	//reset_control_deassert(rstc_gmac);
+	tmp = readl(tp->mmio_clkaddr + ISO_SOFT_RESET);
+	tmp |= BIT(9);
+	writel(tmp, tp->mmio_clkaddr + ISO_SOFT_RESET);
+
+	/* reg_0x9800708c[12:11] = 11 */
+	/* ISO spec, clock enable bit for etn clock & etn 250MHz */
+	//clk_prepare_enable(clk_etn_sys);
+	//clk_prepare_enable(clk_etn_250m);
+	tmp = readl(tp->mmio_clkaddr + ISO_CLOCK_ENABLE);
+	tmp |= (BIT(11) | BIT(12));
+	writel(tmp, tp->mmio_clkaddr + ISO_CLOCK_ENABLE);
+
+	mdelay(1);	/* wait 1ms for GMAC uC to be stable */
+
+	#if 0
+	/* release resource */
+	reset_control_put(rstc_fephy);
+	reset_control_put(rstc_gmac);
+	#endif
+}
+
+#if 0
+static void r8169soc_load_otp_content(struct rtl8169_private *tp)
+{
+	u32 otp;
+	u16 tmp;
+
+	/* RC-K 0x980174F8[27:24] */
+	otp = (readl(tp->mmio_otpaddr) & (0xf << 24)) >> 24;
+	tmp = (otp << 12) | (otp << 8) | (otp << 4) | otp;
+	tmp ^= RC_K_DEFAULT;
+	r8169_mdio_write(tp, 31, 0xbcd);
+	r8169_mdio_write(tp, 22, tmp);
+	r8169_mdio_write(tp, 23, tmp);
+
+	/* R-K 0x98017500[18:15] */
+	otp = (readl(tp->mmio_otpaddr + 0x8) & (0xf << 15)) >> 15;
+	tmp = (otp << 12) | (otp << 8) | (otp << 4) | otp;
+	tmp ^= R_K_DEFAULT;
+	r8169_mdio_write(tp, 31, 0xbce);
+	r8169_mdio_write(tp, 16, tmp);
+	r8169_mdio_write(tp, 17, tmp);
+
+	/* Amp-K 0x980174FC[15:0] */
+	otp = (readl(tp->mmio_otpaddr + 0x4) & (0xffff << 0)) >> 0;
+	tmp = otp ^ AMP_K_DEFAULT;
+	r8169_mdio_write(tp, 31, 0xbca);
+	r8169_mdio_write(tp, 22, tmp);
+
+	/* Bias-K 0x980174FC[31:16] */
+	otp = (readl(tp->mmio_otpaddr + 0x4) & (0xffff << 16)) >> 16;
+	tmp = otp ^ ADC_BIAS_K_DEFAULT;
+	r8169_mdio_write(tp, 31, 0xbcf);
+	r8169_mdio_write(tp, 22, tmp);
+}
+#endif
+
+#if 0
+static void r8169soc_phy_iol_tuning(struct rtl8169_private *tp)
+{
+	/* for common mode voltage */
+	r8169_mdio_write(tp, 31, 0xbc0);
+	r8169_mdio_write(tp, 17,
+		((r8169_mdio_read(tp, 17) & ~(0xff << 4)) | (0xb4 << 4)));
+
+	/* for 1000 Base-T, Transmitter Distortion */
+	r8169_mdio_write(tp, 31, 0xa43);
+	r8169_mdio_write(tp, 27, 0x8082);
+	r8169_mdio_write(tp, 28, 0xae00);
+}
+#endif
+
+#if 0
+static void r8169soc_phy_sram_table(struct rtl8169_private *tp)
+{
+	/* enable echo power*2 */
+	r8169_mdio_write(tp, 31, 0xa42);
+	r8169_mdio_write(tp, 22, 0x0f10);
+
+	/* Channel estimation, 100Mbps adjustment */
+	r8169_mdio_write(tp, 31, 0xa43);
+	r8169_mdio_write(tp, 27, 0x8087);	/* gain_i slope */
+	r8169_mdio_write(tp, 28, 0x42f0);	/* 0x43 => 0x42 */
+	r8169_mdio_write(tp, 27, 0x808e);	/* clen_i_c initial value */
+	r8169_mdio_write(tp, 28, 0x14a4);	/* 0x13 => 0x14 */
+	/* adc peak adjustment */
+	r8169_mdio_write(tp, 27, 0x8088);	/* aagc_lvl_c initial value 0x3f0 => ok */
+	r8169_mdio_write(tp, 28, 0xf0eb);	/* delta_a slope 0x1e => 0x1d */
+	/* cb0 adjustment */
+	r8169_mdio_write(tp, 27, 0x808c);	/* cb0_i_c initial value */
+	r8169_mdio_write(tp, 28, 0xef09);	/* 0x9ef => ok */
+	r8169_mdio_write(tp, 27, 0x808f);	/* delta_b slope */
+	r8169_mdio_write(tp, 28, 0xa4c6);	/* 0xa4 => ok */
+	/* DAGC adjustment */
+	r8169_mdio_write(tp, 27, 0x808a);	/* cg_i_c initial value */
+	r8169_mdio_write(tp, 28, 0x400a);	/* 0xb40 => 0xa40 */
+	r8169_mdio_write(tp, 27, 0x8092);	/* delta_g slope */
+	r8169_mdio_write(tp, 28, 0xc21e);	/* 0x0c0 => 0x0c2 */
+
+	/* 1000Mbps master adjustment */
+	/* line adjustment */
+	r8169_mdio_write(tp, 27, 0x8099);	/* gain_i slope */
+	r8169_mdio_write(tp, 28, 0x2ae0);	/* 0x2e => 0x2a */
+	r8169_mdio_write(tp, 27, 0x80a0);	/* clen_i_c initial value */
+	r8169_mdio_write(tp, 28, 0xf28f);	/* 0xfe => 0xf2 */
+	/* adc peak adjustment */
+	r8169_mdio_write(tp, 27, 0x809a);	/* aagc_lvl_c initial value 0x3e0 => 0x470 */
+	r8169_mdio_write(tp, 28, 0x7084);	/* delta_a slope 0x0d => 0x10 */
+	/* cb0 adjustment */
+	r8169_mdio_write(tp, 27, 0x809e);	/* cb0_i_c initial value */
+	r8169_mdio_write(tp, 28, 0xa008);	/* 0x7a1 => 0x8a0 */
+	r8169_mdio_write(tp, 27, 0x80a1);	/* delta_b slope */
+	r8169_mdio_write(tp, 28, 0x783d);	/* 0x8f => 0x78 */
+	/* DAGC adjustment */
+	r8169_mdio_write(tp, 27, 0x809c);	/* cg_i_c initial value */
+	r8169_mdio_write(tp, 28, 0x8008);	/* 0xb00 => 0x880 */
+	r8169_mdio_write(tp, 27, 0x80a4);	/* delta_g slope */
+	r8169_mdio_write(tp, 28, 0x580c);	/* 0x063 => 0x058 */
+
+	/* 1000Mbps slave adjustment */
+	/* line adjustment */
+	r8169_mdio_write(tp, 27, 0x80ab);	/* gain_i slope */
+	r8169_mdio_write(tp, 28, 0x2b4a);	/* 0x2e => 0x2b */
+	r8169_mdio_write(tp, 27, 0x80b2);	/* clen_i_c initial value */
+	r8169_mdio_write(tp, 28, 0xf47f);	/* 0xfa => 0xf4 */
+	/* adc peak adjustment */
+	r8169_mdio_write(tp, 27, 0x80ac);	/* aagc_lvl_c initial value 0x44a => 0x488 */
+	r8169_mdio_write(tp, 28, 0x8884);	/* delta_a slope 0x0e => 0x10 */
+	/* cb0 adjustment */
+	r8169_mdio_write(tp, 27, 0x80b0);	/* cb0_i_c initial value */
+	r8169_mdio_write(tp, 28, 0xa107);	/* 0x6a1 => 0x7a1 */
+	r8169_mdio_write(tp, 27, 0x80b3);	/* delta_b slope */
+	r8169_mdio_write(tp, 28, 0x683d);	/* 0x7f => 0x68 */
+	/* DAGC adjustment */
+	r8169_mdio_write(tp, 27, 0x80ae);	/* cg_i_c initial value */
+	r8169_mdio_write(tp, 28, 0x2006);	/* 0x760 => 0x620 */
+	r8169_mdio_write(tp, 27, 0x80b6);	/* delta_g slope */
+	r8169_mdio_write(tp, 28, 0x850c);	/* 0x090 => 0x085 */
+}
+#endif
+
+#if 0
+static void r8169soc_patch_gphy_uc_code(struct rtl8169_private *tp)
+{
+	u32 tmp;
+
+	/* patch for GPHY uC firmware, adjust 1000M EEE lpi_waketx_timer = 1.3uS */
+	#define PATCH_KEY_ADDR  0x8028   // for RL6525
+	#define PATCH_KEY       0x5600   // for RL6525
+
+	/* Patch request & wait for the asserting of patch_rdy */
+	r8169_mdio_write(tp, 31, 0xb82);
+	r8169_mdio_write(tp, 16, r8169_mdio_read(tp, 16) | (BIT(4)));
+
+	tmp = 0;
+	r8169_mdio_write(tp, 31, 0xb80);
+	while ((r8169_mdio_read(tp, 16) & BIT(6)) == 0) {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 100) {
+			pr_err("GPHY patch_rdy timeout.\n");
+			break;
+		}
+	}
+	pr_err("wait %d ms for GPHY patch_rdy. reg = 0x%x\n",
+		tmp, r8169_mdio_read(tp, 16));
+	pr_err("patch_rdy is asserted!!\n");
+
+	/* Set patch_key & patch_lock */
+	r8169_mdio_write(tp, 31, 0);
+	r8169_mdio_write(tp, 27, PATCH_KEY_ADDR);
+	r8169_mdio_write(tp, 28, PATCH_KEY);
+	r8169_mdio_write(tp, 27, PATCH_KEY_ADDR);
+	pr_err("check patch key = %04x\n", r8169_mdio_read(tp, 28));
+	r8169_mdio_write(tp, 27, 0xb82e);
+	r8169_mdio_write(tp, 28, 0x0001);
+
+	/* uC patch code, released by Digital Designer */
+	r8169_mdio_write(tp, 0x1f, 0x0000);
+	r8169_mdio_write(tp, 27, 0xb820);
+	r8169_mdio_write(tp, 28, 0x0290);
+
+	r8169_mdio_write(tp, 27, 0xa012);
+	r8169_mdio_write(tp, 28, 0x0000);
+
+	r8169_mdio_write(tp, 27, 0xa014);
+	r8169_mdio_write(tp, 28, 0x2c04);
+	r8169_mdio_write(tp, 28, 0x2c06);
+	r8169_mdio_write(tp, 28, 0x2c09);
+	r8169_mdio_write(tp, 28, 0x2c0c);
+	r8169_mdio_write(tp, 28, 0xd093);
+	r8169_mdio_write(tp, 28, 0x2265);
+	r8169_mdio_write(tp, 28, 0x9e20);
+	r8169_mdio_write(tp, 28, 0xd703);
+	r8169_mdio_write(tp, 28, 0x2502);
+	r8169_mdio_write(tp, 28, 0x9e40);
+	r8169_mdio_write(tp, 28, 0xd700);
+	r8169_mdio_write(tp, 28, 0x0800);
+	r8169_mdio_write(tp, 28, 0x9e80);
+	r8169_mdio_write(tp, 28, 0xd70d);
+	r8169_mdio_write(tp, 28, 0x202e);
+
+	r8169_mdio_write(tp, 27, 0xa01a);
+	r8169_mdio_write(tp, 28, 0x0000);
+
+	r8169_mdio_write(tp, 27, 0xa006);
+	r8169_mdio_write(tp, 28, 0x002d);
+
+	r8169_mdio_write(tp, 27, 0xa004);
+	r8169_mdio_write(tp, 28, 0x0507);
+
+	r8169_mdio_write(tp, 27, 0xa002);
+	r8169_mdio_write(tp, 28, 0x0501);
+
+	r8169_mdio_write(tp, 27, 0xa000);
+	r8169_mdio_write(tp, 28, 0x1264);
+
+	r8169_mdio_write(tp, 27, 0xb820);
+	r8169_mdio_write(tp, 28, 0x0210);
+
+	r8169_mdio_write(tp, 31, 0);
+
+	mdelay(10);
+
+	/* Clear patch_key & patch_lock */
+	r8169_mdio_write(tp, 27, PATCH_KEY_ADDR);
+	r8169_mdio_write(tp, 28, 0);
+	r8169_mdio_write(tp, 31, 0xb82);
+	r8169_mdio_write(tp, 23, 0);
+
+	/* Release patch request & wait for the deasserting of patch_rdy. */
+	r8169_mdio_write(tp, 31, 0xb82);
+	r8169_mdio_write(tp, 16, r8169_mdio_read(tp, 16) & ~(BIT(4)));
+
+	tmp = 0;
+	r8169_mdio_write(tp, 31, 0xb80);
+	while ((r8169_mdio_read(tp, 16) & BIT(6)) != 0) {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 100) {
+			pr_err("GPHY patch_rdy timeout.\n");
+			break;
+		}
+	}
+	pr_err("wait %d ms for GPHY patch_rdy. reg = 0x%x\n",
+		tmp, r8169_mdio_read(tp, 16));
+
+	pr_err("\npatch_rdy is de-asserted!!\n");
+	pr_err("GPHY uC code patched.\n");
+}
+#endif
+
+/* For FPGA w/o embedded PHY */
+static void r8169soc_gmac_init(struct rtl8169_private *tp)
+{
+	u32 tmp;
+	#if 0
+	struct pinctrl *p_rgmii_mdio;
+	struct pinctrl_state * ps_rgmii_mdio;
+	#endif
+	void __iomem *ioaddr = tp->mmio_addr;
+
+	/* wait GMAC registers ready */
+	tmp = 0;
+	while (RTL_R8(MAC0) != 0x0) {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 100) {
+			pr_err("GMAC init timeout.\n");
+			break;
+		}
+	}
+	pr_info("wait %d ms for GMAC registers ready. MAC0 = 0x%x\n",
+		tmp, RTL_R8(MAC0));
+
+	/* init_autoload_done = 1 */
+	tmp = r8169soc_ocp_reg_read(tp, 0xe004);
+	tmp |= BIT(7);
+	r8169soc_ocp_reg_write(tp, 0xe004, tmp);
+
+	/* ee_mode = 3 */
+	RTL_W8(Cfg9346, Cfg9346_Unlock);
+
+	/* Interface Config : RGMII */
+	switch (tp->output_mode) {
+	case OUTPUT_RGMII_TO_PHY:
+		#if 0
+		/* # ETN spec, adjust MDC freq=2.5MHz */
+		r8169soc_ocp_reg_write(tp, 0xDE30,
+			r8169soc_ocp_reg_read(tp, 0xDE30) & ~(BIT(7) | BIT(6)));
+		/* # ETN spec, set external PHY addr */
+		r8169soc_ocp_reg_write(tp, 0xDE24,
+			((r8169soc_ocp_reg_read(tp, 0xDE24) & ~(0x1f << 0)) |
+						(tp->ext_phy_id & 0x1f)));
+		#endif
+		/* ISO mux spec, GPIO15 is set to MDC pin */
+		/* ISO mux spec, GPIO14 is set to MDIO pin */
+		/* ISO mux spec, GPIO65~76 is set to TX/RX pin */
+		#if 0
+		p_rgmii_mdio = devm_pinctrl_get(&tp->pdev->dev);
+		ps_rgmii_mdio = pinctrl_lookup_state(p_rgmii_mdio, "rgmii");
+		pinctrl_select_state(p_rgmii_mdio, ps_rgmii_mdio);
+		#else
+		tmp = readl(tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD2);
+		tmp &= ~((0x7 << 7) | (0x7 << 4));
+		tmp |= (0x4 << 7) | (0x4 << 4);
+		writel(tmp, tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD2);
+
+		tmp = readl(tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD5);
+		tmp &= ~((0x7 << 27) | (0x7 << 24) | (0x7 << 21) | (0x7 << 18) | (0x1 << 17));
+		tmp |= (0x1 << 27) | (0x1 << 24) | (0x1 << 21) | (0x1 << 18) | (0x1 << 17);
+		writel(tmp, tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD5);
+
+		tmp = readl(tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD6);
+		tmp &= ~((0x3 << 17) | (0x3 << 15) | (0x7 << 12) | (0x7 << 9) | (0x7 << 6) | (0x7 << 3) | (0x7 << 0));
+		tmp |= (0x1 << 17) | (0x1 << 15) | (0x1 << 12) | (0x1 << 9) | (0x1 << 6) | (0x1 << 3) | (0x1 << 0);
+		writel(tmp, tp->mmio_pinmuxaddr + ISO_TESTMUX_MUXPAD6);
+		#endif
+
+		/* FPGA is fixed to 1.8V, DP=100, DN=100 */
+		writel((0x4 << 3) | (0x4 << 0),
+			(tp->mmio_pinmuxaddr + ISO_TESTMUX_PFUNC25));
+
+		/* no Schmitt_Trigger */
+		/* MODE2=0, MODE=0, SR=0, smt=0, pudsel=0, puden=0, E2=1 */
+		writel((readl(tp->mmio_pinmuxaddr + ISO_TESTMUX_PFUNC20) &
+			~((0xf << 24) | (0xf << 20) | (0x1f << 16) | (0x1f << 12) | (0x1f << 8) | (0x1f << 4))) |
+			 ((0x1 << 24) | (0x1 << 20) | (0x1 << 16) | (0x1 << 12) | (0x1 << 8) | (0x1 << 4)),
+			(tp->mmio_pinmuxaddr + ISO_TESTMUX_PFUNC20));
+		writel((readl(tp->mmio_pinmuxaddr + ISO_TESTMUX_PFUNC21) &
+			~((0x3 << 30) | (0x1f << 25) | (0x1f << 20) | (0x1f << 15) | (0x1f << 10) | (0x1f << 5) | (0x1f << 0))) |
+			 ((0x0 << 30) | (0x1 << 25) | (0x1 << 20) | (0x1 << 15) | (0x1 << 10) | (0x1 << 5) | (0x1 << 0)),
+			(tp->mmio_pinmuxaddr + ISO_TESTMUX_PFUNC21));
+
+		/* check if external PHY is available */
+		pr_info("Searching external PHY...");
+		MDIO_LOCK;
+		tp->ext_phy = true;
+		r8169_mdio_write(tp, 31, 0x0a43);
+		tmp = 0;
+		while (0xa43 != r8169_mdio_read(tp, 31)) {
+			pr_info(".");
+			tmp += 100;
+			mdelay(100);
+			if (tmp >= 2000) {
+				pr_err("\n External RGMII PHY not found, current = 0x%02x\n",
+					r8169_mdio_read(tp, 31));
+				return;
+			}
+		}
+		if (tmp < 2000)
+			pr_cont("found.\n");
+
+		/* set RGMII RX delay = 0 */
+		tmp = r8169soc_ocp_reg_read(tp, 0xea36) & ~(BIT(0)); /* rg_clk_en */
+		r8169soc_ocp_reg_write(tp, 0xea36, tmp);
+
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(14) | BIT(9)| BIT(8) | BIT(6));
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+
+		/* external PHY RGMII timing tuning, rg_rgmii_id_mode = 1 (default) */
+		r8169_mdio_write(tp, 31, 0x0d08);
+		r8169_mdio_write(tp, 21,
+			(r8169_mdio_read(tp, 21) | BIT(3)));
+
+		/* set RGMII TX delay = 0 */
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(7));
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+
+		/* external PHY RGMII timing tuning, tx_dly_mode = 1 */
+		r8169_mdio_write(tp, 31, 0x0d08);
+		r8169_mdio_write(tp, 17,
+			(r8169_mdio_read(tp, 17) | BIT(8)));
+
+		/* ISO spec, data path is set to RGMII */
+		tmp = r8169soc_ocp_reg_read(tp, 0xea30) & ~(BIT(0));
+		r8169soc_ocp_reg_write(tp, 0xea30, tmp);
+
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(0) | BIT(1));
+		tmp |= BIT(0); /* RGMII */
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+
+		//tp->ext_phy = false;
+		MDIO_UNLOCK;
+
+		/* ext_phy == true now */
+
+		break;
+	default:
+		pr_err("%s:%d: unsupport output mode (%d) in FPGA\n", __func__, __LINE__, tp->output_mode);
+	}
+}
+
+#if 0
+static void r8169soc_mdio_init(struct rtl8169_private *tp)
+{
+	u32 tmp;
+	struct pinctrl *p_sgmii_mdio;
+	struct pinctrl_state * ps_sgmii_mdio;
+	void __iomem *ioaddr = tp->mmio_addr;
+
+	/* ISO spec, ETN_PHY_INTR, wait interrupt from PHY and it means MDIO is ready */
+	tmp = 0;
+	while ((readl(tp->mmio_clkaddr + ISO_UMSK_ISR) & BIT(27)) == 0) {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 100) {
+			pr_err("PHY PHY_Status timeout.\n");
+			break;
+		}
+	}
+	pr_info("wait %d ms for PHY interrupt. UMSK_ISR = 0x%x\n",
+		tmp, readl(tp->mmio_clkaddr + ISO_UMSK_ISR));
+
+	MDIO_LOCK;
+	/* In ByPass mode,
+	   SW need to handle the EPHY Status check ,
+	   OTP data update and EPHY fuse_rdy setting. */
+	/* PHY will stay in state 1 mode */
+	r8169_mdio_write(tp, 31, 0x0a42);
+	tmp = 0;
+	while (0x1 != (r8169_mdio_read(tp, 16) & 0x07)) {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 2000) {
+			pr_err("PHY status is not 0x1 in bypass mode, current = 0x%02x\n",
+				(r8169_mdio_read(tp, 16) & 0x07));
+			break;
+		}
+	}
+
+	/* ETN spec. set MDC freq = 8.9MHZ */
+
+	/* fill fuse_rdy & rg_ext_ini_done */
+	r8169_mdio_write(tp, 31, 0x0a46);
+	r8169_mdio_write(tp, 20,
+		(r8169_mdio_read(tp, 20) | (BIT(1) | BIT(0))));
+
+	/* init_autoload_done = 1 */
+	tmp = r8169soc_ocp_reg_read(tp, 0xe004);
+	tmp |= BIT(7);
+	r8169soc_ocp_reg_write(tp, 0xe004, tmp);
+
+	/* ee_mode = 3 */
+	RTL_W8(Cfg9346, Cfg9346_Unlock);
+
+	/* wait LAN-ON */
+	r8169_mdio_write(tp, 31, 0x0a42);
+	tmp = 0;
+	do {
+		tmp += 10;
+		mdelay(10);
+		if (tmp >= 2000) {
+			pr_err("PHY status is not 0x3, current = 0x%02x\n",
+				(r8169_mdio_read(tp, 16) & 0x07));
+			break;
+		}
+	} while (0x3 != (r8169_mdio_read(tp, 16) & 0x07));
+	pr_info("wait %d ms for PHY ready, current = 0x%x\n",
+		tmp, r8169_mdio_read(tp, 16));
+
+	/* adjust PHY SRAM table */
+	r8169soc_phy_sram_table(tp);
+
+	/* GPHY patch code */
+	r8169soc_patch_gphy_uc_code(tp);
+
+	/* load OTP contents (RC-K, R-K, Amp-K, and Bias-K)
+	   RC-K:	0x980174F8[27:24]
+	   R-K:		0x98017500[18:15]
+	   Amp-K:	0x980174FC[15:0]
+	   Bias-K:	0x980174FC[31:16]
+	 */
+	r8169soc_load_otp_content(tp);
+
+	/* adjust PHY electrical characteristics */
+	r8169soc_phy_iol_tuning(tp);
+
+	MDIO_UNLOCK;
+
+	if (tp->output_mode == OUTPUT_EMBEDDED_PHY) {
+		/* Init PHY path */
+		/* reg_0x9800705c[5] = 0 */
+		/* reg_0x9800705c[7] = 0 */
+		/* ISO spec, set internal MDIO to access PHY */
+		tmp = readl(tp->mmio_clkaddr + ISO_POWERCUT_ETN);
+		tmp &= ~(BIT(7) | BIT(5));
+		writel(tmp, tp->mmio_clkaddr + ISO_POWERCUT_ETN);
+
+		/* reg_0x9800705c[4] = 0 */
+		/* ISO spec, set data path to access PHY */
+		tmp = readl(tp->mmio_clkaddr + ISO_POWERCUT_ETN);
+		tmp &= ~(BIT(4));
+		writel(tmp, tp->mmio_clkaddr + ISO_POWERCUT_ETN);
+
+		/* # ETN spec, GMAC data path select MII-like(embedded GPHY), not SGMII(external PHY) */
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(0) | BIT(1));
+		tmp |= BIT(1); /* MII */
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+	} else {
+		/* SGMII */
+		/* # ETN spec, adjust MDC freq=2.5MHz */
+		r8169soc_ocp_reg_write(tp, 0xDE30,
+			r8169soc_ocp_reg_read(tp, 0xDE30) & ~(BIT(7) | BIT(6)));
+		/* # ETN spec, set external PHY addr */
+		r8169soc_ocp_reg_write(tp, 0xDE24,
+			((r8169soc_ocp_reg_read(tp, 0xDE24) & ~(0x1f << 0)) |
+						(tp->ext_phy_id & 0x1f)));
+		/* ISO mux spec, GPIO29 is set to MDC pin */
+		/* ISO mux spec, GPIO46 is set to MDIO pin */
+		p_sgmii_mdio = devm_pinctrl_get(&tp->pdev->dev);
+		ps_sgmii_mdio = pinctrl_lookup_state(p_sgmii_mdio, "sgmii");
+		pinctrl_select_state(p_sgmii_mdio, ps_sgmii_mdio);
+
+		/* check if external PHY is available */
+		pr_info("Searching external PHY...");
+		MDIO_LOCK;
+		tp->ext_phy = true;
+		r8169_mdio_write(tp, 31, 0x0a43);
+		tmp = 0;
+		while (0xa43 != r8169_mdio_read(tp, 31)) {
+			pr_info(".");
+			tmp += 100;
+			mdelay(100);
+			if (tmp >= 2000) {
+				pr_err("\n External SGMII PHY not found, current = 0x%02x\n",
+					r8169_mdio_read(tp, 31));
+				return;
+			}
+		}
+		if (tmp < 2000)
+			pr_info("found.\n");
+
+		/* lower SGMII TX swing of RTL8211FS to reduce EMI */
+		r8169_mdio_write(tp, 31, 0x0dcd);
+		r8169_mdio_write(tp, 16, 0x104e);	/* TX swing = 470mV, default value */
+
+		tp->ext_phy = false;
+		MDIO_UNLOCK;
+
+		/* # ETN spec, GMAC data path select SGMII(external PHY), not MII-like(embedded GPHY) */
+		tmp = r8169soc_ocp_reg_read(tp, 0xea34) & ~(BIT(0) | BIT(1));
+		tmp |= BIT(1) | BIT(0); /* SGMII */
+		r8169soc_ocp_reg_write(tp, 0xea34, tmp);
+
+		if (0 != r8169soc_serdes_init(tp))
+			pr_err("SERDES init failed\n");
+		/* ext_phy == true now */
+
+		/* SDS spec, auto update SGMII link capability */
+		tmp = readl(tp->mmio_sdsaddr + SDS_DEBUG);
+		tmp |= BIT(2);
+		writel(tmp, tp->mmio_sdsaddr + SDS_DEBUG);
+
+		/* enable 8b/10b symbol error even it is only valid in 1000Mbps */
+		r8169_mdio_write(tp, 31, 0x0dcf);
+		r8169_mdio_write(tp, 16,
+			(r8169_mdio_read(tp, 16) & ~(BIT(2) | BIT(1) | BIT(0))));
+		r8169_mdio_read(tp, 17); /* dummy read */
+	}
+}
+#endif
+
+static void r8169soc_eee_init(struct rtl8169_private *tp, bool enable)
+{
+	#if 0
+	if (enable) {
+		MDIO_LOCK;
+		if (tp->output_mode == OUTPUT_EMBEDDED_PHY) {
+			/* 1000M/100M EEE capability */
+			r8169_mmd_write(tp, 0x7, 60, (BIT(2) | BIT(1)));
+			/* 10M EEE */
+			r8169_mdio_write(tp, 31, 0xa43);
+			r8169_mdio_write(tp, 25, r8169_mdio_read(tp, 25) | (BIT(4) | BIT(2)));
+			/* disable dynamic RX power in PHY */
+			r8169_mdio_write(tp, 31, 0xbd0);
+			r8169_mdio_write(tp, 21, (r8169_mdio_read(tp, 21) & ~BIT(8)) | BIT(9));
+		} else { /* SGMII */
+			/* 1000M & 100M EEE capability */
+			r8169_mmd_write(tp, 0x7, 60, (BIT(2) | BIT(1)));
+			/* 10M EEE */
+			r8169_mdio_write(tp, 31, 0xa43);
+			r8169_mdio_write(tp, 25, r8169_mdio_read(tp, 25) | (BIT(4) | BIT(2)));
+		}
+		MDIO_UNLOCK;
+		/* EEE MAC mode */
+		r8169soc_ocp_reg_write(tp, 0xe040, (r8169soc_ocp_reg_read(tp, 0xe040) | (BIT(1) | BIT(0))));
+		/* EEE+ MAC mode */
+		r8169soc_ocp_reg_write(tp, 0xe080, (r8169soc_ocp_reg_read(tp, 0xe080) | BIT(1)));
+	} else {
+		if (tp->output_mode == OUTPUT_EMBEDDED_PHY) {
+			/* no EEE capability */
+			r8169_mmd_write(tp, 0x7, 60, 0);
+			/* 10M EEE */
+			r8169_mdio_write(tp, 31, 0xa43);
+			r8169_mdio_write(tp, 25, r8169_mdio_read(tp, 25) & ~(BIT(4) | BIT(2)));
+		} else { /* SGMII */
+			/* no EEE capability */
+			r8169_mmd_write(tp, 0x7, 60, 0);
+			/* 10M EEE */
+			r8169_mdio_write(tp, 31, 0xa43);
+			r8169_mdio_write(tp, 25, r8169_mdio_read(tp, 25) & ~(BIT(4) | BIT(2)));
+		}
+		MDIO_UNLOCK;
+		/* reset to default value */
+		r8169soc_ocp_reg_write(tp, 0xe040, (r8169soc_ocp_reg_read(tp, 0xe040) | BIT(13)));
+		/* EEE MAC mode */
+		r8169soc_ocp_reg_write(tp, 0xe040, (r8169soc_ocp_reg_read(tp, 0xe040) & ~(BIT(1) | BIT(0))));
+		/* EEE+ MAC mode */
+		r8169soc_ocp_reg_write(tp, 0xe080, (r8169soc_ocp_reg_read(tp, 0xe080) & ~BIT(1)));
+	}
+	#endif
+}
+#endif /* CONFIG_ARCH_RTD13xx */
+
 static int
 rtl_init_one(struct platform_device *pdev)
 {
@@ -10005,6 +10906,7 @@ rtl_init_one(struct platform_device *pdev)
 	int rc;
 	int rtl_config;
 	int mac_version;
+	int led_config;
 	u32 tmp;
 	int irq;
 	int retry;
@@ -10033,7 +10935,17 @@ rtl_init_one(struct platform_device *pdev)
 	#if defined(CONFIG_ARCH_RTD16xx)
 	u32 sgmii_swing = 0;
 	#endif /* CONFIG_ARCH_RTD16xx */
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	void __iomem *sbxaddr;
+	void __iomem *otpaddr;
+	void __iomem *pinmuxaddr;
+	u32 bypass_enable = 0;
+	u32 acp_enable = 0;
+	u32 rgmii_voltage = 1;
+	u32 rgmii_tx_delay = 0;
+	u32 rgmii_rx_delay = 0;
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+		  CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 	u32 output_mode = 0;
 	u32 ext_phy_id = 1;
 	u32 eee_enable = 0;
@@ -10050,6 +10962,9 @@ rtl_init_one(struct platform_device *pdev)
 	cfg = rtl_cfg_infos + rtl_config;
 	if (of_property_read_u32(pdev->dev.of_node, "mac-version", &mac_version)) {
 		dprintk("%s canot specified config", __func__);
+	}
+	if (of_property_read_u32(pdev->dev.of_node, "led-cfg", &led_config)) {
+		led_config = 0;
 	}
 	if (of_property_read_u32(pdev->dev.of_node, "output-mode", &output_mode)) {
 		dprintk("%s can't get output mode", __func__);
@@ -10083,11 +10998,34 @@ rtl_init_one(struct platform_device *pdev)
 		dprintk("%s can't get sgmii-swing", __func__);
 	}
 	#endif /* CONFIG_ARCH_RTD16xx */
+
 	sbxaddr = of_iomap(pdev->dev.of_node, 2);
 	otpaddr = of_iomap(pdev->dev.of_node, 3);
 	sdsaddr = of_iomap(pdev->dev.of_node, 4);
 	pinmuxaddr = of_iomap(pdev->dev.of_node, 5);
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	if (of_property_read_u32(pdev->dev.of_node, "rgmii-voltage", &rgmii_voltage)) {
+		dprintk("%s can't get RGMII voltage", __func__);
+	}
+	if (of_property_read_u32(pdev->dev.of_node, "rgmii-tx-delay", &rgmii_tx_delay)) {
+		dprintk("%s can't get RGMII TX delay", __func__);
+	}
+	if (of_property_read_u32(pdev->dev.of_node, "rgmii-rx-delay", &rgmii_rx_delay)) {
+		dprintk("%s can't get RGMII RX delay", __func__);
+	}
+	if (of_property_read_u32(pdev->dev.of_node, "bypass", &bypass_enable)) {
+		dprintk("%s can't get bypass", __func__);
+	}
+	if (of_property_read_u32(pdev->dev.of_node, "acp", &acp_enable)) {
+		dprintk("%s can't get acp", __func__);
+	}
+
+	sbxaddr = of_iomap(pdev->dev.of_node, 2);
+	otpaddr = of_iomap(pdev->dev.of_node, 3);
+	pinmuxaddr = of_iomap(pdev->dev.of_node, 4);
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+		  CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 
 	if (soc_is_rtk1195() && (realtek_rev() == RTK1195_REV_A)) {
 		if (of_property_read_u32(pdev->dev.of_node, "rtl-features", &(cfg->features))) {
@@ -10126,6 +11064,7 @@ rtl_init_one(struct platform_device *pdev)
 	tp->mac_version = mac_version - 1;
 	tp->mmio_addr = ioaddr;
 	tp->mmio_clkaddr = clkaddr;
+	tp->led_cfg = led_config;
 	tp->output_mode = output_mode;
 	tp->ext_phy_id = ext_phy_id;
 	tp->eee_enable = !!(eee_enable > 0);
@@ -10145,7 +11084,18 @@ rtl_init_one(struct platform_device *pdev)
 	#if defined(CONFIG_ARCH_RTD16xx)
 	tp->sgmii_swing = sgmii_swing;
 	#endif /* CONFIG_ARCH_RTD16xx */
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	tp->mmio_sbxaddr = sbxaddr;
+	tp->mmio_otpaddr = otpaddr;
+	tp->mmio_pinmuxaddr = pinmuxaddr;
+	tp->bypass_enable = !!(bypass_enable > 0);
+	tp->acp_enable = !!(acp_enable > 0);
+	tp->ext_phy = false;
+	tp->rgmii_voltage = rgmii_voltage;
+	tp->rgmii_tx_delay = rgmii_tx_delay;
+	tp->rgmii_rx_delay = rgmii_rx_delay;
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x |
+		  CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 
 	mii = &tp->mii;
 	mii->dev = ndev;
@@ -10214,7 +11164,14 @@ rtl_init_one(struct platform_device *pdev)
 	r8169_mdio_write(tp, 31, 0xa43);
 	r8169_mdio_write(tp, 24, (r8169_mdio_read(tp, 24) | BIT(2)));
 	MDIO_UNLOCK;
-	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | CONFIG_ARCH_RTD16xx */
+	#elif defined(CONFIG_ARCH_RTD13xx)
+	r8169soc_reset_phy_gmac(tp);
+	r8169soc_acp_init(tp);
+	r8169soc_pll_clock_init(tp);
+	r8169soc_gmac_init(tp);
+	r8169soc_eee_init(tp, tp->eee_enable);
+	#endif /* CONFIG_ARCH_RTD129x | CONFIG_ARCH_RTD139x | \
+	          CONFIG_ARCH_RTD16xx | CONFIG_ARCH_RTD13xx */
 #endif
 
 	tp->wol_wpd_cnt = 0;

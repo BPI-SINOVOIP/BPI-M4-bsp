@@ -73,8 +73,9 @@ int g22xx_regulator_of_parse_cb(struct device_node *np,
 unsigned int g22xx_regulator_dc_of_map_mode(unsigned int mode);
 unsigned int g22xx_regulator_ldo_of_map_mode(unsigned int mode);
 void g22xx_prepare_suspend_state(struct regulator_dev *rdev, int is_coldboot);
-struct regulator_dev *g22xx_regulator_register(struct g22xx_regulator_device *gdev,
-					       struct g22xx_regulator_desc *gd);
+struct regulator_dev *g22xx_regulator_register(
+		struct g22xx_regulator_device *grdev,
+		struct g22xx_regulator_desc *gd);
 
 static inline int g22xx_regulator_type_is_ldo(struct g22xx_regulator_desc *gd)
 {

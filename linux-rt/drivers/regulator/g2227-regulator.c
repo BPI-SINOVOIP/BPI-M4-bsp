@@ -180,7 +180,8 @@ static int g2227_regulator_probe(struct platform_device *pdev)
 		if (desc[i].desc.id == G2227_ID_DC6 &&
 			(chip_rev == RTD129x_CHIP_REVISION_A00 ||
 			chip_rev == RTD129x_CHIP_REVISION_B00)) {
-			struct g22xx_regulator_data *data = rdev_get_drvdata(rdev);
+			struct g22xx_regulator_data *data
+				= rdev_get_drvdata(rdev);
 
 			BUG_ON(!data);
 			data->state_mem.enabled = true;
@@ -213,7 +214,7 @@ static const struct of_device_id g2227_regulator_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, g2227_regulator_ids);
 
-struct platform_driver g2227_regulator_driver = {
+static struct platform_driver g2227_regulator_driver = {
 	.driver = {
 		.name = "g2227-regulator",
 		.owner = THIS_MODULE,

@@ -283,6 +283,10 @@ void hdmi_port_var_init(void)
 	hdmi_audio_var_init();
 }
 
+static const char * const str_mode[] = {"DVI", "HDMI"};
+static const char * const str_interlace[] = {"Prog", "Int"};
+static const char * const str_color[] = {"RGB", "YUV422", "YUV444", "YUV420"};
+static const char * const str_depth[] = {"8Bit", "10Bit", "12Bit", "16Bit"};
 unsigned char hdmi_detect_mode(void)
 {
 	unsigned char ret_val;
@@ -350,8 +354,12 @@ unsigned char hdmi_detect_mode(void)
 			/* Workaround for 6G hw bug */
 			hdmi2p0_align_flush();
 #endif
+			HDMIRX_INFO("FSM_HDMI_DISPLAY_ON  mode(%s) I/P(%s) color(%s) depth(%s)",
+				str_mode[GET_H_MODE()&0x1], str_interlace[GET_H_INTERLACE()&0x1],
+				str_color[GET_H_COLOR_SPACE()&0x3], str_depth[GET_H_COLOR_DEPTH()&0x3]);
+
 			/* Enable rx wrapper detect */
-			yuv_fmt = hdmirx_wrapper_convert_color_fmt(hdmi_rx.timing_t.colorspace);
+			yuv_fmt = hdmirx_wrapper_convert_color_fmt(GET_H_COLOR_SPACE());
 			set_hdmirx_wrapper_control_0(-1, -1, -1, -1, yuv_fmt, -1);
 			hdmirx_state.detect_done = 1;
 			set_hdmirx_wrapper_interrupt_en(0, 0, 1);

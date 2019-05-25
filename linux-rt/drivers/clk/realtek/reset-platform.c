@@ -70,9 +70,10 @@ static inline void rc_reg_update_bits(struct rc_platform_data *data,
 				      u32 val)
 {
 	dev_dbg(data->dev, "%s: offset=%03x: flags=%c, mask=%08x, val=%08x\n",
-		__func__, reg->offset, reg->write_en ? 'w' : '-' , mask, val);
+		__func__, reg->offset, reg->write_en ? 'w' : '-', mask, val);
 	if (data->regmap) {
-		regmap_update_bits(data->regmap, data->offset + reg->offset, mask, val);
+		regmap_update_bits(data->regmap, data->offset + reg->offset,
+				   mask, val);
 	} else if (data->reg) {
 		unsigned int rval;
 
@@ -149,7 +150,8 @@ static int rc_suspend(struct device *dev)
 		desc = &data->desc[i];
 
 		desc->pm_data = rc_reg_read(data, desc);
-		dev_info(dev, "%03x: suspend_val=%08x\n", desc->offset, desc->pm_data);
+		dev_info(dev, "%03x: suspend_val=%08x\n", desc->offset,
+			desc->pm_data);
 	}
 	dev_info(dev, "exit %s\n", __func__);
 	return 0;
@@ -170,7 +172,8 @@ static void rc_resume_desc(struct device *dev,
 	/* apply reg-val */
 	rc_reg_update_bits(data, desc, mask, val);
 
-	dev_info(dev, "%03x: resume_val=%08x\n", desc->offset, rc_reg_read(data, desc));
+	dev_info(dev, "%03x: resume_val=%08x\n", desc->offset,
+		rc_reg_read(data, desc));
 }
 
 static int rc_resume(struct device *dev)
@@ -205,31 +208,28 @@ static int rc_of_reset_xlate(struct reset_controller_dev *rcdev,
 	return val;
 }
 
-static int rc_of_config_io_mem(struct device_node *np,
+static int rc_of_config_io_mem(struct device *dev,
 			       struct rc_platform_data *data)
 {
+	struct device_node *np = dev->of_node;
 	struct regmap *regmap;
-	void *reg;
 	int offset = 0;
+	struct resource r;
+	int ret;
 
-	reg = of_iomap(np, 0);
 
 	regmap = of_get_rtk_mmio_regmap_with_offset(np, 0, &offset);
-	if (IS_ERR(regmap))
-		regmap = NULL;
-
-	if (!reg && !regmap)
-		return -EINVAL;
-
-
 	if (regmap) {
 		data->regmap = regmap;
 		data->offset = offset;
-	} else {
-		data->reg = reg;
+		return 0;
 	}
 
-	return 0;
+	ret = of_address_to_resource(np, 0, &r);
+	if (ret)
+		return ret;
+	data->reg = devm_ioremap(dev, r.start, resource_size(&r));
+	return data->reg ? 0 : -ENOMEM;
 }
 
 
@@ -240,13 +240,14 @@ int rc_probe_platform(struct platform_device *pdev,
 	struct device_node *np = dev->of_node;
 	int ret;
 
-	ret = rc_of_config_io_mem(np, data);
+	ret = rc_of_config_io_mem(dev, data);
 	if (ret) {
 		dev_err(dev, "failed to get io mem: %d\n", ret);
 		return ret;
 	}
 
-	dev_info(dev, "io mem type is %s\n", data->regmap ? "regmap" : "direct");
+	dev_info(dev, "io mem type is %s\n",
+			data->regmap ? "regmap" : "direct");
 	data->dev = dev;
 	data->chip_rev = get_rtd_chip_revision();
 

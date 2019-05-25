@@ -7,8 +7,17 @@
  *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -47,10 +56,14 @@ static DEFINE_SPINLOCK(clk_div_lock);
 	.val = ((_m) << 4) | ((_n) << 12) | ((_o) << 17), \
 }
 
-#define CLK_PLL_TYPE_SSC                (CLK_PLL_CONF_FREQ_LOC_SSC1)
-#define CLK_PLL_TYPE_SSC_POW0           (CLK_PLL_CONF_FREQ_LOC_SSC1 | CLK_PLL_CONF_POW_LOC_CTL2)
-#define CLK_PLL_TYPE_SSC_POW1           (CLK_PLL_CONF_FREQ_LOC_SSC1 | CLK_PLL_CONF_POW_LOC_CTL3)
-#define CLK_PLL_TYPE_POW                (CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL2)
+#define CLK_PLL_TYPE_SSC                \
+	(CLK_PLL_CONF_FREQ_LOC_SSC1)
+#define CLK_PLL_TYPE_SSC_POW0           \
+	(CLK_PLL_CONF_FREQ_LOC_SSC1 | CLK_PLL_CONF_POW_LOC_CTL2)
+#define CLK_PLL_TYPE_SSC_POW1           \
+	(CLK_PLL_CONF_FREQ_LOC_SSC1 | CLK_PLL_CONF_POW_LOC_CTL3)
+#define CLK_PLL_TYPE_POW                \
+	(CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL2)
 
 static const struct div_table scpu_div_tbl[] = {
 	_D(1000000000, 1, SCPU_FREQ_DIV1),
@@ -134,7 +147,8 @@ static struct clk_pll_div pll_bus = {
 			.ops          = &clk_pll_div_ops,
 			.parent_names = DEFAULT_PARENT_OSC27M,
 			.num_parents  = 1,
-			.flags        = CLK_IGNORE_UNUSED | CLK_GET_RATE_NOCACHE,
+			.flags        = CLK_IGNORE_UNUSED |
+				CLK_GET_RATE_NOCACHE,
 		},
 	},
 };
@@ -474,7 +488,7 @@ static int rtd129x_cc_probe(struct platform_device *pdev)
 	return cc_probe_platform(pdev, ccd, rtd129x_cc_init_clocks);
 }
 
-static struct of_device_id rtd129x_cc_match[] = {
+static const struct of_device_id rtd129x_cc_match[] = {
 	{ .compatible = "realtek,clock-controller", },
 	{}
 };

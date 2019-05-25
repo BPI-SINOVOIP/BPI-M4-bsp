@@ -7,8 +7,17 @@
  *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -30,9 +39,12 @@ static DEFINE_SPINLOCK(clk_div_lock);
 #define MNO_MASK   0x030FF800
 #define MN_MASK    0x07FC0000
 
-#define CLK_PLL_TYPE_NF       (CLK_PLL_CONF_FREQ_LOC_CTL2)
-#define CLK_PLL_TYPE_MNO      (CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL2)
-#define CLK_PLL_TYPE_MN       (CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL3)
+#define CLK_PLL_TYPE_NF       \
+	(CLK_PLL_CONF_FREQ_LOC_CTL2)
+#define CLK_PLL_TYPE_MNO      \
+	(CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL2)
+#define CLK_PLL_TYPE_MN       \
+	(CLK_PLL_CONF_FREQ_LOC_CTL1 | CLK_PLL_CONF_POW_LOC_CTL3)
 
 #define _D(_rate, _div, _val) \
 { \
@@ -366,7 +378,7 @@ static int rtd119x_cc_probe(struct platform_device *pdev)
 	return cc_probe_platform(pdev, ccd, rtd119x_cc_init_clocks);
 }
 
-static struct of_device_id rtd119x_cc_match[] = {
+static const struct of_device_id rtd119x_cc_match[] = {
 	{ .compatible = "realtek,clock-controller", },
 	{}
 };

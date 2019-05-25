@@ -169,60 +169,71 @@
 		};
 		opp600: opp-600mhz {
 			opp-hz = /bits/ 64 <600000000>;
-			opp-microvolt = <825000>;
+			opp-microvolt     = <825000>;
+			opp-microvolt-a02 = <850000>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp700: opp-700mhz {
 			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt     = <887500>;
 			opp-microvolt-a00 = <875000>;
-			opp-microvolt = <862500>;
+			opp-microvolt-a01 = <862500>;
+			opp-microvolt-a02 = <887500>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp800: opp-800mhz {
 			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt     = <925000>;
 			opp-microvolt-a00 = <912500>;
-			opp-microvolt = <900000>;
+			opp-microvolt-a01 = <900000>;
+			opp-microvolt-a02 = <925000>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp900: opp-900mhz {
 			opp-hz = /bits/ 64 <900000000>;
+			opp-microvolt     = <975000>;
 			opp-microvolt-a00 = <975000>;
-			opp-microvolt = <937500>;
+			opp-microvolt-a01 = <937500>;
+			opp-microvolt-a02 = <962500>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp1000: opp-1000mhz {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt-a00 = <987500>;
-			opp-microvolt = <962500>;
+			opp-microvolt     = <987500>;
+			opp-microvolt-a01 = <962500>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp1100: opp-1100mhz {
 			opp-hz = /bits/ 64 <1100000000>;
-			opp-microvolt = <1000000>;
+			opp-microvolt     = <1000000>;
+			opp-microvolt-a02 = <1025000>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp1200: opp-1200mhz {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <1062500>;
+			opp-microvolt     = <1062500>;
+			opp-microvolt-a02 = <1087500>;
 			clock-latency-ns = <150000>;
 			opp-suspend;
 			status = "okay";
 		};
 		opp1300: opp-1300mhz {
 			opp-hz = /bits/ 64 <1300000000>;
-			opp-microvolt = <1100000>;
+			opp-microvolt     = <1100000>;
+			opp-microvolt-a02 = <1125000>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
 		opp1400: opp-1400mhz {
 			opp-hz = /bits/ 64 <1400000000>;
-			opp-microvolt = <1150000>;
+			opp-microvolt     = <1150000>;
+			opp-microvolt-a02 = <0>;
 			clock-latency-ns = <150000>;
 			status = "okay";
 		};
@@ -235,16 +246,20 @@
  * cpu_cdev0 => active over 105 degree Celsius
  * cpu_cdev1 => active over 115 degree Celsius
  *
- * CDEV_ST  FREQUENCY
+ * $0: max-state-cpu-map0
+ * $1: min-state-cpu-map1
+ *
+ *                         [chip rev]
+ * CDEV_ST  FREQUENCY    A00/A01   A02
  *       0       1400
  *       1       1300
  *       2       1200
  *       3       1100
  *       4       1000
  *       5        900
- *       6        800  <- max of cpu-map0
- *       7        700  <- min of cpu-map1
- *       8        600
+ *       6        800  <-  $0
+ *       7        700  <-  $1       $0
+ *       8        600  <-           $1
  *       9        500
  *      10        400
  *      11        300

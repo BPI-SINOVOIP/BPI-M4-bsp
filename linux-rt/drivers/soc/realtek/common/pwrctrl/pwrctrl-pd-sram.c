@@ -223,6 +223,7 @@ static int rtk_sram_power_init(struct power_control *pwrctrl)
 		spd->timer.data = (unsigned long)pwrctrl;
 		spd->pm_nb.notifier_call = rtk_sram_async_power_notifier;
 		pwrctrl->flags |= POWER_CONTROL_FLAG_ASYNC_POWER_OFF;
+		pwrctrl->flags |= POWER_CONTROL_FLAG_SHARED_POWER;
 		pwrctrl_pd_register_pm_notifier(&spd->pm_nb);
 	}
 	return 0;

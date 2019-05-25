@@ -2,11 +2,22 @@
  * common.c - Realtek Clock common
  *
  * Copyright (C) 2018 Realtek Semiconductor Corporation
- * Copyright (C) 2018 Cheng-Yu Lee <cylee12@realtek.com>
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -156,7 +167,9 @@ static inline int __hw_to_cc_type(struct clk_hw *hw)
 	return CC_CLK_TYPE_OTHERS;
 }
 
-static inline int cc_set_clk_cell(struct cc_platform_data *ccd, int i, struct clk *clk)
+static inline int cc_set_clk_cell(struct cc_platform_data *ccd,
+				  int i,
+				  struct clk *clk)
 {
 	if (ccd->data.clks[i]) {
 		pr_warn("%s: failed to fill %s to cell %d, used by %s\n",
@@ -274,8 +287,10 @@ static struct clk *clk_reg_create_composite_clk(struct device *dev,
 	return clk;
 }
 
-int cc_init_composite_clk(struct device *dev, struct cc_platform_data *ccd, int cc_index,
-	struct clk_composite_init_data *init)
+int cc_init_composite_clk(struct device *dev,
+			  struct cc_platform_data *ccd,
+			  int cc_index,
+			  struct clk_composite_init_data *init)
 {
 	struct clk *clk;
 	const char *name = init->name;

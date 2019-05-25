@@ -692,7 +692,7 @@ static int __port2_gpio_on_off(struct manager_data *data, bool on) {
 
 	if (gpio_is_valid(port2_pow_gpio)) {
 		if (gpio_request(port2_pow_gpio, "port2_pow_gpio"))    //request gpio
-			dev_err(dev, "%s ERROR Request port1_pow_gpio (id=%d) fail\n",
+			dev_err(dev, "%s ERROR Request port2_pow_gpio (id=%d) fail\n",
 				   __func__, port2_pow_gpio);
 		else if (port2_pow_gpio != -1) {
 			if (gpio_direction_output(port2_pow_gpio,

@@ -697,9 +697,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		interrupt-parent = <&mux_intc>;
-		interrupts = <27 4>; /* SPI_INT */
-		reg = <0x0 0x9801BD00 0x0 0x100>, /* DW SPI */
-			<0x0 0x9801B300 0x0 0x18>; /* SPI wrapper */
+		interrupts = <38 4>; /* SPI1_INT */
+		reg = <0x0 0x98007500 0x0 0x100>, /* DW SPI */
+			<0x0 0x980072E4 0x0 0xC>; /* SPI wrapper */
 		pinctrl-names = "default";
 		pinctrl-0 = <&gspi_pins_0>;
 		/*spi-cs-gpio = <&rtk_iso_gpio 6 1 1>;*/
@@ -747,13 +747,12 @@
 	rtk-lsadc@98007900 {
 		compatible = "Realtek,rtk-lsadc";
 		interrupt-parent = <&mux_intc>;
-		interrupts = <35 4>, <36 4>; /* LSADC0_INT, LSADC1_INT */
+		interrupts = <35 4>; /* LSADC0_INT */
 		reg = <0x0 0x98007000 0x0 0x4>, /* ISO_ISR */
 			<0x0 0x98007900 0x0 0x200>, /* LSADC */
 			<0x0 0x9800034C 0x0 0x4>; /* LSADC_PG */
 		status = "disabled";
-		clk_gating_en = <1>, /* LSADC0 0:disable; 1:enable */
-						<1>; /* LSADC1 0:disable; 1:enable */
+		clk_gating_en = <1>; /* LSADC0 0:disable; 1:enable */
 		vdd_mux_sel = <0>; /* 0:VDD1; 1:VDD2 */
 		vdd_mux1 = <0>; /* 0 ~ 15: VDD_IN source selection */
 		vdd_mux2 = <0>; /* 0 ~ 15: VDD_IN source selection */
@@ -775,24 +774,6 @@
 			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
 			sw_idx = <1>; /* 0:External input pin 0; 1:External input pin 1 */
 			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
-		};
-
-		rtk-lsadc1-pad0 {
-			//compatible = "Realtek,rtk-lsadc1-pad0";
-			activate = <1>; /* 0:in-activate; 1:activate */
-			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
-			sw_idx = <0>; /* 0:VDD; 1:GND */
-			voltage_threshold = <32>; /* 8 bit : 0 ~ 255 */
-			detect_range_ctrl = <0>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
-		};
-
-		rtk-lsadc1-pad1 {
-			//compatible = "Realtek,rtk-lsadc1-pad1";
-			activate = <1>; /* 0: in-activate; 1:activate */
-			ctrl_mode = <0>; /* 0: Voltage mode; 1:Current mode*/
-			sw_idx = <0>; /* 0:VDD; 1:GND */
-			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
-			detect_range_ctrl = <1>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
 		};
 	};
 
@@ -1038,14 +1019,14 @@
 		interrupts = <0 53 4>, <0 54 4>;
 		clocks = <&cc CC_CLK_VE1>,
 			<&cc CC_CLK_VE2>,
-			<&cc CC_CLK_VE2_BPU>,
+			<&cc CC_CLK_VE3_BPU>,
 			<&cc CC_CLK_VE3>,
 			<&cc CC_CLK_SYSH>,
 			<&cc CC_PLL_VE1>,
 			<&cc CC_PLL_VE2>;
 		clock-names = "clk_ve1",
 			"clk_ve2",
-			"clk_ve2_bpu",
+			"clk_ve3_bpu",
 			"clk_ve3",
 			"clk_sysh",
 			"pll_ve1",
@@ -1056,7 +1037,7 @@
 		reset-names = "ve1",
 			"ve2",
 			"ve3";
-		assigned-clocks = <&cc CC_CLK_VE1>, <&cc CC_CLK_VE2>, <&cc CC_CLK_VE2_BPU>, <&cc CC_CLK_VE3>;
+		assigned-clocks = <&cc CC_CLK_VE1>, <&cc CC_CLK_VE2>, <&cc CC_CLK_VE3_BPU>, <&cc CC_CLK_VE3>;
 		assigned-clock-parents = <&cc CC_PLL_VE1>, <&cc CC_PLL_VE2>, <&cc CC_PLL_VE1>, <&cc CC_PLL_VE1>;
 		assigned-clock-rates = <550000000>, <715000000>, <550000000>, <550000000>;
 		status = "okay";

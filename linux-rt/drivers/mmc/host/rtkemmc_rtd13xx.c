@@ -1042,11 +1042,6 @@ static int rtkemmc_cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	u32 tag = mrq->cmdq_req->tag + cq_host->start_slot;	//if we enable the pon, slot 0 is reserved for PON
 
-#ifdef CONFIG_MMC_RTK_EMMC_PON
-	struct rtkemmc_host *emmc_port = mmc_priv(mmc);;
-	int i=0, retry_cnt=0;
-#endif
-
 	if (!cq_host->enabled) {
 		pr_err("%s: CMDQ host not enabled yet !!!\n",
 			mmc_hostname(mmc));
@@ -1058,35 +1053,6 @@ static int rtkemmc_cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		err = SD_SendCMDGetRSP_cmdq_Cmd(mmc, mrq, tag);
 	}
 	else {
-#ifdef CONFIG_MMC_RTK_EMMC_PON
-		/*our strategy is to add 1 onto tag to make sure slot 0 is for pon usage only.
-		  However, if the orignal tage is 30, and add 1 is 31, this slot is for dcmd usage
-		  therefore, we need to re-find an available cmdq slot for this command request
-		*/
-		if(tag==31) {
-retry:
-			if(retry_cnt==10) {
-				goto out;
-			}
-			else retry_cnt++;
-
-			for(i=cq_host->start_slot; i<31; i++) {	//in this for loop, the i initial value should be 1
-				if((readl(emmc_port->emmc_membase+EMMC_CQTDBR)&(1<<i))==0)
-				{
-					tag = i;	//remap the block IO request tage to cmdq slot tag
-					break;
-				}
-			}
-			if(i==31) {
-				printk(KERN_ERR "%s: No available cmdq slot for this command request...\n", __func__);
-				usleep_range(5000, 10000);
-				goto retry;
-			}
-#ifdef RTKEMMC_DEBUG
-			printk(KERN_ERR "[DEBUG] %s: cmdq slot 31 is for dcmd, search for a new tag %d for this data command request %d times\n", __func__, tag, retry_cnt);
-#endif
-		}
-#endif
 		err = SD_Stream_cmdq_Cmd(mmc, mrq, tag);
 	}
 out:
@@ -2511,8 +2477,13 @@ static int wait_done_timeout(struct rtkemmc_host *emmc_port, volatile u32 *addr,
 		if(n++ > 3000000) {
 			printk(KERN_ERR "Timeout!!! cmd_opcode=%d, cmd_arg=%x, addr=%p, mask=%x, value=%x, emmc_port->emmc_membase + EMMC_NORMAL_INT_STAT_R=%x \
 					emmc_port->emmc_membase + EMMC_ERROR_INT_STA_R=%x, pre_func=%s\n",
-				emmc_port->cmd_opcode, readl(emmc_port->emmc_membase+EMMC_ARGUMENT_R), addr, mask, value, 
+				emmc_port->cmd_opcode, readl(emmc_port->emmc_membase+EMMC_ARGUMENT_R), addr, mask, value,
 				readw(emmc_port->emmc_membase + EMMC_NORMAL_INT_STAT_R), readw(emmc_port->emmc_membase + EMMC_ERROR_INT_STAT_R),string);
+			printk(KERN_ERR "RESP01=0x%x, RESP23=0x%x, RESP45=0x%x, RESP67=0x%x",
+				readl(emmc_port->emmc_membase + EMMC_RESP01_R),
+				readl(emmc_port->emmc_membase + EMMC_RESP23_R),
+				readl(emmc_port->emmc_membase + EMMC_RESP45_R),
+				readl(emmc_port->emmc_membase + EMMC_RESP67_R));
 			print_err_reg(emmc_port->cmd_opcode, emmc_port->normal_interrupt, emmc_port->error_interrupt);
                         print_ip_desc(emmc_port);
                         print_reg_info(emmc_port);
@@ -2745,11 +2716,8 @@ static irqreturn_t rtkemmc_irq(int irq, void *dev)
 	if(cq_host->enabled) {	//if we run the cmdq mode currently
 		u32 status;
 		unsigned long comp_status;
-#ifdef CONFIG_MMC_RTK_EMMC_PON
-		unsigned long tag = 1;	//tag 0 is reserved for pon
-#else
 		unsigned long tag = 0;
-#endif
+
 		status = readl(emmc_port->emmc_membase+ EMMC_CQIS);
 
 		if (status & EMMC_CQIS_TCC) {
@@ -2763,11 +2731,17 @@ static irqreturn_t rtkemmc_irq(int irq, void *dev)
 				goto out;
 
 			for_each_set_bit(tag, &comp_status, cq_host->num_slots) {
-#ifdef RTKEMMC_DEBUG
-				/* complete the corresponding mrq */
-				printk(KERN_ERR "%s_cmdq: cpuid=%d, completing tag -> %lu\n", __func__, raw_smp_processor_id(), tag);
+#ifdef CONFIG_MMC_RTK_EMMC_PON
+				if(tag!=0) {
 #endif
-				rtkemmc_cmdq_finish_data(emmc_port->mmc, tag);
+#ifdef RTKEMMC_DEBUG
+					/* complete the corresponding mrq */
+					printk(KERN_ERR "%s_cmdq: cpuid=%d, completing tag -> %lu\n", __func__, raw_smp_processor_id(), tag);
+#endif
+					rtkemmc_cmdq_finish_data(emmc_port->mmc, tag);
+#ifdef CONFIG_MMC_RTK_EMMC_PON
+				}
+#endif
 			}
 			rtkemmc_writel(comp_status, emmc_port->emmc_membase+EMMC_CQTCN);
 			rtkemmc_writel(status, emmc_port->emmc_membase+ EMMC_CQIS);
@@ -4217,7 +4191,7 @@ static void rtkemmc_request(struct mmc_host *host, struct mmc_request *mrq)
 		if(readl(emmc_port->emmc_membase+0x900)==1) break;
 		else {
 			printk(KERN_INFO "%s: Pon is occupying the semaphore and eMMC needs to wait for it.\n", __func__);
-			usleep_range(70, 150);
+			usleep_range(10, 30);
 		}
 	}
 #endif

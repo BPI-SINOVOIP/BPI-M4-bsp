@@ -19,7 +19,7 @@
 #include "internal.h"
 
 extern struct i2c_driver g2237_i2c_driver;
-extern struct i2c_driver apw8889_regulator_driver;
+extern struct i2c_driver apw8889_i2c_driver;
 enum {
 	I2C_SELECTOR_DRIVER_G2237,
 	I2C_SELECTOR_DRIVER_APW8889,
@@ -152,7 +152,7 @@ static int selector_probe(struct i2c_client *client,
 		selection_driver = &g2237_i2c_driver;
 		break;
 	case I2C_SELECTOR_DRIVER_APW8889:
-		selection_driver = &apw8889_regulator_driver;
+		selection_driver = &apw8889_i2c_driver;
 		break;
 	}
 	if (!selection_driver) {

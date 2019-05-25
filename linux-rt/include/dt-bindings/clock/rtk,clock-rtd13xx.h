@@ -119,8 +119,11 @@
 #define CC_CLK_VE1             13
 #define CC_CLK_VE2             14
 #define CC_CLK_VE3             15
-#define CC_CLK_VE2_BPU         16
+#define CC_CLK_VE3_BPU         16
 #define CC_PLL_DIF             17
-#define CC_CLK_MAX             18
+#define CC_PLL_PSAUD1A         18
+#define CC_PLL_PSAUD2A         19
+#define CC_CLK_MAX             20
+
 
 #endif /* __DT_BINDINGS_RTK_CLOCK_RTD13XX_H */

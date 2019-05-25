@@ -141,7 +141,7 @@ static int rtk_demod_runtime_resume(struct device *dev)
 {
 	struct rtk_demod_device *dmdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_demod_power_on(dmdev);
 	dev_dbg(dev, "Exit %s\n", __func__);
 	return 0;
@@ -151,7 +151,7 @@ static int rtk_demod_runtime_suspend(struct device *dev)
 {
 	struct rtk_demod_device *dmdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_demod_power_off(dmdev);
 	dev_dbg(dev, "Exit %s\n", __func__);
 	return 0;
@@ -164,7 +164,7 @@ static int rtk_demod_resume(struct device *dev)
 	if (atomic_read(&dmdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_demod_power_on(dmdev);
 	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
@@ -177,7 +177,7 @@ static int rtk_demod_suspend(struct device *dev)
 	if (atomic_read(&dmdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_demod_power_off(dmdev);
 	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
@@ -207,27 +207,27 @@ static int rtk_demod_probe(struct platform_device *pdev)
 	dmdev->clk = devm_clk_get(dev, "cablerx");
 	if (IS_ERR(dmdev->clk)) {
 		ret = PTR_ERR(dmdev->clk);
-		dev_err(dev, "cablerx: clk_get() returns %d\n", ret);
+		dev_err(dev, "cablerx: failed to get clk: %d\n", ret);
 		return ret;
 	}
 
 	dmdev->pll = devm_clk_get(dev, "pll");
 	if (IS_ERR(dmdev->pll)) {
 		ret = PTR_ERR(dmdev->pll);
-		dev_err(dev, "pll: clk_get() returns %d\n", ret);
+		dev_err(dev, "pll: failed to get clk: %d\n", ret);
 		return ret;
 	}
 
 	dmdev->rstc = devm_reset_control_get(dev, NULL);
 	if (IS_ERR(dmdev->rstc)) {
 		ret = PTR_ERR(dmdev->rstc);
-		dev_err(dev, "reset_control_get() returns %d\n", ret);
+		dev_err(dev, "failed to get reset_control: %d\n", ret);
 		return ret;
 	}
 
 	ret = of_address_to_resource(np, 0, &res);
 	if (ret) {
-		dev_err(dev, "of_address_to_resource() returns %d\n", ret);
+		dev_err(dev, "failed to get address: %d\n", ret);
 		return ret;
 	}
 
@@ -235,9 +235,10 @@ static int rtk_demod_probe(struct platform_device *pdev)
 
 	dmdev->addr = res.start;
 	dmdev->size = ALIGN(resource_size(&res), PAGE_SIZE);
-	dmdev->internal_addr = devm_ioremap(dev, res.start, resource_size(&res));
+	dmdev->internal_addr = devm_ioremap(dev, res.start,
+		resource_size(&res));
 	if (!dmdev->internal_addr) {
-		dev_err(dev, "ioremap() returns NULL\n");
+		dev_err(dev, "failed to ioremap\n");
 		return -ENOMEM;
 	}
 
@@ -247,7 +248,7 @@ static int rtk_demod_probe(struct platform_device *pdev)
 	dmdev->mdev.parent = dev;
 	ret = misc_register(&dmdev->mdev);
 	if (ret) {
-		dev_err(dev, "misc_register() returns %d\n", ret);
+		dev_err(dev, "failed to register misc device: %d\n", ret);
 		return ret;
 	}
 
@@ -260,7 +261,7 @@ static int rtk_demod_probe(struct platform_device *pdev)
 
 static int rtk_demod_remove(struct platform_device *pdev)
 {
-        struct device *dev = &pdev->dev;
+	struct device *dev = &pdev->dev;
 	struct rtk_demod_device *dmdev = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(dev);
@@ -271,7 +272,7 @@ static int rtk_demod_remove(struct platform_device *pdev)
 }
 
 
-static struct of_device_id rtk_demod_ids[] = {
+static const struct of_device_id rtk_demod_ids[] = {
 	{ .compatible = "realtek,demod" },
 	{}
 };

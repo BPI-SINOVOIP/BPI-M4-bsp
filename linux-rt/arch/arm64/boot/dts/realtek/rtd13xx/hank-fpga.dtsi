@@ -108,7 +108,7 @@
 		interrupts = <0 68 4>;
 		reg-shift = <2>;
 		reg-io-width = <4>;
-		clock-frequency = <33000000>; /* This value must be override by the board. */
+		clock-frequency = <27000000>; /* This value must be override by the board. */
 		status = "okay";
 	};
 
@@ -126,14 +126,14 @@
 		status = "okay";
 	};
 
-	watchdog@0x98007680 {
+	watchdog@98007680 {
 		compatible = "Realtek,rtk-watchdog";
 		reg = <0x0 0x98007680 0x0 0x100>;
 		rst-oe = <0>; /* 0:input, 1:output */
 		status = "okay";
 	};
 
-	rtk-rstctrl@0x98007000 {
+	rtk-rstctrl@98007000 {
 		compatible = "Realtek,rtk-rstctrl";
 		reg = <0x0 0x98007640 0x0 0x10>;
 	};

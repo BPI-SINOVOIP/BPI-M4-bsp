@@ -80,10 +80,14 @@ int hdmi_queue_setup(struct vb2_queue *vq,
 	atomic_set(&dma_q->qcnt, 0);
 	atomic_set(&dma_q->rcnt, 0);
 
-	if (dev->outfmt >= OUT_ARGB)
+	if (dev->outfmt == OUT_10BIT_YUV420) {
+		size = mipi_top.pitch * roundup16(dev->height);/* y_size */
+		size = size + (size >> 1);/* y_size x 1.5 */
+	} else if (dev->outfmt >= OUT_ARGB) {
 		size = dev->width * dev->height * dev->bpp / 8;
-	else
+	} else {
 		size = roundup16(dev->width) * roundup16(dev->height) * dev->bpp / 8;
+	}
 
 	if (size == 0)
 		return -EINVAL;
@@ -110,10 +114,14 @@ int hdmi_buffer_prepare(struct vb2_buffer *vb)
 		dev->height < 32 || dev->height > MAX_HEIGHT)
 		return -EINVAL;
 
-	if (dev->outfmt >= OUT_ARGB)
+	if (dev->outfmt == OUT_10BIT_YUV420) {
+		size = mipi_top.pitch * roundup16(dev->height);/* y_size */
+		size = size + (size >> 1);/* y_size x 1.5 */
+	} else if (dev->outfmt >= OUT_ARGB) {
 		size = dev->width * dev->height * dev->bpp / 8;
-	else
+	} else {
 		size = roundup16(dev->width) * roundup16(dev->height) * dev->bpp / 8;
+	}
 
 	if (vb2_plane_size(vb, 0) < size) {
 		HDMIRX_ERROR("[%s] data will not fit into plane (%lu < %lu)",

@@ -64,7 +64,8 @@ const struct dev_pm_ops cc_pm_ops = {
 	.resume_noirq  = cc_resume,
 };
 
-struct cc_platform_data *devm_cc_alloc_platform_data(struct device *dev, int max_clk)
+struct cc_platform_data *devm_cc_alloc_platform_data(struct device *dev,
+						     int max_clk)
 {
 	struct cc_platform_data *ccd;
 
@@ -97,7 +98,7 @@ int cc_probe_platform(struct platform_device *pdev,
 	int offset = 0;
 	int ret;
 
-	if (!init_cb || ! ccd)
+	if (!init_cb || !ccd)
 		return -EINVAL;
 
 	/* register access */

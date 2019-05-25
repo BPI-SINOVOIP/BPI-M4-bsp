@@ -33,20 +33,20 @@ static void power_control_del_debugfs(struct power_control *pwrctrl);
 int power_control_register_notifier(struct power_control *pwrctrl,
 				    struct notifier_block *nb)
 {
-	return blocking_notifier_chain_register(&pwrctrl->notifier_head, nb);
+	return raw_notifier_chain_register(&pwrctrl->notifier_head, nb);
 }
 EXPORT_SYMBOL_GPL(power_control_register_notifier);
 
 void power_control_unregister_notifier(struct power_control *pwrctrl,
 				       struct notifier_block *nb)
 {
-	blocking_notifier_chain_unregister(&pwrctrl->notifier_head, nb);
+	raw_notifier_chain_unregister(&pwrctrl->notifier_head, nb);
 }
 EXPORT_SYMBOL_GPL(power_control_unregister_notifier);
 
 int __power_control_notify(struct power_control *pwrctrl, int action)
 {
-	return blocking_notifier_call_chain(&pwrctrl->notifier_head, action, pwrctrl);
+	return raw_notifier_call_chain(&pwrctrl->notifier_head, action, pwrctrl);
 }
 EXPORT_SYMBOL_GPL(__power_control_notify);
 
@@ -345,7 +345,7 @@ int power_control_register(struct power_control *pwrctrl)
 		pr_warn("%s: %s: failed to add debugfs: %d\n", pwrctrl->name,
 			__func__, ret);
 #endif
-	BLOCKING_INIT_NOTIFIER_HEAD(&pwrctrl->notifier_head);
+	RAW_INIT_NOTIFIER_HEAD(&pwrctrl->notifier_head);
 
 	return 0;
 }

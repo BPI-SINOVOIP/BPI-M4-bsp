@@ -240,8 +240,10 @@ void g22xx_prepare_suspend_state(struct regulator_dev *rdev,
 }
 EXPORT_SYMBOL_GPL(g22xx_prepare_suspend_state);
 
-static struct regmap_field *create_regmap_field(struct g22xx_regulator_device *grdev,
-	u32 reg, u32 mask)
+static struct regmap_field *create_regmap_field(
+		struct g22xx_regulator_device *grdev,
+		u32 reg,
+		u32 mask)
 {
 	u32 msb = fls(mask) - 1;
 	u32 lsb = ffs(mask) - 1;
@@ -261,8 +263,9 @@ static struct regmap_field *create_regmap_field(struct g22xx_regulator_device *g
 	return rmap;
 }
 
-struct regulator_dev *g22xx_regulator_register(struct g22xx_regulator_device *grdev,
-					       struct g22xx_regulator_desc *gd)
+struct regulator_dev *g22xx_regulator_register(
+		struct g22xx_regulator_device *grdev,
+		struct g22xx_regulator_desc *gd)
 {
 	struct device *dev = grdev->dev;
 	struct g22xx_regulator_data *data;

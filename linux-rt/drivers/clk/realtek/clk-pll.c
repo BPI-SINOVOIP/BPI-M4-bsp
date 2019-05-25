@@ -2,11 +2,22 @@
  * clk-pll.c - Realtek clk-pll & clk-pll-div implementation
  *
  * Copyright (C) 2017-2018 Realtek Semiconductor Corporation
- * Copyright (C) 2017-2018 Cheng-Yu Lee <cylee12@realtek.com>
+ *
+ * Author:
+ *      Cheng-Yu Lee <cylee12@realtek.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/io.h>
@@ -18,6 +29,9 @@
 #include <linux/debugfs.h>
 #include "common.h"
 #include "clk-pll.h"
+
+#define ck_dbg(clk, fmt, ...) \
+	pr_debug("%pC: %s:" fmt, clk, __func__, ##__VA_ARGS__)
 
 #define DEFUALT_OSC_RATE                (27000000)
 #define DEFAULT_MAX_OC_DONE_RETRY       (20000)
@@ -89,10 +103,10 @@ static const struct file_operations clk_pll_conf_fops = {
 	.release        = single_release,
 };
 
-static int clk_pll_debug_init(struct clk_hw *hw, struct dentry *dentry)
+static int clk_pll_debug_init(struct clk_hw *hw, struct dentry *d)
 {
-	debugfs_create_file("rtk_clk_rate", 0644, dentry, hw, &clk_pll_rate_op);
-	debugfs_create_file("clk_pll_conf", S_IRUGO, dentry, hw, &clk_pll_conf_fops);
+	debugfs_create_file("rtk_clk_rate", 0644, d, hw, &clk_pll_rate_op);
+	debugfs_create_file("clk_pll_conf", S_IRUGO, d, hw, &clk_pll_conf_fops);
 	return 0;
 }
 
@@ -258,7 +272,7 @@ static unsigned long clk_pll_recalc_rate(struct clk_hw *hw,
 
 static inline int __clk_pll_set_rate_reg(struct clk_pll *pll, u32 mask, u32 val)
 {
-	struct clk_hw *hw= &pll->base.hw;
+	struct clk_hw *hw = &pll->base.hw;
 	int ret = 0;
 
 	if (pll->conf & CLK_PLL_CONF_FREQ_LOC_CTL2) {
@@ -383,6 +397,7 @@ static int clk_pll_div_set_rate(struct clk_hw *hw,
 				unsigned long rate,
 				unsigned long parent_rate)
 {
+	struct clk *clk = hw->clk;
 	struct clk_pll_div *plld = to_clk_pll_div(hw);
 	unsigned long flags;
 	const struct div_table *ndv, *cdv;
@@ -405,9 +420,9 @@ static int clk_pll_div_set_rate(struct clk_hw *hw,
 	if (WARN(!ndv, "%pC: invalid d-tbl entry for %u", hw->clk, cur_d))
 		return -EINVAL;
 
-	pr_debug("%pC: %s: target rate=%lu\n", hw->clk, __func__, rate);
-	pr_debug("%pC: %s: current div=%d, reg_val=0x%x\n", hw->clk, __func__, cdv->div, cdv->val);
-	pr_debug("%pC: %s: target div=%d, reg_val=0x%x\n", hw->clk, __func__, ndv->div, ndv->val);
+	ck_dbg(clk, "target rate=%lu\n", rate);
+	ck_dbg(clk, "c div=(%d, 0x%x)\n", cdv->div, cdv->val);
+	ck_dbg(clk, "n div=(%d, 0x%x)\n", ndv->div, ndv->val);
 
 	flags = clk_pll_div_lock(plld);
 
@@ -419,10 +434,10 @@ static int clk_pll_div_set_rate(struct clk_hw *hw,
 			ndv->val != cdv->val &&
 			(ndv->val == 1 || cdv->val == 1)) {
 
-			pr_debug("%pC: %s: apply rate=%u\n", hw->clk, __func__, 1000000000);
+			ck_dbg(clk, "apply rate=%u\n", 1000000000);
 			clk_pll_set_rate(hw, 1000000000, parent_rate);
 
-			pr_debug("%pC: %s: apply div=%d, reg_val=0x%x\n", hw->clk, __func__, ndv->div, ndv->val);
+			ck_dbg(clk, "apply div=%d, reg_val=0x%x\n", ndv->div, ndv->val);
 			__clk_pll_div_set_div_reg(plld, ndv->val);
 			cdv = ndv;
 		}

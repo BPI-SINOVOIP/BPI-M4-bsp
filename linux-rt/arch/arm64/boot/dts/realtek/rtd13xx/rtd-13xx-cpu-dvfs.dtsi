@@ -1,8 +1,7 @@
 /*
  * RTD-13XX Generic CPU DVFS
  */
-#include <dt-bindings/regulator/gmt,g22xx.h>
-#include <dt-bindings/regulator/anpec,apw8889.h>
+#include <dt-bindings/regulator/anpec,apw888x.h>
 #include <dt-bindings/thermal/thermal.h>
 
 /*
@@ -28,193 +27,96 @@
 &i2c_0 {
 	status = "okay";
 
-	cpu_supp_0: sy8827e: sy8827e@41 {
-		compatible = "silergy,sy8827e";
-		reg = <0x41>;
-		regulator-name = "cpudvs";
-		regulator-min-microvolt = <712500>;
-		regulator-max-microvolt = <1500000>;
-		regulator-ramp-delay = <2000>;
-		regulator-boot-on;
-		regulator-always-on;
-		status = "okay";
-	};
-
-	reg_sel: selector@12 {
-		compatible = "realtek,regulator-selector";
-		reg = <0x12>;
-		status = "okay";
-		cpu_supp: cpu-selector {
-			compatible = "supply-selector";
-			g2237-supply = <&cpu_supp_0>;
-			apw8889-supply = <&cpu_supp_1>;
-		};
-		gpu_supp: gpu-selector {
-			compatible = "supply-selector";
-			g2237-supply = <&gpu_supp_0>;
-			apw8889-supply = <&gpu_supp_1>;
-		};
-	};
-
-	g2237: g2237@12 {
-		compatible = "gmt,g2237";
+	apw8886: apw8886g@12 {
+		compatible = "anpec,apw8886";
 		reg = <0x12>;
 
-		/*** should be disabled ***/
-		status = "disabled";
+		status = "okay";
 
+		powerkey_1: powerkey {
+			compatible = "gmt,g22xx-powerkey";
+			status = "disabled";
+		};
+		poweroff_1: poweroff {
+			compatible = "gmt,g22xx-poweroff";
+			system-power-controller;
+			statis = "disabled";
+		};
+		regulators_1: regulators {
+			compatible = "anpec,apw8886-regulator";
+			status = "okay";
+		};
+
+	};
+};
+
+&apw8886 {
+	regulators {
 		vd33_supp: dc1 {
-			regulator-name = "vd33";
-			regulator-min-microvolt = <2200000>;
-			regulator-max-microvolt = <3700000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-state-mem {
-				regulator-on-in-suspend;
-				regulator-suspend-microvolt = <3200000>;
-			};
-		};
-		gpu_supp_0: dc2 {
-			regulator-name = "gpudvs";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <1187500>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-ramp-delay = <625>;
-			regulator-state-mem {
-				regulator-off-in-suspend;
-			};
-		};
-		dc3 {
-			regulator-name = "core";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <1187500>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-			regulator-state-mem {
-				regulator-on-in-suspend;
-				regulator-suspend-microvolt = <900000>;
-			};
-		};
-		ddr_supp: dc4 {
-			regulator-name = "ddr";
-			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-
-		};
-		dc5 {
-			regulator-name = "vd18";
-			regulator-min-microvolt = <800000>;
-			regulator-max-microvolt = <2500000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_DC_MODE_AUTO>;
-		};
-		ldo1 {
-			regulator-name = "vd25";
-			regulator-min-microvolt = <2200000>;
-			regulator-max-microvolt = <3000000>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <G22XX_LDO_MODE_NORMAL>;
-		};
-	};
-
-	apw8889: apw8889@12 {
-		compatible = "anpec,apw8889";
-		reg = <0x12>;
-
-		/*** should be disabled ***/
-		status = "disabled";
-
-		dc1 {
 			regulator-name = "vd33";
 			regulator-min-microvolt = <2200000>;
 			regulator-max-microvolt = <3777500>;
 
 			regulator-boot-on;
 			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
 			regulator-state-mem {
 				regulator-on-in-suspend;
 				regulator-suspend-microvolt = <3200000>;
 			};
 		};
-		dc2 {
+		gpu_supp:
+		core_supp: dc2 {
 			regulator-name = "core";
 			regulator-min-microvolt = <550000>;
 			regulator-max-microvolt = <1337500>;
 
 			regulator-boot-on;
 			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
 			regulator-state-mem {
 				regulator-on-in-suspend;
 				regulator-suspend-microvolt = <900000>;
 			};
 		};
-		cpu_supp_1: dc3 {
+		cpu_supp: dc3 {
 			regulator-name = "cpudvs";
 			regulator-min-microvolt = <550000>;
 			regulator-max-microvolt = <1337500>;
 
 			regulator-boot-on;
 			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
 			regulator-ramp-delay = <625>;
 			regulator-state-mem {
 				regulator-off-in-suspend;
 			};
 		};
-		gpu_supp_1: dc4 {
-			regulator-name = "gpudvs";
-			regulator-min-microvolt = <550000>;
-			regulator-max-microvolt = <1337500>;
-
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
-			regulator-ramp-delay = <625>;
-			regulator-state-mem {
-				regulator-off-in-suspend;
-			};
-		};
-		dc5 {
-			regulator-name = "ddr";
-			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
-			regulator-boot-on;
-			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
-		};
-		dc6 {
+		vd18_supp: dc4 {
 			regulator-name = "vd18";
 			regulator-min-microvolt = <800000>;
 			regulator-max-microvolt = <2060000>;
 
 			regulator-boot-on;
 			regulator-always-on;
-			regulator-initial-mode = <APW8889_DC_MODE_AUTO>;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
 		};
-		ldo1 {
+		ddr_supp: dc5 {
+			regulator-name = "ddr";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+		};
+		vd25_supp: ldo1 {
 			regulator-name = "vd25";
 			regulator-min-microvolt = <1870000>;
 			regulator-max-microvolt = <4300000>;
 
 			regulator-boot-on;
 			regulator-always-on;
-			regulator-initial-mode = <APW8889_LDO_MODE_NORMAL>;
+			regulator-initial-mode = <APW888X_LDO_MODE_NORMAL>;
 		};
 	};
 };
@@ -258,8 +160,6 @@
 
 /* cpu opp table */
 &dvfs {
-	hlb-enable;
-	hlb-polling-ms = <250>;
 	status = "okay";
 
 	cpu_opps: cpu-opp-table {

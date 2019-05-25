@@ -1117,7 +1117,7 @@ void __init setup_arch(char **cmdline_p)
 #ifdef CONFIG_SMP
 	if (is_smp()) {
 		if (!mdesc->smp_init || !mdesc->smp_init()) {
-#if defined(CONFIG_ARCH_RTD16xx) && defined(CONFIG_CPU_V7)
+#if defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
 			smp_set_ops(mdesc->smp);
 #else
 			if (psci_smp_available())

@@ -441,6 +441,13 @@ config RTK_LSADC
 	help
           Say Y, if you want to enable LSADC feature on Realtek platform.
 
+config RTK_LSADC_RTD13xx
+	tristate "Realtek LSADC support"
+	depends on ARCH_RTD13xx
+	default n
+	help
+          Say Y, if you want to enable LSADC feature on Realtek platform.
+
 config TI_ADC081C
 	tristate "Texas Instruments ADC081C/ADC101C/ADC121C family"
 	depends on I2C

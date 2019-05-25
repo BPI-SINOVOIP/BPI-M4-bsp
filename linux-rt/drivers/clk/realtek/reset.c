@@ -116,7 +116,7 @@ static inline void rtk_reset_update_bits(struct reset_priv *priv,
 	unsigned int mask, unsigned int val)
 {
 	dev_dbg(priv->dev, "%s: flags:%c mask=%08x, val=%08x\n",
-		__func__, contain_write_en(priv) ? 'w' : '-' , mask, val);
+		__func__, contain_write_en(priv) ? 'w' : '-', mask, val);
 	if (priv->regmap) {
 		regmap_update_bits(priv->regmap, priv->offset, mask, val);
 	} else if (priv->reg) {

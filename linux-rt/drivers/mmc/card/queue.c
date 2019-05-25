@@ -296,7 +296,11 @@ static int mmc_cmdq_init(struct mmc_queue *mq, struct mmc_card *card)
 {
 	int i, ret = 0;
 	/* one slot is reserved for dcmd requests */
+#ifdef CONFIG_MMC_RTK_EMMC_PON
+	int q_depth = card->ext_csd.cmdq_depth - 2;	//realtek use slot 0 for pon's usage, so the available slot minus 1
+#else
 	int q_depth = card->ext_csd.cmdq_depth - 1;
+#endif
 	card->cmdq_init = false;
 	if (!(card->host->caps2 & MMC_CAP2_CMD_QUEUE)) {
 		ret = -ENOTSUPP;

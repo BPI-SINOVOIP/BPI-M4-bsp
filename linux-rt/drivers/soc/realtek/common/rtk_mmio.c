@@ -20,20 +20,22 @@
 #include <soc/realtek/rtk_sb2_sem.h>
 #include <soc/realtek/rtk_regmap.h>
 
-#ifdef CONFIG_ARCH_RTD16xx
+#ifdef CONFIG_RTK_MMIO_SECURE_RTD16XX
 
-static struct secure_register_desc crt_regs[] = {
+static struct secure_register_desc rtd16xx_crt_regs[] = {
+#ifdef CONFIG_RTK_SECURE_DVFS
 	{ .offset = 0x030, .wcmd = 0x8400ff0b, .rcmd = 0x8400ff18, .fmt = SMCCC_FMT_CMD, },
 	{ .offset = 0x504, .wcmd = 0x8400ff0c, .rcmd = 0x8400ff19, .fmt = SMCCC_FMT_CMD, },
+#endif
 	{ .offset = 0x014, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
 	{ .offset = 0x06c, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
 	{ .offset = 0x088, .wcmd = 0x8400ffff, .rcmd = 0x8400fffe, .fmt = SMCCC_FMT_CMD_PHYS, },
 };
 
-static struct rtk_regmap_config crt_config = {
+static struct rtk_regmap_config rtd16xx_crt_config = {
 	.addr = 0x98000000,
-	.descs = crt_regs,
-	.num_descs = ARRAY_SIZE(crt_regs),
+	.descs = rtd16xx_crt_regs,
+	.num_descs = ARRAY_SIZE(rtd16xx_crt_regs),
 	.config = {
 		.reg_bits = 32,
 		.val_bits = 32,
@@ -41,24 +43,34 @@ static struct rtk_regmap_config crt_config = {
 	},
 };
 
-static struct rtk_regmap_config *configs[] = {
-	&crt_config,
-	NULL
-};
-
+#ifdef CONFIG_RTK_SECURE_DVFS
 extern bool secure_dvfs_is_disabled(void);
 static int __init secure_register_init(void)
 {
-#define OFFSET_INVALD         (0xffffffff)
+
+	int i;
+
 	if (!secure_dvfs_is_disabled())
 		return 0;
 	pr_info("update CRT secure_register_desc\n");
-	crt_regs[0].offset = OFFSET_INVALD;
-	crt_regs[1].offset = OFFSET_INVALD;
+	for (i = 0; i < ARRAY_SIZE(rtd16xx_crt_regs); i++)
+		if (rtd16xx_crt_regs[i].offset == 0x030 ||
+		    rtd16xx_crt_regs[i].offset == 0x504)
+			rtd16xx_crt_regs[i].offset = 0xffffffff;
 	return 0;
 }
 arch_initcall(secure_register_init);
+#endif
+#endif
 
+#ifdef CONFIG_RTK_REGMAP_SECURE_MMIO
+
+static struct rtk_regmap_config *configs[] = {
+#ifdef CONFIG_RTK_MMIO_SECURE_RTD16XX
+	&rtd16xx_crt_config,
+#endif
+	NULL
+};
 
 static struct rtk_regmap_config *match_config_by_addr(unsigned long addr)
 {
@@ -88,9 +100,11 @@ struct regmap_sb2_lock_data {
 static void regmap_sb2_lock(void *data)
 __acquires(&data->spinlock)
 {
+	unsigned long flags;
 	struct regmap_sb2_lock_data *lock = data;
 
-	spin_lock_irqsave(&lock->spinlock, lock->flags);
+	spin_lock_irqsave(&lock->spinlock, flags);
+	lock->flags = flags;
 	sb2_sem_lock(lock->sb2lock, SB2_SEM_NO_WARNING);
 }
 

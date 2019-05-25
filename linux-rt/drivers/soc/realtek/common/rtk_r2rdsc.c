@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -142,7 +142,7 @@ static int rtk_r2rdsc_runtime_resume(struct device *dev)
 {
 	struct rtk_r2rdsc_device *rrdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_r2rdsc_power_on(rrdev);
 	dev_dbg(dev, "Exit %s\n", __func__);
 	return 0;
@@ -152,7 +152,7 @@ static int rtk_r2rdsc_runtime_suspend(struct device *dev)
 {
 	struct rtk_r2rdsc_device *rrdev = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Enter %s\n", __func__);
+	dev_dbg(dev, "enter %s\n", __func__);
 	rtk_r2rdsc_power_off(rrdev);
 	dev_dbg(dev, "Exit %s\n", __func__);
 	return 0;
@@ -165,7 +165,7 @@ static int rtk_r2rdsc_resume(struct device *dev)
 	if (atomic_read(&rrdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_r2rdsc_power_on(rrdev);
 	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
@@ -178,7 +178,7 @@ static int rtk_r2rdsc_suspend(struct device *dev)
 	if (atomic_read(&rrdev->open_cnt) == 0)
 		return 0;
 
-	dev_info(dev, "Enter %s\n", __func__);
+	dev_info(dev, "enter %s\n", __func__);
 	rtk_r2rdsc_power_off(rrdev);
 	dev_info(dev, "Exit %s\n", __func__);
 	return 0;
@@ -209,20 +209,20 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 	rrdev->clk_r2rdsc = devm_clk_get(dev, "r2rdsc");
 	if (IS_ERR(rrdev->clk_r2rdsc)) {
 		ret = PTR_ERR(rrdev->clk_r2rdsc);
-		dev_err(dev, "r2rdsc: clk_get() returns %d\n", ret);
+		dev_err(dev, "r2rdsc: failed to get clk: %d\n", ret);
 		return ret;
 	}
 
 	rrdev->rstc_r2rdsc = devm_reset_control_get(dev, "r2rdsc");
 	if (IS_ERR(rrdev->rstc_r2rdsc)) {
 		ret = PTR_ERR(rrdev->rstc_r2rdsc);
-		dev_err(dev, "reset_control_get() returns %d\n", ret);
+		dev_err(dev, "failed to get reset_control: %d\n", ret);
 		return ret;
 	}
 
 	ret = of_address_to_resource(np, 0, &res);
 	if (ret) {
-		dev_err(dev, "r2rdsc: of_address_to_resource() returns %d\n", ret);
+		dev_err(dev, "r2rdsc: failed to get address: %d\n", ret);
 		return ret;
 	}
 
@@ -230,7 +230,7 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 	rrdev->size_r2rdsc = ALIGN(resource_size(&res), PAGE_SIZE);
 	rrdev->base_r2rdsc = devm_ioremap(dev, res.start, resource_size(&res));
 	if (!rrdev->base_r2rdsc) {
-		dev_err(dev, "r2rdsc: ioremap() returns NULL\n");
+		dev_err(dev, "r2rdsc: failed to ioremap\n");
 		return -ENOMEM;
 	}
 
@@ -241,7 +241,7 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 	rrdev->mdev.parent = dev;
 	ret = misc_register(&rrdev->mdev);
 	if (ret) {
-		dev_err(dev, "misc_register() returns %d\n", ret);
+		dev_err(dev, "failed to register misc device: %d\n", ret);
 		return ret;
 	}
 
@@ -255,7 +255,7 @@ static int rtk_r2rdsc_probe(struct platform_device *pdev)
 
 static int rtk_r2rdsc_remove(struct platform_device *pdev)
 {
-        struct device *dev = &pdev->dev;
+	struct device *dev = &pdev->dev;
 	struct rtk_r2rdsc_device *rrdev = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(dev);
@@ -266,7 +266,7 @@ static int rtk_r2rdsc_remove(struct platform_device *pdev)
 }
 
 
-static struct of_device_id rtk_r2rdsc_ids[] = {
+static const struct of_device_id rtk_r2rdsc_ids[] = {
 	{ .compatible = "realtek,r2rdsc" },
 	{}
 };

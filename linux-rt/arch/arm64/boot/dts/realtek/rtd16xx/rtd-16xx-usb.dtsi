@@ -327,6 +327,7 @@
 			//tx-fifo-resize;
 			//snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
 			snps,dis_u3_susphy_quirk;
+			snps,dis_ss_park_mode; // disable usb3.0 park mode
 		};
 	};
 

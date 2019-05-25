@@ -32,7 +32,7 @@ struct hdmirx_format_desc {
 const struct hdmirx_format_desc hdmi_rx_fmts[] = {
 	{
 		.name		= "Y/CbCr 4:2:2",
-		.fcc		= V4L2_PIX_FMT_NV16,
+		.fcc		= V4L2_PIX_FMT_YUYV,
 	},
 	{
 		.name		= "YUV 4:2:0 (NV12)",
@@ -41,6 +41,14 @@ const struct hdmirx_format_desc hdmi_rx_fmts[] = {
 	{
 		.name		= "YUV 4:2:0 (NV21)",
 		.fcc		= V4L2_PIX_FMT_NV21,
+	},
+	{
+		.name		= "YUV 4:2:0 10bit (NV12 10bit)",
+		.fcc		= V4L2_PIX_FMT_NV12M,
+	},
+	{
+		.name		= "YUV 4:2:0 10bit (NV21 10bit)",
+		.fcc		= V4L2_PIX_FMT_NV21M,
 	},
 	{
 		.name		= "ARGB",
@@ -77,10 +85,21 @@ MIPI_OUT_COLOR_SPACE_T V4L2_format_parse(unsigned int pixelformat)
 		mipi_top.uv_seq = UV_NV12;
 		output_color = OUT_8BIT_YUV420;
 		break;
+
 	case V4L2_PIX_FMT_NV21:
 		/* main */
 		mipi_top.uv_seq = UV_NV21;
 		output_color = OUT_8BIT_YUV420;
+		break;
+
+	case V4L2_PIX_FMT_NV12M:
+		mipi_top.uv_seq = UV_NV12;
+		output_color = OUT_10BIT_YUV420;
+		break;
+
+	case V4L2_PIX_FMT_NV21M:
+		mipi_top.uv_seq = UV_NV21;
+		output_color = OUT_10BIT_YUV420;
 		break;
 
 	case V4L2_PIX_FMT_ARGB32:
@@ -92,7 +111,7 @@ MIPI_OUT_COLOR_SPACE_T V4L2_format_parse(unsigned int pixelformat)
 		/* byte 0~3: BGRA-8-8-8-8 */
 		output_color = OUT_BGRA;
 		break;
-	case V4L2_PIX_FMT_NV16:
+	case V4L2_PIX_FMT_YUYV:
 		output_color = OUT_8BIT_YUV422;
 		break;
 	default:
@@ -115,6 +134,10 @@ int out_color_to_bpp(MIPI_OUT_COLOR_SPACE_T output_color)
 	case OUT_8BIT_YUV420:
 		/* V4L2_PIX_FMT_NV12, V4L2_PIX_FMT_NV21 */
 		bpp = 12;
+		break;
+	case OUT_10BIT_YUV420:
+		/* V4L2_PIX_FMT_NV12M, V4L2_PIX_FMT_NV21M */
+		bpp = 16;
 		break;
 	case OUT_ARGB:
 		/* V4L2_PIX_FMT_BGR32 */
@@ -572,10 +595,11 @@ static const char * const type[] = {"MIPI", "HDMIRx"};
 static const char * const status[] = {"NotReady", "Ready"};
 static const char * const color[] = {"RGB", "YUV444", "YUV422"};
 static const char * const sm[] = {"Progressive", "Interlaced"};
+static const char * const depth[] = {"8Bit", "10Bit", "12Bit", "16Bit"};
 static ssize_t show_hdmirx_video_info(struct device *cd, struct device_attribute *attr, char *buf)
 {
 	ssize_t ret_count;
-	unsigned char type_index, status_index, mode_index, color_index;
+	unsigned char type_index, status_index, mode_index, color_index, depth_index;
 	unsigned int width = 0, height = 0, vic = 0, fps = 0;
 
 	type_index = mipi_top.src_sel&0x1;
@@ -584,6 +608,7 @@ static ssize_t show_hdmirx_video_info(struct device *cd, struct device_attribute
 	height = mipi_top.v_input_len;
 	mode_index = hdmi_rx.timing_t.is_interlace&0x1;
 	color_index = mipi_top.input_color&0x3;
+	depth_index = hdmi_rx.timing_t.colordepth&0x3;
 
 	if (mode_index == 1) /* interlaced mode */
 		height *= 2;
@@ -596,9 +621,9 @@ static ssize_t show_hdmirx_video_info(struct device *cd, struct device_attribute
 	fps = hdmi_vic_table[vic].fps;
 
 
-	ret_count = sprintf(buf, "Type:%s\nStatus:%s\nWidth:%u\nHeight:%u\nScanMode:%s\nColor:%s\nFps:%u\n",
+	ret_count = sprintf(buf, "Type:%s\nStatus:%s\nWidth:%u\nHeight:%u\nScanMode:%s\nColor:%s\nFps:%u\nDepth:%s\n",
 		type[type_index], status[status_index],
-		width, height, sm[mode_index], color[color_index], fps);
+		width, height, sm[mode_index], color[color_index], fps, depth[depth_index]);
 
 	return ret_count;
 }

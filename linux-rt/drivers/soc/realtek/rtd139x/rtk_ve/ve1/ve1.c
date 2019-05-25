@@ -209,8 +209,6 @@ static wait_queue_head_t s_interrupt_wait_q_ve2;
 #endif
 
 static spinlock_t s_vpu_lock = __SPIN_LOCK_UNLOCKED(s_vpu_lock);
-static spinlock_t s_ve1_lock = __SPIN_LOCK_UNLOCKED(s_ve1_lock);
-static spinlock_t s_ve2_lock = __SPIN_LOCK_UNLOCKED(s_ve2_lock);
 static DEFINE_SEMAPHORE(s_vpu_sem);
 static struct list_head s_vbp_head = LIST_HEAD_INIT(s_vbp_head);
 static struct list_head s_inst_list_head = LIST_HEAD_INIT(s_inst_list_head);
@@ -662,10 +660,8 @@ static irqreturn_t ve1_irq_handler(int irq, void *dev_id)
 		kill_fasync(&dev->async_queue, SIGIO, POLL_IN); /* notify the interrupt to user space */
 
 	if (vpu_int_sts_ve1) {
-		spin_lock_irqsave(&s_ve1_lock, flags);
 		dev->interrupt_reason_ve1 = interrupt_reason_ve1;
 		atomic_set(&s_interrupt_flag_ve1, 1);
-		spin_unlock_irqrestore(&s_ve1_lock, flags);
 		wake_up_interruptible(&s_interrupt_wait_q_ve1);
 		//DPRINTK("%s [-]%s\n", DEV_NAME, __func__);
 	}
@@ -825,22 +821,16 @@ static irqreturn_t ve2_irq_handler(int irq, void *dev_id)
 #ifdef SUPPORT_MULTI_INST_INTR
 #ifdef SUPPORT_MULTI_INST_INTR_ERROR_CHECK
 		if (intr_inst_index >= 0 && intr_inst_index < MAX_NUM_INSTANCE) {
-			spin_lock_irqsave(&s_ve2_lock, flags);
 			atomic_set(&s_interrupt_flag_ve2[intr_inst_index], 1);
-			spin_unlock_irqrestore(&s_ve2_lock, flags);
 			wake_up_interruptible(&s_interrupt_wait_q_ve2[intr_inst_index]);
 		}
 #else
-		spin_lock_irqsave(&s_ve2_lock, flags);
 		atomic_set(&s_interrupt_flag_ve2[intr_inst_index], 1);
-		spin_unlock_irqrestore(&s_ve2_lock, flags);
 		wake_up_interruptible(&s_interrupt_wait_q_ve2[intr_inst_index]);
 #endif
 #else
-		spin_lock_irqsave(&s_ve2_lock, flags);
 		dev->interrupt_reason_ve2 = interrupt_reason_ve2;
 		atomic_set(&s_interrupt_flag_ve2, 1);
-		spin_unlock_irqrestore(&s_ve2_lock, flags);
 		wake_up_interruptible(&s_interrupt_wait_q_ve2);
 #endif
 		DPRINTK("%s [-]%s\n", DEV_NAME, __func__);
@@ -996,11 +986,9 @@ static long vpu_ioctl(struct file *filp, u_int cmd, u_long arg)
 			}
 
 			//DPRINTK("[VPUDRV] s_interrupt_flag_ve1(%d), reason(0x%08lx)\n", atomic_read(&s_interrupt_flag_ve1), dev->interrupt_reason_ve1);
-			spin_lock_irqsave(&s_ve1_lock, flags);
 			atomic_set(&s_interrupt_flag_ve1, 0);
 			info.intr_reason = dev->interrupt_reason_ve1;
 			dev->interrupt_reason_ve1 = 0;
-			spin_unlock_irqrestore(&s_ve1_lock, flags);
 		} else { /* VE2 */
 #ifdef USE_HRTIMEOUT_INSTEAD_OF_TIMEOUT
 			ktime_t ktime;
@@ -1075,7 +1063,6 @@ static long vpu_ioctl(struct file *filp, u_int cmd, u_long arg)
 
 INTERRUPT_REMAIN_IN_QUEUE:
 
-			spin_lock_irqsave(&s_ve2_lock, flags);
 #ifdef SUPPORT_MULTI_INST_INTR
 			info.intr_reason = dev->interrupt_reason_ve2[intr_inst_index];
 			atomic_set(&s_interrupt_flag_ve2[intr_inst_index], 0);
@@ -1085,7 +1072,6 @@ INTERRUPT_REMAIN_IN_QUEUE:
 			info.intr_reason = dev->interrupt_reason_ve2;
 			dev->interrupt_reason_ve2 = 0;
 #endif
-			spin_unlock_irqrestore(&s_ve2_lock, flags);
 		}
 
 		ret = copy_to_user((void __user *)arg, &info, sizeof(vpudrv_intr_info_t));
@@ -1895,6 +1881,8 @@ static int vpu_probe(struct platform_device *pdev)
 #endif /* CONFIG_RTK_PLATFORM_FPGA */
 
 #ifdef CONFIG_POWER_CONTROL
+	vpu_pctrl_on(s_pctrl_ve1);
+	vpu_pctrl_on(s_pctrl_ve2);
 	vpu_pctrl_off(s_pctrl_ve1);
 	vpu_pctrl_off(s_pctrl_ve2);
 #endif /* CONFIG_POWER_CONTROL */
@@ -2462,6 +2450,9 @@ void vpu_pctrl_on(struct power_control *pctrl)
 	if (!(pctrl == NULL || IS_ERR(pctrl))) {
 		DPRINTK("%s vpu_pctrl_on\n", DEV_NAME);
 		power_control_power_on(pctrl);
+		if (pctrl == s_pctrl_ve2)
+			power_control_power_on(s_pctrl_ve1);
+
 	}
 }
 
@@ -2470,6 +2461,8 @@ void vpu_pctrl_off(struct power_control *pctrl)
 	if (!(pctrl == NULL || IS_ERR(pctrl))) {
 		DPRINTK("%s vpu_pctrl_off\n", DEV_NAME);
 		power_control_power_off(pctrl);
+		if (pctrl == s_pctrl_ve2)
+			power_control_power_off(s_pctrl_ve1);
 	}
 }
 #endif /* CONFIG_POWER_CONTROL */
