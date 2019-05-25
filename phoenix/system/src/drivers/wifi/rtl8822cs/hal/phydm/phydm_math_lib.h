@@ -109,7 +109,7 @@ u64 phydm_db_2_linear(u32 value);
 
 u16 phydm_show_fraction_num(u32 frac_val, u8 bit_num);
 
-u32 phydm_gen_bitmask(u8 mask_num);
+u64 phydm_gen_bitmask(u8 mask_num);
 
 s32 phydm_cnvrt_2_sign(u32 val, u8 bit_num);
 #endif

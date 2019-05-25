@@ -317,7 +317,7 @@ u8 rtw_set_802_11_ssid(_adapter *padapter, NDIS_802_11_SSID *ssid)
 			}
 #ifdef CONFIG_LPS
 			else
-				rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_JOINBSS, 1);
+				rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_JOINBSS, 0);
 #endif
 		} else {
 

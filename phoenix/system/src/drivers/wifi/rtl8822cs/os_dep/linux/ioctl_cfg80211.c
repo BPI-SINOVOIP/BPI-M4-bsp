@@ -4107,7 +4107,7 @@ static int cfg80211_rtw_set_power_mgmt(struct wiphy *wiphy,
 
 #ifdef CONFIG_LPS
 	if (!enabled)
-		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE_CFG80211_PWRMGMT, 1);
+		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE_CFG80211_PWRMGMT, 0);
 #endif
 
 	return 0;
@@ -7492,7 +7492,7 @@ static int cfg80211_rtw_tdls_oper(struct wiphy *wiphy,
 	}
 
 #ifdef CONFIG_LPS
-	rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 1);
+	rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 0);
 #endif /* CONFIG_LPS */
 
 	_rtw_memset(&txmgmt, 0x00, sizeof(struct tdls_txmgmt));

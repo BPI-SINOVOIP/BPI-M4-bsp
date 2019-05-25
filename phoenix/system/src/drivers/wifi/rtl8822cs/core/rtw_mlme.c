@@ -1808,7 +1808,7 @@ void rtw_indicate_disconnect(_adapter *padapter, u16 reason, u8 locally_generate
 #endif /* CONFIG_P2P_PS */
 
 #ifdef CONFIG_LPS
-	rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_DISCONNECT, 1);
+	rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_DISCONNECT, 0);
 #endif
 
 #ifdef CONFIG_BEAMFORMING
@@ -3244,10 +3244,10 @@ void rtw_iface_dynamic_check_timer_handlder(_adapter *adapter)
 
 		bEnterPS = traffic_status_watchdog(adapter, 1);
 		if (bEnterPS) {
-			/* rtw_lps_ctrl_wk_cmd(adapter, LPS_CTRL_ENTER, 1); */
+			/* rtw_lps_ctrl_wk_cmd(adapter, LPS_CTRL_ENTER, 0); */
 			rtw_hal_dm_watchdog_in_lps(adapter);
 		} else {
-			/* call rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 1) in traffic_status_watchdog() */
+			/* call rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 0) in traffic_status_watchdog() */
 		}
 	}
 	#endif /* CONFIG_LPS_LCLK_WD_TIMER	*/

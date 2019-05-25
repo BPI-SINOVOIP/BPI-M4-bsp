@@ -1534,9 +1534,9 @@ get_sta_info:
 
 	if (pkt_type == LPS_PT_SP) {/*packet is as SPECIAL_PACKET*/
 		DBG_COUNTER(padapter->tx_logs.core_tx_upd_attrib_active);
-		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_SPECIAL_PACKET, 1);
+		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_SPECIAL_PACKET, 0);
 	} else if (pkt_type == LPS_PT_ICMP)
-		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 1);
+		rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_LEAVE, 0);
 #endif /* CONFIG_LPS */
 
 #ifdef CONFIG_BEAMFORMING
