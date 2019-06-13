@@ -192,6 +192,7 @@
 		wakeup-gpio-list = <&rtk_iso_gpio 28 0 1>;
 		wakeup-gpio-enable = <1>;
 		wakeup-gpio-activity = <0>;
+		poweroff-suspend = <0>;
 		status = "okay";
 	};
 
@@ -306,7 +307,6 @@
 
 	rtk_usb_power_manager@0 {
 		compatible = "Realtek,usb-manager";
-		poweroff-suspend = <0>;
 		realtek,port0-power-gpio;
 		realtek,port1-power-gpio;
 		realtek,port2-power-gpio;
