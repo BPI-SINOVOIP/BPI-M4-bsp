@@ -186,6 +186,15 @@
 		};
 	};
 
+	power-management@0 {
+		compatible = "Realtek,power-management";
+		pwms = <&pwm 0 37878>;
+		wakeup-gpio-list = <&rtk_iso_gpio 28 0 1>;
+		wakeup-gpio-enable = <1>;
+		wakeup-gpio-activity = <0>;
+		status = "okay";
+	};
+
 	uart1: serial1@9801B200 {
 		compatible = "snps,dw-apb-uart";
 		pinctrl-names = "default";
@@ -271,7 +280,7 @@
 
 	rfkill: rfkilligpio {
 		compatible = "Realtek,rfkill";
-		gpios = <&rtk_iso_gpio 49 1 0>;
+		gpios = <&rtk_iso_gpio 27 1 0>;
 		status = "okay";
 	};
 
@@ -313,8 +322,31 @@
 		led1-gpio-active-low = <1>;
 		status = "okay";
 	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		status = "okay";
+
+		/*install-button {
+			label = "Volume Down";
+			gpios = <&rtk_iso_gpio 52 0 1>;
+			linux,code = <114>;
+		};*/
+
+		power-button {
+			label = "Power Button";
+			gpios = <&rtk_iso_gpio 28 0 1>;
+			linux,code = <116>;
+		};
+
+		boot-button {
+			label = "Volume Up";
+			gpios = <&rtk_iso_gpio 49 0 1>;
+			linux,code = <115>;
+		};
+	};
 };
 
 &powerkey {
-	status = "okay";
+	status = "disabled";
 };
