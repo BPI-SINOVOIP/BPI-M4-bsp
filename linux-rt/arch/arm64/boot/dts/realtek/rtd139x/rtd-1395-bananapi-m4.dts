@@ -189,7 +189,7 @@
 	power-management@0 {
 		compatible = "Realtek,power-management";
 		pwms = <&pwm 0 37878>;
-		wakeup-gpio-list = <&rtk_iso_gpio 28 0 1>;
+		wakeup-gpio-list = <&rtk_iso_gpio 1 0 1>;
 		wakeup-gpio-enable = <1>;
 		wakeup-gpio-activity = <0>;
 		poweroff-suspend = <0>;
@@ -331,13 +331,13 @@
 			label = "Volume Down";
 			gpios = <&rtk_iso_gpio 52 0 1>;
 			linux,code = <114>;
-		};*/
+		};
 
 		power-button {
 			label = "Power Button";
 			gpios = <&rtk_iso_gpio 28 0 1>;
 			linux,code = <116>;
-		};
+		};*/
 
 		boot-button {
 			label = "Volume Up";
