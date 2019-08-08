@@ -1069,6 +1069,7 @@ int cpu_release(int nr, int argc, char * const argv[]);
 #define UNIT_BYTE 1
 #define UNIT_MEGABYTE 2 
 unsigned long get_accessible_ddr_size(int unit);
+void set_dram_dtb(void);
 int user_choice(void);/*1=yes 0=no*/
 
 #ifdef CONFIG_SYS_NONCACHED_MEMORY

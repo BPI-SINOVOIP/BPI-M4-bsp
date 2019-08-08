@@ -24,7 +24,7 @@
 	 */
 	#define CONFIG_FLASH_WRITER_SETTING				"1395_force_spi_bananapi"
 	#define CONFIG_CHIP_ID							"rtd1395"
-	#define CONFIG_CUSTOMER_ID						"demo"
+	#define CONFIG_CUSTOMER_ID						"bananapi"
 	#define CONFIG_CHIP_TYPE						"0001"
 	#define CONFIG_FLASH_TYPE						"RTK_FLASH_SPI"
 

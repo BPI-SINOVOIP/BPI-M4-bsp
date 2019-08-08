@@ -834,6 +834,10 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	else {
 		setenv("sdmmc_on", "1");
 	}
+
+	/* set different dram size dtb */
+	set_dram_dtb();
+	
 #endif
 #if defined(CONFIG_CMD_PCI) || defined(CONFIG_PCI)
 	arm_pci_init();

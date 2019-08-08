@@ -108,3 +108,20 @@ int dram_init(void)
 
 	return 0;
 }
+
+void set_dram_dtb(void)
+{
+        unsigned int size;
+		char dram_size[8];
+
+        size = gd->ram_size / 1024 / 1024 / 1024;
+
+		sprintf(dram_size, "%dGB", size);
+		printf("[BPI] set dram dtb is %s\n", dram_size);
+		
+        if(size == 1)
+                setenv("dram_size", dram_size);
+        else if(size == 2)
+                setenv("dram_size", dram_size);
+}
+

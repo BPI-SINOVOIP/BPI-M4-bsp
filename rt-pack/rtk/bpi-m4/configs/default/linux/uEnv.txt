@@ -9,7 +9,7 @@ service=linux
 ##
 #
 kernel=uImage
-dtb=rtd-1395-bananapi-m4.dtb
+#dtb=rtd-1395-bananapi-m4-${dramsize}.dtb;
 rootfs=uInitrd
 audio=bluecore.audio
 #
@@ -24,10 +24,10 @@ rootfs_loadaddr=0x31400000
 ## ${bpi}/${board}/${service}/${kernel}
 #
 #
-sd_boot_dtb=bananapi/bpi-m4/linux/rtd-1395-bananapi-m4.dtb
-sd_boot_rootfs=bananapi/bpi-m4/linux/uInitrd
-sd_vmlinux=bananapi/bpi-m4/linux/uImage
-sd_audio=bananapi/bpi-m4/linux/bluecore.audio
+#sd_boot_dtb=bananapi/bpi-m4/linux/rtd-1395-bananapi-m4-${dram_size}.dtb
+#sd_boot_rootfs=bananapi/bpi-m4/linux/uInitrd
+#sd_vmlinux=bananapi/bpi-m4/linux/uImage
+#sd_audio=bananapi/bpi-m4/linux/bluecore.audio
 #
 ##
 #
@@ -54,7 +54,7 @@ ahello=echo Banana Pi ${board} chip: $chip Service: $service
 #aboot=if fatload $device $partition $rootfs_loadaddr ${bpi}/berryboot.img; gosd;
 aboot=go all;
 #
-aload_dtb=fatload $device $partition ${fdt_loadaddr} ${bpi}/${board}/${service}/${dtb}
+aload_dtb=if test $dram_size = 1GB; then setenv dtb rtd-1395-bananapi-m4-1GB.dtb; fi; if test $dram_size = 2GB; then setenv dtb rtd-1395-bananapi-m4-2GB.dtb; fi; fatload $device $partition ${fdt_loadaddr} ${bpi}/${board}/${service}/${dtb}
 aload_kernel=fatload $device $partition ${kernel_loadaddr} ${bpi}/${board}/${service}/${kernel}
 aload_rootfs=fatload $device $partition ${rootfs_loadaddr} ${bpi}/${board}/${service}/${rootfs}
 aload_audio=fatload $device $partition ${audio_loadaddr} ${bpi}/${board}/${service}/${audio}
