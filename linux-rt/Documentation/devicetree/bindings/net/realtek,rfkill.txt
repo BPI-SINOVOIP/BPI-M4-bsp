@@ -1,1 +1,0 @@
-- compatible: one of "realtek,rfkill"

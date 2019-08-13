@@ -2,19 +2,13 @@
 
 set -e
 
-#SOC=rtd1296
 SOC=rtd1395
-#MACH=rtd129x
 MACH=rtd139x
 PLATFORM=
 BOARD=
 TYPE=sd
 TOPDIR=`pwd`
-#TARGET_PLATFORM="realtek"
-#TARGET_PRODUCT="bpi-w2"
 TARGET_PRODUCT="bpi-m4"
-BPILINUX=linxu-rt
-BPIPACK=rt-pack
 BPISOC=rtk
 
 CUR_DIR=$PWD

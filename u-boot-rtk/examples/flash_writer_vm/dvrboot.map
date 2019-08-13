@@ -1,0 +1,841 @@
+
+Discarded input sections
+
+ .note.GNU-stack
+                0x0000000000000000        0x0 dvrmain.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 util.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 flashdev_n.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 flashdev_s.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 flashdev_e.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 rtkemmc.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 strlen.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 strstr.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 strtoul.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ctype.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 mcp.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 otp.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 timer.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 BootPartition_wrapper.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 printf.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 TinyStdio/tinystdio.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 cache_v8.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+Address of section .text set to 0x1500000
+LOAD temp_target_array.o
+LOAD start64.o
+LOAD cache64.o
+LOAD dvrmain.o
+LOAD util.o
+LOAD flashdev_n.o
+LOAD flashdev_s.o
+LOAD flashdev_e.o
+LOAD rtkemmc.o
+LOAD strlen.o
+LOAD strstr.o
+LOAD strtoul.o
+LOAD ctype.o
+LOAD mcp.o
+LOAD otp.o
+LOAD timer.o
+LOAD BootPartition_wrapper.o
+LOAD printf.o
+LOAD TinyStdio/tinystdio.o
+LOAD cache_v8.o
+LOAD /usr/lib/gcc-cross/aarch64-linux-gnu/5/libgcc.a
+                [!provide]                        PROVIDE (__executable_start, 0x400000)
+                0x00000000004000e8                . = (0x400000 + SIZEOF_HEADERS)
+
+.interp
+ *(.interp)
+
+.note.gnu.build-id
+ *(.note.gnu.build-id)
+
+.hash
+ *(.hash)
+
+.gnu.hash
+ *(.gnu.hash)
+
+.dynsym
+ *(.dynsym)
+
+.dynstr
+ *(.dynstr)
+
+.gnu.version
+ *(.gnu.version)
+
+.gnu.version_d
+ *(.gnu.version_d)
+
+.gnu.version_r
+ *(.gnu.version_r)
+
+.rela.dyn
+ *(.rela.init)
+ *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+ *(.rela.fini)
+ *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+ *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+ *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+ *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+ *(.rela.ctors)
+ *(.rela.dtors)
+ *(.rela.got)
+ *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+ *(.rela.ifunc)
+
+.rela.plt       0x00000000004000e8        0x0
+ *(.rela.plt)
+                [!provide]                        PROVIDE (__rela_iplt_start, .)
+ *(.rela.iplt)
+ .rela.iplt     0x00000000004000e8        0x0 start64.o
+                [!provide]                        PROVIDE (__rela_iplt_end, .)
+
+.init
+ *(SORT(.init))
+
+.plt            0x00000000004000f0        0x0
+ *(.plt)
+ *(.iplt)
+ .iplt          0x00000000004000f0        0x0 start64.o
+
+.text           0x0000000001500000     0x7cf0
+ *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ *(.text.exit .text.exit.*)
+ *(.text.startup .text.startup.*)
+ *(.text.hot .text.hot.*)
+ *(.text .stub .text.* .gnu.linkonce.t.*)
+ .text          0x0000000001500000        0x0 temp_target_array.o
+ .text          0x0000000001500000       0x80 start64.o
+                0x0000000001500000                start
+                0x0000000001500028                _stack_start
+                0x0000000001500030                _stack_start1
+ .text          0x0000000001500080      0x11c cache64.o
+                0x0000000001500080                __asm_flush_dcache_level
+                0x00000000015000f0                __flush_cache_all
+                0x0000000001500150                __invalidate_tlb_all
+ .text          0x000000000150019c      0xcd4 dvrmain.o
+                0x000000000150019c                align_to_boundary
+                0x00000000015001b0                align_to_boundary_length
+                0x00000000015001c8                set_spi_pin_mux
+                0x00000000015001ec                set_nand_pin_mux
+                0x0000000001500234                set_emmc_freq
+                0x000000000150027c                set_emmc_pin_mux
+                0x00000000015002a8                rebuild_function_pointer_from_uboot_to_dvrmain
+                0x0000000001500368                get_chip_rev_id
+                0x0000000001500378                dvrmain
+ .text          0x0000000001500e70      0x558 util.o
+                0x0000000001500e94                sync
+                0x0000000001500eac                init_uart
+                0x0000000001500ef0                set_focus_uart
+                0x0000000001500f14                print_val
+                0x0000000001500f68                print_hex
+                0x0000000001500f70                sys_dcache_flush_all
+                0x0000000001500f74                put_char
+                0x0000000001500f94                hexstr2int
+                0x0000000001500fa0                simple_malloc
+                0x0000000001501000                is_hex_digit
+                0x0000000001501044                memset
+                0x00000000015010bc                prints
+                0x0000000001501138                wait_done
+                0x00000000015011a4                hexdump
+                0x0000000001501270                set_memory
+                0x0000000001501294                copy_memory
+                0x0000000001501324                compare_memory
+                0x000000000150135c                compare_str
+                0x0000000001501390                swap_endian
+                0x0000000001501398                watchdog_reset
+                0x00000000015013c4                __div0
+ .text          0x00000000015013c8     0x2a60 flashdev_n.o
+                0x00000000015021f4                do_erase_n
+                0x0000000001502328                do_erase_map
+                0x00000000015023c0                do_write_n
+                0x00000000015026f8                do_write_map
+                0x000000000150290c                do_identify_n
+                0x0000000001502e64                do_init_n
+                0x00000000015030c4                write_bbt
+                0x00000000015031d8                check_build_bbt
+                0x00000000015034b8                do_exit_n
+                0x0000000001503800                get_env_n
+                0x0000000001503988                save_env_n
+                0x0000000001503adc                do_read_n
+ .text          0x0000000001503e28      0x8b4 flashdev_s.o
+                0x0000000001503e74                _sync
+                0x0000000001503e8c                spi_switch_read_mode
+                0x0000000001503eb8                spi_hexdump
+                0x0000000001503f24                do_erase_s
+                0x00000000015042d8                do_write_s
+                0x00000000015043cc                do_identify_s
+                0x0000000001504650                do_init_s
+                0x00000000015046c4                do_exit_s
+ .text          0x00000000015046dc      0x30c flashdev_e.o
+                0x00000000015046dc                do_erase_e
+                0x00000000015046e4                do_write_e
+                0x00000000015047b4                do_read_e
+                0x0000000001504880                do_identify_e
+                0x0000000001504890                do_init_e
+                0x00000000015048b4                do_exit_e
+                0x00000000015048b8                do_hide_hwsetting_e
+ .text          0x00000000015049e8      0xf48 rtkemmc.o
+                0x00000000015049e8                check_error
+                0x0000000001504b30                reset_ip
+                0x0000000001504b48                emmc_send_cmd_get_rsp
+                0x0000000001504c38                frequency
+                0x0000000001504d98                switch_bus
+                0x0000000001504ee0                kylin_cr_init
+                0x0000000001505288                rtk_eMMC_init
+                0x0000000001505388                switch_speed
+                0x0000000001505448                IsAddressSRAM
+                0x0000000001505460                make_ip_des
+                0x0000000001505508                emmc_read_write_ip
+                0x00000000015056e0                rtk_eMMC_write
+                0x00000000015057c8                rtk_eMMC_read
+                0x00000000015058b0                emmc_switch_partition
+ .text          0x0000000001505930       0x20 strlen.o
+                0x0000000001505930                strlen
+ .text          0x0000000001505950       0x70 strstr.o
+                0x0000000001505950                strstr
+ .text          0x00000000015059c0      0x160 strtoul.o
+                0x00000000015059c0                strtoul
+ .text          0x0000000001505b20        0x0 ctype.o
+ .text          0x0000000001505b20      0x7f8 mcp.o
+                0x0000000001505cc8                AES_CBC_decrypt
+                0x0000000001505d6c                AES_CBC_encrypt
+                0x0000000001505e10                AES_ECB_decrypt
+                0x0000000001505ebc                AES_ECB_encrypt
+                0x0000000001505f68                AES_hash_one
+                0x0000000001505ff8                AES_hash
+                0x0000000001506118                SHA1_hash
+                0x00000000015061f8                SHA256_hash
+ .text          0x0000000001506318       0xbc otp.o
+                0x0000000001506318                get_boot_flash_type_from_gpio
+                0x000000000150636c                OTP_JUDGE_BIT
+                0x000000000150639c                get_secure_type_from_efuse
+                0x00000000015063c0                check_secure_boot
+                0x00000000015063c8                get_secure_type_name
+ .text          0x00000000015063d4      0x12c timer.o
+                0x00000000015063d4                InitTimer
+                0x000000000150642c                DisableTimer
+                0x0000000001506460                SystemTimeout
+                0x000000000150648c                mdelay
+                0x00000000015064c8                udelay
+ .text          0x0000000001506500       0xf0 BootPartition_wrapper.o
+                0x0000000001506500                BootPart_wrapper_read
+                0x0000000001506530                BootPart_wrapper_write
+                0x0000000001506560                BootPart_wrapper_VerifyData
+                0x00000000015065b8                InitBootPartitionOpes
+ .text          0x00000000015065f0       0xb4 printf.o
+                0x00000000015065f0                __printf
+ *fill*         0x00000000015066a4        0x4 00000000
+ .text          0x00000000015066a8     0x14c8 TinyStdio/tinystdio.o
+                0x0000000001506a3c                s_to_float
+                0x0000000001506ae4                tfp_format
+                0x00000000015073c0                init_printf
+                0x00000000015073d4                tfp_printf
+                0x0000000001507460                tfp_vsnprintf
+                0x00000000015074cc                tfp_snprintf
+                0x0000000001507540                tfp_vsprintf
+                0x0000000001507588                tfp_sprintf
+                0x00000000015075fc                float_to_s
+                0x0000000001507658                tfp_vsscanf
+ .text          0x0000000001507b70      0x180 cache_v8.o
+                0x0000000001507b70                v7_maint_dcache_all
+                0x0000000001507c68                disable_dcache
+ *(.gnu.warning)
+
+.fini
+ *(SORT(.fini))
+                [!provide]                        PROVIDE (__etext, .)
+                [!provide]                        PROVIDE (_etext, .)
+                [!provide]                        PROVIDE (etext, .)
+
+.rodata         0x0000000001507cf0     0x2738
+ *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata.str1.1
+                0x0000000001507cf0      0x2b6 dvrmain.o
+                                        0x2b8 (size before relaxing)
+ *fill*         0x0000000001507fa6        0x2 
+ .rodata        0x0000000001507fa8        0x8 util.o
+ .rodata.str1.1
+                0x0000000001507fb0       0x19 util.o
+                                         0x1d (size before relaxing)
+ *fill*         0x0000000001507fc9        0x7 
+ .rodata        0x0000000001507fd0      0xd80 flashdev_n.o
+ .rodata.str1.1
+                0x0000000001508d50      0x7a6 flashdev_n.o
+                                        0x7a8 (size before relaxing)
+ *fill*         0x00000000015094f6        0x2 
+ .rodata        0x00000000015094f8      0x558 flashdev_s.o
+ .rodata.str1.1
+                0x0000000001509a50      0x464 flashdev_s.o
+                                        0x466 (size before relaxing)
+ .rodata.str1.1
+                0x0000000001509eb4      0x121 flashdev_e.o
+ *fill*         0x0000000001509fd5        0x3 
+ .rodata        0x0000000001509fd8      0x140 rtkemmc.o
+                0x0000000001509fe0                clk_tlb
+                0x000000000150a020                bit_tlb
+                0x000000000150a040                state_tlb
+                0x000000000150a088                tacc_mant
+                0x000000000150a0c8                tacc_exp
+                0x000000000150a0e8                tran_mant
+                0x000000000150a0f8                tran_exp
+ .rodata.str1.1
+                0x000000000150a118       0x9e rtkemmc.o
+ *fill*         0x000000000150a1b6        0x2 
+ .rodata.str1.8
+                0x000000000150a1b8      0x258 rtkemmc.o
+                                        0x25c (size before relaxing)
+ .rodata.str1.1
+                0x000000000150a410       0x11 otp.o
+ .rodata.str1.1
+                0x000000000150a421        0x7 TinyStdio/tinystdio.o
+                                          0xd (size before relaxing)
+
+.rodata1
+ *(.rodata1)
+
+.eh_frame_hdr
+ *(.eh_frame_hdr)
+ *(.eh_frame_entry .eh_frame_entry.*)
+
+.eh_frame
+ *(.eh_frame)
+ *(.eh_frame.*)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.gnu_extab
+ *(.gnu_extab*)
+
+.exception_ranges
+ *(.exception_ranges .exception_ranges*)
+                0x000000000151a428                . = DATA_SEGMENT_ALIGN (0x10000, 0x1000)
+
+.eh_frame
+ *(.eh_frame)
+ *(.eh_frame.*)
+
+.gnu_extab
+ *(.gnu_extab)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.exception_ranges
+ *(.exception_ranges .exception_ranges*)
+
+.tdata
+ *(.tdata .tdata.* .gnu.linkonce.td.*)
+
+.tbss
+ *(.tbss .tbss.* .gnu.linkonce.tb.*)
+ *(.tcommon)
+
+.preinit_array  0x000000000151a428        0x0
+                [!provide]                        PROVIDE (__preinit_array_start, .)
+ *(.preinit_array)
+                [!provide]                        PROVIDE (__preinit_array_end, .)
+
+.init_array     0x000000000151a428        0x0
+                [!provide]                        PROVIDE (__init_array_start, .)
+ *(SORT(.init_array.*) SORT(.ctors.*))
+ *(.init_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .ctors)
+                [!provide]                        PROVIDE (__init_array_end, .)
+
+.fini_array     0x000000000151a428        0x0
+                [!provide]                        PROVIDE (__fini_array_start, .)
+ *(SORT(.fini_array.*) SORT(.dtors.*))
+ *(.fini_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .dtors)
+                [!provide]                        PROVIDE (__fini_array_end, .)
+
+.ctors
+ *crtbegin.o(.ctors)
+ *crtbegin?.o(.ctors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+ *(SORT(.ctors.*))
+ *(.ctors)
+
+.dtors
+ *crtbegin.o(.dtors)
+ *crtbegin?.o(.dtors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+ *(SORT(.dtors.*))
+ *(.dtors)
+
+.jcr
+ *(.jcr)
+
+.data.rel.ro
+ *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*)
+ *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*)
+
+.dynamic
+ *(.dynamic)
+
+.got
+ *(.got)
+ *(.igot)
+                0x000000000151a428                . = DATA_SEGMENT_RELRO_END (., 0x18)
+
+.got.plt        0x000000000151a428        0x0
+ *(.got.plt)
+ *(.igot.plt)
+ .igot.plt      0x000000000151a428        0x0 start64.o
+
+.data           0x000000000151a428   0x133728
+                [!provide]                        PROVIDE (__data_start, .)
+ *(.data .data.* .gnu.linkonce.d.*)
+ .data          0x000000000151a428   0x13360c temp_target_array.o
+                0x000000000151a428                resetrom
+                0x0000000001530b20                resetrom_end
+                0x0000000001530b24                mips_resetrom
+                0x0000000001530e8c                mips_resetrom_end
+                0x0000000001530e90                hwsetting
+                0x0000000001531a78                hwsetting_end
+                0x0000000001531a7c                hasharray
+                0x00000000015b6f3c                hasharray_end
+                0x00000000015b6f40                hasharray64
+                0x00000000015b6f40                hasharray64_end
+                0x00000000015b6f44                signature
+                0x00000000015b6f64                signature_end
+                0x00000000015b6f68                bootcode2_boot_hasharray_end
+                0x00000000015b6f68                bootcode2_boot_hasharray
+                0x00000000015b6f6c                bootcode2_boot_signature
+                0x00000000015b6f6c                bootcode2_boot_signature_end
+                0x00000000015b6f70                ecbarray_end
+                0x00000000015b6f70                ecbarray
+                0x00000000015b6f74                linux_rescue_hasharray_end
+                0x00000000015b6f74                linux_rescue_hasharray
+                0x00000000015b6f78                linux_rescue_signature_end
+                0x00000000015b6f78                linux_rescue_signature
+                0x00000000015b6f7c                fsbl
+                0x00000000015c27c4                fsbl_end
+                0x00000000015c27c8                fsbl_signature_end
+                0x00000000015c27c8                fsbl_signature
+                0x00000000015c27cc                fsbl_vm_end
+                0x00000000015c27cc                fsbl_vm
+                0x00000000015c27d0                fsbl_vm_signature_end
+                0x00000000015c27d0                fsbl_vm_signature
+                0x00000000015c27d4                fsbl_os
+                0x000000000164879c                fsbl_os_end
+                0x00000000016487a0                fsbl_os_signature
+                0x00000000016487a0                fsbl_os_signature_end
+                0x00000000016487a4                bl31
+                0x000000000164d9ec                bl31_end
+                0x000000000164d9f0                bl31_signature
+                0x000000000164d9f0                bl31_signature_end
+                0x000000000164d9f4                rsa_pub
+                0x000000000164d9f4                rsa_pub_end
+                0x000000000164d9f8                Kpublic_fw
+                0x000000000164d9f8                Kpublic_fw_end
+                0x000000000164d9fc                Kpublic_tee
+                0x000000000164d9fc                Kpublic_tee_end
+                0x000000000164da00                Kpublic_fw_signature
+                0x000000000164da00                Kpublic_fw_signature_end
+                0x000000000164da04                Kpublic_tee_signature
+                0x000000000164da04                Kpublic_tee_signature_end
+                0x000000000164da08                cbc_linux
+                0x000000000164da08                cbc_linux_end
+                0x000000000164da0c                hwsetting_sig_image_end
+                0x000000000164da0c                hwsetting_sig_image
+                0x000000000164da10                dcas_key_sig_image_end
+                0x000000000164da10                dcas_key_sig_image
+                0x000000000164da14                logo_end
+                0x000000000164da14                logo
+                0x000000000164da18                logo2
+                0x000000000164da18                logo2_end
+                0x000000000164da1c                logo3_end
+                0x000000000164da1c                logo3
+                0x000000000164da20                logo4
+                0x000000000164da20                logo4_end
+                0x000000000164da24                logo5_end
+                0x000000000164da24                logo5
+                0x000000000164da28                logo6
+                0x000000000164da28                logo6_end
+                0x000000000164da2c                logo7
+                0x000000000164da2c                logo7_end
+                0x000000000164da30                logo8
+                0x000000000164da30                logo8_end
+ .data          0x000000000164da34        0x0 start64.o
+ .data          0x000000000164da34        0x0 cache64.o
+ .data          0x000000000164da34        0x0 dvrmain.o
+ *fill*         0x000000000164da34        0x4 
+ .data          0x000000000164da38        0xc util.o
+                0x000000000164da38                UartReg
+ .data          0x000000000164da44        0x0 flashdev_n.o
+ .data          0x000000000164da44        0x0 flashdev_s.o
+ .data          0x000000000164da44        0x0 flashdev_e.o
+ *fill*         0x000000000164da44        0x4 
+ .data          0x000000000164da48        0x8 rtkemmc.o
+                0x000000000164da48                rw_descriptor
+ .data          0x000000000164da50        0x0 strlen.o
+ .data          0x000000000164da50        0x0 strstr.o
+ .data          0x000000000164da50        0x0 strtoul.o
+ .data          0x000000000164da50      0x100 ctype.o
+                0x000000000164da50                _ctype
+ .data          0x000000000164db50        0x0 mcp.o
+ .data          0x000000000164db50        0x0 otp.o
+ .data          0x000000000164db50        0x0 timer.o
+ .data          0x000000000164db50        0x0 BootPartition_wrapper.o
+ .data          0x000000000164db50        0x0 printf.o
+ .data          0x000000000164db50        0x0 TinyStdio/tinystdio.o
+ .data          0x000000000164db50        0x0 cache_v8.o
+
+.data1
+ *(.data1)
+                0x000000000164db50                _edata = .
+                [!provide]                        PROVIDE (edata, .)
+                0x000000000164db50                . = .
+                0x000000000164db50                __bss_start = .
+                0x000000000164db50                __bss_start__ = .
+
+.bss            0x000000000164db50      0x138
+ *(.dynbss)
+ *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss           0x000000000164db50        0x0 temp_target_array.o
+ .bss           0x000000000164db50        0x0 start64.o
+ .bss           0x000000000164db50        0x0 cache64.o
+ .bss           0x000000000164db50       0x1c dvrmain.o
+                0x000000000164db50                rtprintf
+                0x000000000164db58                rtflush_dcache_all
+                0x000000000164db60                rtflush_cache
+                0x000000000164db68                force_secure
+                0x000000000164db69                test_secure
+                0x000000000164db6a                noreset
+                0x000000000164db6b                verify_after_write
+ .bss           0x000000000164db6c        0x5 util.o
+                0x000000000164db70                sys_l2cache_enabled
+ *fill*         0x000000000164db71        0x7 
+ .bss           0x000000000164db78       0x50 flashdev_n.o
+                0x000000000164db84                total_chip_num
+                0x000000000164db88                pages_per_chip
+                0x000000000164db8c                pages_per_block
+                0x000000000164db94                blocks_per_flash
+                0x000000000164dba0                nf_page_size
+ .bss           0x000000000164dbc8        0x0 flashdev_s.o
+ .bss           0x000000000164dbc8        0x0 flashdev_e.o
+ .bss           0x000000000164dbc8       0xac rtkemmc.o
+                0x000000000164dbc8                emmc_card
+                0x000000000164dc68                dummy_512B
+                0x000000000164dc70                cr_int_status_reg
+ .bss           0x000000000164dc74        0x0 strlen.o
+ .bss           0x000000000164dc74        0x0 strstr.o
+ .bss           0x000000000164dc74        0x0 strtoul.o
+ .bss           0x000000000164dc74        0x0 ctype.o
+ .bss           0x000000000164dc74        0x4 mcp.o
+                0x000000000164dc74                mcp_dscpt_addr
+ .bss           0x000000000164dc78        0x0 otp.o
+ .bss           0x000000000164dc78        0x0 timer.o
+ .bss           0x000000000164dc78        0x0 BootPartition_wrapper.o
+ .bss           0x000000000164dc78        0x0 printf.o
+ .bss           0x000000000164dc78       0x10 TinyStdio/tinystdio.o
+ .bss           0x000000000164dc88        0x0 cache_v8.o
+ *(COMMON)
+                0x000000000164dc88                . = ALIGN ((. != 0x0)?0x8:0x1)
+                0x000000000164dc88                _bss_end__ = .
+                0x000000000164dc88                __bss_end__ = .
+                0x000000000164dc88                . = ALIGN (0x8)
+                0x000000000164dc88                . = SEGMENT_START ("ldata-segment", .)
+                0x000000000164dc88                . = ALIGN (0x8)
+                0x000000000164dc88                __end__ = .
+                0x000000000164dc88                _end = .
+                [!provide]                        PROVIDE (end, .)
+                0x000000000164dc88                . = DATA_SEGMENT_END (.)
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment        0x0000000000000000       0x3b
+ *(.comment)
+ .comment       0x0000000000000000       0x3b dvrmain.o
+                                         0x3c (size before relaxing)
+ .comment       0x000000000000003b       0x3c util.o
+ .comment       0x000000000000003b       0x3c flashdev_n.o
+ .comment       0x000000000000003b       0x3c flashdev_s.o
+ .comment       0x000000000000003b       0x3c flashdev_e.o
+ .comment       0x000000000000003b       0x3c rtkemmc.o
+ .comment       0x000000000000003b       0x3c strlen.o
+ .comment       0x000000000000003b       0x3c strstr.o
+ .comment       0x000000000000003b       0x3c strtoul.o
+ .comment       0x000000000000003b       0x3c ctype.o
+ .comment       0x000000000000003b       0x3c mcp.o
+ .comment       0x000000000000003b       0x3c otp.o
+ .comment       0x000000000000003b       0x3c timer.o
+ .comment       0x000000000000003b       0x3c BootPartition_wrapper.o
+ .comment       0x000000000000003b       0x3c printf.o
+ .comment       0x000000000000003b       0x3c TinyStdio/tinystdio.o
+ .comment       0x000000000000003b       0x3c cache_v8.o
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges  0x0000000000000000      0x320
+ *(.debug_aranges)
+ .debug_aranges
+                0x0000000000000000       0x30 dvrmain.o
+ .debug_aranges
+                0x0000000000000030       0x30 util.o
+ .debug_aranges
+                0x0000000000000060       0x30 flashdev_n.o
+ .debug_aranges
+                0x0000000000000090       0x30 flashdev_s.o
+ .debug_aranges
+                0x00000000000000c0       0x30 flashdev_e.o
+ .debug_aranges
+                0x00000000000000f0       0x30 rtkemmc.o
+ .debug_aranges
+                0x0000000000000120       0x30 strlen.o
+ .debug_aranges
+                0x0000000000000150       0x30 strstr.o
+ .debug_aranges
+                0x0000000000000180       0x30 strtoul.o
+ .debug_aranges
+                0x00000000000001b0       0x20 ctype.o
+ .debug_aranges
+                0x00000000000001d0       0x30 mcp.o
+ .debug_aranges
+                0x0000000000000200       0x30 otp.o
+ .debug_aranges
+                0x0000000000000230       0x30 timer.o
+ .debug_aranges
+                0x0000000000000260       0x30 BootPartition_wrapper.o
+ .debug_aranges
+                0x0000000000000290       0x30 printf.o
+ .debug_aranges
+                0x00000000000002c0       0x30 TinyStdio/tinystdio.o
+ .debug_aranges
+                0x00000000000002f0       0x30 cache_v8.o
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_info     0x0000000000000000    0x10d69
+ *(.debug_info .gnu.linkonce.wi.*)
+ .debug_info    0x0000000000000000     0x2190 dvrmain.o
+ .debug_info    0x0000000000002190      0xeeb util.o
+ .debug_info    0x000000000000307b     0x6cf7 flashdev_n.o
+ .debug_info    0x0000000000009d72     0x1a76 flashdev_s.o
+ .debug_info    0x000000000000b7e8      0xaf6 flashdev_e.o
+ .debug_info    0x000000000000c2de     0x1b3f rtkemmc.o
+ .debug_info    0x000000000000de1d       0xbb strlen.o
+ .debug_info    0x000000000000ded8       0xdb strstr.o
+ .debug_info    0x000000000000dfb3      0x153 strtoul.o
+ .debug_info    0x000000000000e106       0x51 ctype.o
+ .debug_info    0x000000000000e157      0xba8 mcp.o
+ .debug_info    0x000000000000ecff      0x1ea otp.o
+ .debug_info    0x000000000000eee9      0x3b4 timer.o
+ .debug_info    0x000000000000f29d      0x3b5 BootPartition_wrapper.o
+ .debug_info    0x000000000000f652      0x1a5 printf.o
+ .debug_info    0x000000000000f7f7      0xf15 TinyStdio/tinystdio.o
+ .debug_info    0x000000000001070c      0x65d cache_v8.o
+
+.debug_abbrev   0x0000000000000000     0x21da
+ *(.debug_abbrev)
+ .debug_abbrev  0x0000000000000000      0x2da dvrmain.o
+ .debug_abbrev  0x00000000000002da      0x3c9 util.o
+ .debug_abbrev  0x00000000000006a3      0x429 flashdev_n.o
+ .debug_abbrev  0x0000000000000acc      0x2ff flashdev_s.o
+ .debug_abbrev  0x0000000000000dcb      0x23e flashdev_e.o
+ .debug_abbrev  0x0000000000001009      0x379 rtkemmc.o
+ .debug_abbrev  0x0000000000001382       0x74 strlen.o
+ .debug_abbrev  0x00000000000013f6       0x83 strstr.o
+ .debug_abbrev  0x0000000000001479       0xc0 strtoul.o
+ .debug_abbrev  0x0000000000001539       0x3e ctype.o
+ .debug_abbrev  0x0000000000001577      0x2d0 mcp.o
+ .debug_abbrev  0x0000000000001847       0xf1 otp.o
+ .debug_abbrev  0x0000000000001938      0x140 timer.o
+ .debug_abbrev  0x0000000000001a78      0x175 BootPartition_wrapper.o
+ .debug_abbrev  0x0000000000001bed      0x110 printf.o
+ .debug_abbrev  0x0000000000001cfd      0x36d TinyStdio/tinystdio.o
+ .debug_abbrev  0x000000000000206a      0x170 cache_v8.o
+
+.debug_line     0x0000000000000000     0x2ded
+ *(.debug_line .debug_line.* .debug_line_end)
+ .debug_line    0x0000000000000000      0x449 dvrmain.o
+ .debug_line    0x0000000000000449      0x283 util.o
+ .debug_line    0x00000000000006cc      0xe07 flashdev_n.o
+ .debug_line    0x00000000000014d3      0x486 flashdev_s.o
+ .debug_line    0x0000000000001959      0x147 flashdev_e.o
+ .debug_line    0x0000000000001aa0      0x3ee rtkemmc.o
+ .debug_line    0x0000000000001e8e       0x3f strlen.o
+ .debug_line    0x0000000000001ecd       0x53 strstr.o
+ .debug_line    0x0000000000001f20       0xfc strtoul.o
+ .debug_line    0x000000000000201c       0x28 ctype.o
+ .debug_line    0x0000000000002044      0x2ad mcp.o
+ .debug_line    0x00000000000022f1       0xc1 otp.o
+ .debug_line    0x00000000000023b2      0x106 timer.o
+ .debug_line    0x00000000000024b8       0xf9 BootPartition_wrapper.o
+ .debug_line    0x00000000000025b1      0x103 printf.o
+ .debug_line    0x00000000000026b4      0x61e TinyStdio/tinystdio.o
+ .debug_line    0x0000000000002cd2      0x11b cache_v8.o
+
+.debug_frame    0x0000000000000000     0x1888
+ *(.debug_frame)
+ .debug_frame   0x0000000000000000      0x130 dvrmain.o
+ .debug_frame   0x0000000000000130      0x2b0 util.o
+ .debug_frame   0x00000000000003e0      0x668 flashdev_n.o
+ .debug_frame   0x0000000000000a48      0x190 flashdev_s.o
+ .debug_frame   0x0000000000000bd8      0x140 flashdev_e.o
+ .debug_frame   0x0000000000000d18      0x348 rtkemmc.o
+ .debug_frame   0x0000000000001060       0x28 strlen.o
+ .debug_frame   0x0000000000001088       0x28 strstr.o
+ .debug_frame   0x00000000000010b0       0x28 strtoul.o
+ .debug_frame   0x00000000000010d8      0x2c8 mcp.o
+ .debug_frame   0x00000000000013a0       0x98 otp.o
+ .debug_frame   0x0000000000001438       0xa8 timer.o
+ .debug_frame   0x00000000000014e0       0xa8 BootPartition_wrapper.o
+ .debug_frame   0x0000000000001588       0x40 printf.o
+ .debug_frame   0x00000000000015c8      0x270 TinyStdio/tinystdio.o
+ .debug_frame   0x0000000000001838       0x50 cache_v8.o
+
+.debug_str      0x0000000000000000     0x2a5e
+ *(.debug_str)
+ .debug_str     0x0000000000000000     0x1387 dvrmain.o
+                                       0x14cc (size before relaxing)
+ .debug_str     0x0000000000001387      0x2a9 util.o
+                                        0x4f3 (size before relaxing)
+ .debug_str     0x0000000000001630      0x815 flashdev_n.o
+                                        0xb36 (size before relaxing)
+ .debug_str     0x0000000000001e45       0xae flashdev_s.o
+                                        0x2ff (size before relaxing)
+ .debug_str     0x0000000000001ef3      0x29a flashdev_e.o
+                                        0x4a2 (size before relaxing)
+ .debug_str     0x000000000000218d      0x2ab rtkemmc.o
+                                        0x6c6 (size before relaxing)
+ .debug_str     0x0000000000002438        0x9 strlen.o
+                                        0x158 (size before relaxing)
+ .debug_str     0x0000000000002441       0x10 strstr.o
+                                        0x158 (size before relaxing)
+ .debug_str     0x0000000000002451       0x26 strtoul.o
+                                        0x17b (size before relaxing)
+ .debug_str     0x0000000000002477        0x8 ctype.o
+                                         0xe5 (size before relaxing)
+ .debug_str     0x000000000000247f       0xfb mcp.o
+                                        0x2c6 (size before relaxing)
+ .debug_str     0x000000000000257a       0xae otp.o
+                                        0x22a (size before relaxing)
+ .debug_str     0x0000000000002628       0x77 timer.o
+                                        0x1d4 (size before relaxing)
+ .debug_str     0x000000000000269f       0x78 BootPartition_wrapper.o
+                                        0x291 (size before relaxing)
+ .debug_str     0x0000000000002717       0x6b printf.o
+                                        0x1db (size before relaxing)
+ .debug_str     0x0000000000002782      0x197 TinyStdio/tinystdio.o
+                                        0x3ba (size before relaxing)
+ .debug_str     0x0000000000002919      0x145 cache_v8.o
+                                        0x2f4 (size before relaxing)
+
+.debug_loc      0x0000000000000000    0x1282b
+ *(.debug_loc)
+ .debug_loc     0x0000000000000000      0x720 dvrmain.o
+ .debug_loc     0x0000000000000720      0xcd0 util.o
+ .debug_loc     0x00000000000013f0     0x7f22 flashdev_n.o
+ .debug_loc     0x0000000000009312     0x1fb7 flashdev_s.o
+ .debug_loc     0x000000000000b2c9      0xb9e flashdev_e.o
+ .debug_loc     0x000000000000be67      0xfda rtkemmc.o
+ .debug_loc     0x000000000000ce41       0x8c strlen.o
+ .debug_loc     0x000000000000cecd       0xae strstr.o
+ .debug_loc     0x000000000000cf7b      0x46a strtoul.o
+ .debug_loc     0x000000000000d3e5     0x1bdf mcp.o
+ .debug_loc     0x000000000000efc4      0x238 otp.o
+ .debug_loc     0x000000000000f1fc      0x46f timer.o
+ .debug_loc     0x000000000000f66b      0x3fc BootPartition_wrapper.o
+ .debug_loc     0x000000000000fa67       0x95 printf.o
+ .debug_loc     0x000000000000fafc     0x27e2 TinyStdio/tinystdio.o
+ .debug_loc     0x00000000000122de      0x54d cache_v8.o
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges   0x0000000000000000     0x1980
+ *(.debug_ranges)
+ .debug_ranges  0x0000000000000000       0xa0 dvrmain.o
+ .debug_ranges  0x00000000000000a0       0xd0 util.o
+ .debug_ranges  0x0000000000000170      0xf30 flashdev_n.o
+ .debug_ranges  0x00000000000010a0      0x4c0 flashdev_s.o
+ .debug_ranges  0x0000000000001560      0x170 rtkemmc.o
+ .debug_ranges  0x00000000000016d0      0x130 mcp.o
+ .debug_ranges  0x0000000000001800      0x120 TinyStdio/tinystdio.o
+ .debug_ranges  0x0000000000001920       0x60 cache_v8.o
+
+.debug_macro
+ *(.debug_macro)
+
+.ARM.attributes
+ *(.ARM.attributes)
+ *(.gnu.attributes)
+
+.note.gnu.arm.ident
+ *(.note.gnu.arm.ident)
+
+/DISCARD/
+ *(.note.GNU-stack)
+ *(.gnu_debuglink)
+ *(.gnu.lto_*)
+OUTPUT(dvrboot.exe elf64-littleaarch64)

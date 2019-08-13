@@ -1,1 +1,0 @@
-- compatible: one of "realtek,rtk129x-pinctrl", "realtek,rtk139x-pinctrl"

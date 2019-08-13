@@ -1,5 +1,0 @@
-config RTK_WORKAROUND_ARM_PMUV3
-	bool
-	depends on ARM_PMUV3 && ARCH_RTD139x
-	default y
-

@@ -9,8 +9,8 @@ board="bpi-m4"
 kernel="4.9.119-BPI-M4-Kernel"
 headers="linux-headers-4.9.119-BPI-M4-Kernel"
 MODE=$1
-BPILINUX=linux-rt
-BPIPACK=rt-pack
+BPILINUX=linux-rtk
+BPIPACK=rtk-pack
 BPISOC=rtk
 RET=0
 
@@ -44,7 +44,7 @@ R="${SD}/BPI-ROOT"
 	cp -a $T/${BPILINUX}/arch/arm64/boot/Image $B/bananapi/${board}/linux/uImage
 	cp -a $T/${BPILINUX}/arch/arm64/boot/dts/realtek/rtd139x/rtd-1395-bananapi-m4-*.dtb $B/bananapi/${board}/linux/
 	#
-	cp -a $T/u-boot-rt/u-boot.bin $B/bananapi/${board}/linux/u-boot-bpi-m4.bin
+	cp -a $T/u-boot-rtk/u-boot.bin $B/bananapi/${board}/linux/u-boot-bpi-m4.bin
 	#
 	## copy files to BPI-ROOT
 	#

@@ -1,0 +1,52 @@
+Realtek CPU Driver DT-bindings
+==============================
+
+DVFS node (platform device node)
+-------------------------------
+
+Required properties :
+- compatible : shall contain only any of the following:
+	"realtek,rtd129x-dvfs",
+	"realtek,rtd139x-dvfs",
+	"realtek,cpu-dvfs",
+	"realtek,dummy-dvfs".
+
+CPU node
+--------
+
+When using the dummy cpufreq driver, please put the following properties in the DVFS node.
+
+- OPP binding:
+  See also 'Documentation/devicetree/bindings/opp/opp.txt'
+
+  Only support for operating-points-v2.
+
+- CPU Cooling Dev binding (optional):
+  See also 'Documentation/devicetree/bindings/thermal/thermal.txt'
+
+- Clock binding:
+  See also 'Documentation/devicetree/bindings/regulator/cpu.txt'
+
+- Regulator binding (optional):
+  See also 'Documentation/devicetree/bindings/regulator/regulator.txt'
+
+Exmaple:
+	cpus {
+		cpu@0 {
+			clocks = <&cc CC_PLL_SCPU>;
+                        cpu-supply = <&cpu_supp>;
+			operating-points-v2 = <&cpu_opps>;
+			cooling-min-level = <0>;
+			cooling-max-level = <11>;
+			#cooling-cells = <2>; /* min followed by max */
+		};
+	};
+
+	cpu_opps: opp-table-0 {
+		...
+	};
+
+	dvfs {
+		compatible = "realtek,rtk129x-dvfs";
+	};
+

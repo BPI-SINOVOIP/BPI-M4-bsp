@@ -1,0 +1,69 @@
+#
+## uEnv.txt
+#
+bpi=bananapi
+board=bpi-m4
+chip=RTD1395
+service=linux
+#
+##
+#
+kernel=uImage
+#dtb=rtd-1395-bananapi-m4-${dramsize}.dtb;
+rootfs=uInitrd
+audio=bluecore.audio
+#
+##
+#
+kernel_loadaddr=0x03000000
+audio_loadaddr=0x0f900000
+blue_logo_loadaddr=0x30000000
+fdt_loadaddr=0x02100000
+rootfs_loadaddr=0x31400000
+#
+## ${bpi}/${board}/${service}/${kernel}
+#
+#
+#sd_boot_dtb=bananapi/bpi-m4/linux/rtd-1395-bananapi-m4-${dram_size}.dtb
+#sd_boot_rootfs=bananapi/bpi-m4/linux/uInitrd
+#sd_vmlinux=bananapi/bpi-m4/linux/uImage
+#sd_audio=bananapi/bpi-m4/linux/bluecore.audio
+#
+##
+#
+#root=/dev/ram
+# SD / eMMC
+root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait 
+#root=/dev/mmcblk2p2 rw rootfstype=ext4 rootwait 
+# USB / SATA
+#root=/dev/sda2 rw rootfstype=ext4 rootwait 
+#
+console=earlycon=uart8250,mmio32,0x98007800 console=tty1 fbcon=map:0 console=ttyS0,115200
+bootopts=loglevel=8 initcall_debug=0
+#
+##
+#
+abootargs=setenv bootargs board=${board} console=${console} root=${root} fsck.mode=force fsck.repair=yes service=${service} sdmmc_on=${sdmmc_on} ${bootopts} 
+#
+##
+#
+ahello=echo Banana Pi ${board} chip: $chip Service: $service
+#
+##
+#
+#aboot=if fatload $device $partition $rootfs_loadaddr ${bpi}/berryboot.img; gosd;
+aboot=go all;
+#
+aload_dtb=if test $dram_size = 1GB; then setenv dtb rtd-1395-bananapi-m4-1GB.dtb; fi; if test $dram_size = 2GB; then setenv dtb rtd-1395-bananapi-m4-2GB.dtb; fi; fatload $device $partition ${fdt_loadaddr} ${bpi}/${board}/${service}/${dtb}
+aload_kernel=fatload $device $partition ${kernel_loadaddr} ${bpi}/${board}/${service}/${kernel}
+aload_rootfs=fatload $device $partition ${rootfs_loadaddr} ${bpi}/${board}/${service}/${rootfs}
+aload_audio=fatload $device $partition ${audio_loadaddr} ${bpi}/${board}/${service}/${audio}
+#
+##
+#
+#uenvcmd=run ahello abootargs aboot
+uenvcmd=run ahello abootargs aload_dtb aload_kernel aload_rootfs aload_audio aboot
+usercmd=run ahello abootargs
+#
+## END
+#

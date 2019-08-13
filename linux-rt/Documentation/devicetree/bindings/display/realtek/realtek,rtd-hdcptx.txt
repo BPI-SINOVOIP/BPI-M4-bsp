@@ -1,1 +1,0 @@
-- compatible: "realtek,rtk129x-hdcptx", "realtek,rtk139x-hdcptx"

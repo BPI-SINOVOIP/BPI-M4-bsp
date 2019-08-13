@@ -1,0 +1,20 @@
+config DM_RTC
+	bool "Enable Driver Model for RTC drivers"
+	depends on DM
+	help
+	  Enable drver model for real-time-clock drivers. The RTC uclass
+	  then provides the rtc_get()/rtc_set() interface, delegating to
+	  drivers to perform the actual functions. See rtc.h for a
+	  description of the API.
+
+config RTC_RTD1295
+	bool "Enable Realtek RTD1295 RTC driver"
+	help
+	  This config turns on RTC driver in uboot.
+
+config RTK_RTC_BASE_YEAR
+	int "RTC timer base year"
+	default 2016
+	depends on RTC_RTD1295
+	help
+	  Start Year of RTK RTC Timer.

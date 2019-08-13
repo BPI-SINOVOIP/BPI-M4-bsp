@@ -16,7 +16,7 @@ set -e
 
 set -e
 
-LINUX="$TOPDIR/linux-rt"
+LINUX="$TOPDIR/linux-rtk"
 DEST="$LINUX/output"
 
 echo "Using Linux from $LINUX ..."

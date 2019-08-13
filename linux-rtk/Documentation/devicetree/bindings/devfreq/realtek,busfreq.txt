@@ -1,0 +1,85 @@
+Realtek Bus DFS DT-bindings
+===========================
+
+BUSFreq node
+------------
+
+Required properties :
+
+- compatible : shall contain the following :
+	"realtek,busfreq".
+
+- operating-points-v2 : a phandle to a operating-points-v2.
+
+- clocks : a phandle to bus clock
+
+- devfreq-events: one or more phandles to devfreq event device(s).
+
+- method: shall contain a string,
+	"ltl" for long term load calculator,
+	"passive" for passive.
+
+- devfreq: only required when method is "passive", a phandle of a reference
+	devfreq device.
+
+Optional propertise :
+
+- ltl-data: data for ltl governor
+
+
+Bandwith Event node
+-------------------
+
+Required properties :
+
+- compatible:  shall contain the following :
+	"realtek,bw-event-dcsys", for a dcsys event,
+	"realtek,bw-event-dmc", for a dmc event,
+
+	and a fixed 2nd compatible
+
+	"devfreq-event".
+
+- perfcnts: shall contain a phandle to a perfcnt.
+
+
+Example :
+
+	event0: dcsys-bandwitdh-event {
+		compatible = "realtek,bw-event-dcsys",
+			"devfreq-event";
+		perfcnts = <&pc0>;
+		status = "okay";
+	};
+
+	event1: dmc-bandwitdh-event {
+		compatible = "realtek,bw-event-dmc",
+			"devfreq-event";
+		perfcnts = <&pc1>;
+		status = "okay";
+	};
+
+	dcsb-dfs {
+		compatible = "realtek,busfreq";
+		clocks = <&cc CC_PLL_DCSB>;
+		devfreq-events = <&event0>, <&event1>;
+		operating-points-v2 = <&dcsb_opps>;
+		ltl-data = <0 0 0>;
+		status = "okay";
+
+		dcsb_opps: opp-table {
+			compatible = "operating-points-v2";
+			opp-low {
+				opp-hz = /bits/ 64 <275000000>;
+				clock-latency-ns = <150000>;
+				suspend-opp;
+			};
+			opp-high {
+				opp-hz = /bits/ 64 <550000000>;
+				clock-latency-ns = <150000>;
+			};
+		};
+	};
+
+
+

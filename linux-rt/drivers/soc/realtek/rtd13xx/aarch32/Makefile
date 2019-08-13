@@ -1,1 +1,0 @@
-obj-$(CONFIG_ARCH_RTD13xx) += rtd13xx_cpu_wrapper.o rtd13xx_cpu_hotplug.o
