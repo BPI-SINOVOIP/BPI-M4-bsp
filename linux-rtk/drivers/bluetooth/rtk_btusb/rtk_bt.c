@@ -35,10 +35,16 @@
 #include "rtk_bt.h"
 #include "rtk_misc.h"
 
-#define VERSION "3.1"
+#define VERSION "3.1.a2fd257.20190620-164204"
 
 #ifdef BTCOEX
 #include "rtk_coex.h"
+#endif
+
+#ifdef RTKBT_SWITCH_PATCH
+#include <linux/semaphore.h>
+#include <net/bluetooth/hci_core.h>
+DEFINE_SEMAPHORE(switch_sem);
 #endif
 
 #if HCI_VERSION_CODE >= KERNEL_VERSION(3, 7, 1)
@@ -831,6 +837,21 @@ static int btusb_close(struct hci_dev *hdev)
 failed:
 	mdelay(URB_CANCELING_DELAY_MS);	// Added by Realtek
 	usb_scuttle_anchored_urbs(&data->deferred);
+
+#ifdef RTKBT_SWITCH_PATCH
+	down(&switch_sem);
+	if (data->context) {
+		struct api_context *ctx = data->context;
+
+		if (ctx->flags & RTLBT_CLOSE) {
+			ctx->flags &= ~RTLBT_CLOSE;
+			ctx->status = 0;
+			complete(&ctx->done);
+		}
+	}
+	up(&switch_sem);
+#endif
+
 	return 0;
 }
 
@@ -1148,8 +1169,10 @@ int rtkbt_pm_notify(struct notifier_block *notifier,
 	struct hci_dev *hdev;
 	/* int err; */
 #ifdef RTKBT_SWITCH_PATCH
-	u8 cmd[16];
+	u8 *cmd;
 	int result;
+	static u8 hci_state = 0;
+	struct api_context ctx;
 #endif
 
 	data = container_of(notifier, struct btusb_data, pm_notifier);
@@ -1188,10 +1211,32 @@ int rtkbt_pm_notify(struct notifier_block *notifier,
 		}
 
 #ifdef RTKBT_SWITCH_PATCH
-		queue_work(hdev->req_workqueue, &hdev->power_off.work);
+		if (test_bit(HCI_UP, &hdev->flags)) {
+			unsigned long expire;
 
-		/* TODO: How to make sure that the power off is done */
-		msleep(200);
+			init_completion(&ctx.done);
+			hci_state = 1;
+
+			down(&switch_sem);
+			data->context = &ctx;
+			ctx.flags = RTLBT_CLOSE;
+			queue_work(hdev->req_workqueue, &hdev->power_off.work);
+			up(&switch_sem);
+
+			expire = msecs_to_jiffies(1000);
+			if (!wait_for_completion_timeout(&ctx.done, expire))
+				RTKBT_ERR("hdev close timeout");
+
+			down(&switch_sem);
+			data->context = NULL;
+			up(&switch_sem);
+		}
+
+		cmd = kzalloc(16, GFP_ATOMIC);
+		if (!cmd) {
+			RTKBT_ERR("Can't allocate memory for cmd");
+			return -ENOMEM;
+		}
 
 		/* Clear patch */
 		cmd[0] = 0x66;
@@ -1199,8 +1244,16 @@ int rtkbt_pm_notify(struct notifier_block *notifier,
 		cmd[2] = 0x00;
 
 		result = __rtk_send_hci_cmd(udev, cmd, 3);
-		msleep(100);
+		kfree(cmd);
+		msleep(100); /* From FW colleague's recommendation */
 		result = download_lps_patch(intf);
+
+		/* Tell the controller to wake up host if received special
+		 * advertising packet
+		 */
+		set_scan(intf);
+
+		/* Send special vendor commands */
 #endif
 
 		break;
@@ -1215,14 +1268,25 @@ int rtkbt_pm_notify(struct notifier_block *notifier,
 		 * } */
 
 #ifdef RTKBT_SWITCH_PATCH
+		cmd = kzalloc(16, GFP_ATOMIC);
+		if (!cmd) {
+			RTKBT_ERR("Can't allocate memory for cmd");
+			return -ENOMEM;
+		}
+
 		/* Clear patch */
 		cmd[0] = 0x66;
 		cmd[1] = 0xfc;
 		cmd[2] = 0x00;
 
 		result = __rtk_send_hci_cmd(udev, cmd, 3);
-		msleep(100);
+		kfree(cmd);
+		msleep(100); /* From FW colleague's recommendation */
 		result = download_patch(intf);
+		if (hci_state) {
+			hci_state = 0;
+			queue_work(hdev->req_workqueue, &hdev->power_on);
+		}
 #endif
 
 #if BTUSB_RPM
@@ -1472,7 +1536,7 @@ static int btusb_suspend(struct usb_interface *intf, pm_message_t message)
 		  message.event, data->suspend_count);
 	if (!test_bit(HCI_RUNNING, &data->hdev->flags)) {
 		RTKBT_INFO("%s: hdev is not HCI_RUNNING", __func__);
-		/* set_btoff(data->intf); */
+		/* set_scan(data->intf); */
 	}
 	/*******************************/
 
@@ -1605,6 +1669,9 @@ static struct usb_driver btusb_driver = {
 #ifdef CONFIG_PM
 	.suspend = btusb_suspend,
 	.resume = btusb_resume,
+#ifdef RTKBT_SWITCH_PATCH
+	.reset_resume = btusb_resume,
+#endif
 #endif
 	.id_table = btusb_table,
 	.supports_autosuspend = 1,

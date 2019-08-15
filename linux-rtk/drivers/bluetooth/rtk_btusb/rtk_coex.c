@@ -242,6 +242,22 @@ static int8_t psm_to_profile_index(uint16_t psm)
 	}
 }
 
+static rtk_prof_info *find_by_psm(u16 psm)
+{
+	struct list_head *head = &btrtl_coex.profile_list;
+	struct list_head *iter = NULL;
+	struct list_head *temp = NULL;
+	rtk_prof_info *desc = NULL;
+
+	list_for_each_safe(iter, temp, head) {
+		desc = list_entry(iter, rtk_prof_info, list);
+		if (desc->psm == psm)
+			return desc;
+	}
+
+	return NULL;
+}
+
 static void rtk_check_setup_timer(int8_t profile_index)
 {
 	if (profile_index == profile_a2dp) {
@@ -376,7 +392,7 @@ static uint8_t list_allocate_add(uint16_t handle, uint16_t psm,
 	rtk_prof_info *pprof_info = NULL;
 
 	if (profile_index < 0) {
-		RTKBT_ERR("PSM(0x%x) do not need parse", psm);
+		RTKBT_ERR("PSM 0x%x do not need parse", psm);
 		return FALSE;
 	}
 
@@ -385,6 +401,20 @@ static uint8_t list_allocate_add(uint16_t handle, uint16_t psm,
 	if (NULL == pprof_info) {
 		RTKBT_ERR("list_allocate_add: allocate error");
 		return FALSE;
+	}
+
+	/* Check if it is the second l2cap connection for a2dp
+	 * a2dp signal channel will be created first than media channel.
+	 */
+	if (psm == PSM_AVDTP) {
+		rtk_prof_info *pinfo = find_by_psm(psm);
+		if (!pinfo) {
+			pprof_info->flags = A2DP_SIGNAL;
+			RTKBT_INFO("%s: Add a2dp signal channel", __func__);
+		} else {
+			pprof_info->flags = A2DP_MEDIA;
+			RTKBT_INFO("%s: Add a2dp media channel", __func__);
+		}
 	}
 
 	pprof_info->handle = handle;
@@ -665,6 +695,11 @@ static void update_profile_connection(rtk_conn_prof * phci_conn,
 		}
 		phci_conn->profile_refcount[profile_index]++;
 	} else {
+		if (!btrtl_coex.profile_refcount[profile_index]) {
+			RTKBT_WARN("profile %u refcount is already zero",
+				   profile_index);
+			return;
+		}
 		btrtl_coex.profile_refcount[profile_index]--;
 		RTKBT_DBG("%s: btrtl_coex.profile_refcount[%x] = %x",
 				__func__, profile_index,
@@ -922,36 +957,48 @@ static void packets_count(uint16_t handle, uint16_t scid, uint16_t length,
 			return;
 		}
 
-		if ((prof_info->profile_index == profile_a2dp) && (length > 100)) {	//avdtp media data
+		/* avdtp media data */
+		if (prof_info->profile_index == profile_a2dp &&
+		    prof_info->flags == A2DP_MEDIA) {
 			if (!is_profile_busy(profile_a2dp)) {
 				struct sbc_frame_hdr *sbc_header;
 				struct rtp_header *rtph;
 				u8 bitpool;
+
 				update_profile_state(profile_a2dp, TRUE);
 				if (!direction) {
-					btrtl_coex.profile_bitmap |= BIT(profile_sink);
-					hci_conn->profile_bitmap |= BIT(profile_sink);
-					update_profile_connection(hci_conn, profile_sink, 1);
+					if (!(hci_conn->profile_bitmap & BIT(profile_sink))) {
+						btrtl_coex.profile_bitmap |= BIT(profile_sink);
+						hci_conn->profile_bitmap |= BIT(profile_sink);
+						update_profile_connection(hci_conn, profile_sink, 1);
+					}
 					update_profile_state(profile_sink, TRUE);
 				}
-				rtph = (struct rtp_header *)user_data;
 
-				RTKBT_DBG("rtp: v %u, cc %u, pt %u",
-					  rtph->v, rtph->cc, rtph->pt);
-				/* move forward */
-				user_data += sizeof(struct rtp_header) +
-					rtph->cc * 4 + 1;
+				/* We assume it is SBC if the packet length
+				 * is bigger than 100 bytes
+				 */
+				if (length > 100) {
+					RTKBT_INFO("Length %u", length);
+					rtph = (struct rtp_header *)user_data;
 
-				/* point to the sbc frame header */
-				sbc_header = (struct sbc_frame_hdr *)user_data;
-				bitpool = sbc_header->bitpool;
+					RTKBT_DBG("rtp: v %u, cc %u, pt %u",
+						  rtph->v, rtph->cc, rtph->pt);
+					/* move forward */
+					user_data += sizeof(struct rtp_header) +
+						rtph->cc * 4 + 1;
 
-				print_sbc_header(sbc_header);
+					/* point to the sbc frame header */
+					sbc_header = (struct sbc_frame_hdr *)user_data;
+					bitpool = sbc_header->bitpool;
 
-				RTKBT_DBG("bitpool %u", bitpool);
+					print_sbc_header(sbc_header);
 
-				rtk_vendor_cmd_to_fw(HCI_VENDOR_SET_BITPOOL,
-						1, &bitpool);
+					RTKBT_DBG("bitpool %u", bitpool);
+
+					rtk_vendor_cmd_to_fw(HCI_VENDOR_SET_BITPOOL,
+							1, &bitpool);
+				}
 			}
 			btrtl_coex.a2dp_packet_count++;
 		}
@@ -1831,12 +1878,16 @@ static void disconn_acl(u16 handle, struct rtl_hci_conn *conn)
 		if (handle == prof_info->handle && prof_info->scid
 		    && prof_info->dcid) {
 			RTKBT_DBG("hci disconn, hndl %x, psm %x, dcid %x, "
-				  "scid %x", prof_info->handle,
+				  "scid %x, profile %u", prof_info->handle,
 				  prof_info->psm, prof_info->dcid,
-				  prof_info->scid);
+				  prof_info->scid, prof_info->profile_index);
 			//If both scid and dcid > 0, L2cap connection is exist.
 			update_profile_connection(conn,
 					prof_info->profile_index, FALSE);
+			if ((prof_info->flags & A2DP_MEDIA) &&
+			    (conn->profile_bitmap & BIT(profile_sink)))
+				update_profile_connection(conn, profile_sink,
+							  FALSE);
 			delete_profile_from_hash(prof_info);
 		}
 	}
@@ -1847,7 +1898,7 @@ static void rtk_handle_disconnect_complete_evt(u8 * p)
 {
 	u16 handle;
 	u8 status;
-	/* u8 reason; */
+	u8 reason;
 	rtk_conn_prof *hci_conn = NULL;
 
 	if (btrtl_coex.ispairing) {	//for slave: connection will be disconnected if authentication fail
@@ -1858,8 +1909,10 @@ static void rtk_handle_disconnect_complete_evt(u8 * p)
 
 	status = *p++;
 	STREAM_TO_UINT16(handle, p);
+	reason = *p;
 
-	/* reason = *p; */
+	RTKBT_INFO("disconn cmpl evt: status 0x%02x, handle %04x, reason 0x%02x",
+		   status, handle, reason);
 
 	if (status == 0) {
 		RTKBT_DBG("process disconn complete event.");

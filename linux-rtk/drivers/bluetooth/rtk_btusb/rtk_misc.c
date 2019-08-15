@@ -67,16 +67,17 @@
 static bool customer_bdaddr = false;
 #endif
 
-#define EXTRA_CONFIG_OPTION
-#ifdef EXTRA_CONFIG_OPTION
+struct cfg_list_item {
+	struct list_head list;
+	u16 offset;
+	u8 len;
+	u8 data[0];
+};
+
+static struct list_head list_configs;
+
 #define EXTRA_CONFIG_FILE	"/opt/rtk_btconfig.txt"
-#define CONFIG_TXPOWER	(1 << 0)
-#define CONFIG_XTAL	(1 << 1)
-static u32 config_flags;
-static u8 txpower_cfg[4];
-static u8 txpower_len;
-static u8 xtal_cfg;
-#endif
+static struct list_head list_extracfgs;
 
 #define CMD_CMP_EVT		    0x0e
 #define PKT_LEN			    300
@@ -90,7 +91,7 @@ static u8 xtal_cfg;
  * if host is going to suspend state, it should send this command to
  * Controller. Controller will scan the special advertising packet
  * which indicates Controller to wake up host */
-#define BTOFF_OPCODE	    0xfc28
+#define STARTSCAN_OPCODE	    0xfc28
 #define TRUE			    1
 #define FALSE			    0
 #define CMD_HDR_LEN		    sizeof(struct hci_command_hdr)
@@ -151,7 +152,10 @@ uint16_t project_id[] = {
 	ROM_LMP_8822b,
 	ROM_LMP_8723b, /* RTL8723DU */
 	ROM_LMP_8821a, /* RTL8821CU */
-	ROM_LMP_NONE
+	ROM_LMP_NONE,
+	ROM_LMP_NONE,
+	ROM_LMP_8822b, /* RTL8822CU */
+	ROM_LMP_8761a, /* index 14 for 8761BU */
 };
 
 enum rtk_endpoit {
@@ -161,12 +165,13 @@ enum rtk_endpoit {
 	ISOC_EP = 3
 };
 
-enum rtk_chip_type {
-	RTLPREVI = 0,
-	RTL8822B,
-	RTL8723D,
-	RTL8821C
-};
+/* software id */
+#define RTLPREVIOUS	0x00
+#define RTL8822BU	0x70
+#define RTL8723DU	0x71
+#define RTL8821CU	0x72
+#define RTL8822CU	0x73
+#define RTL8761BU	0x74
 
 typedef struct {
 	uint16_t prod_id;
@@ -179,7 +184,7 @@ typedef struct {
 	uint8_t *fw_cache1;
 	int	 fw_len1;
 
-	enum rtk_chip_type chip_type;
+	u8       chip_type;
 } patch_info;
 
 typedef struct {
@@ -276,6 +281,7 @@ static patch_info fw_patch_table[] = {
 	{0xB761, 0x8761, "mp_rtl8761a_fw", "rtl8761au_fw", "rtl8761a_config", NULL, 0},	/* RTL8761AU + 8192EE */
 	{0x8761, 0x8761, "mp_rtl8761a_fw", "rtl8761au_fw", "rtl8761a_config", NULL, 0},	/* RTL8761AU + 8192EE for LI */
 	{0x8A60, 0x8761, "mp_rtl8761a_fw", "rtl8761au_fw", "rtl8761a_config", NULL, 0},	/* RTL8761AU + 8812AE */
+	{0x3527, 0x8761, "mp_rtl8761a_fw", "rtl8761au_fw", "rtl8761a_config", NULL, 0},	/* RTL8761AU + 8814AE */
 
 	{0x8821, 0x8821, "mp_rtl8821a_fw", "rtl8821a_fw", "rtl8821a_config", NULL, 0},	/* RTL8821AE */
 	{0x0821, 0x8821, "mp_rtl8821a_fw", "rtl8821a_fw", "rtl8821a_config", NULL, 0},	/* RTL8821AE */
@@ -285,12 +291,18 @@ static patch_info fw_patch_table[] = {
 	{0x3461, 0x8821, "mp_rtl8821a_fw", "rtl8821a_fw", "rtl8821a_config", NULL, 0},	/* RTL8821AE */
 	{0x3462, 0x8821, "mp_rtl8821a_fw", "rtl8821a_fw", "rtl8821a_config", NULL, 0},	/* RTL8821AE */
 
-	{0xb00b, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
-	{0xb822, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
 	{0xb82c, 0x8822, "mp_rtl8822bu_fw", "rtl8822bu_fw", "rtl8822bu_config", NULL, 0}, /* RTL8822BU */
 	{0xd723, 0x8723, "mp_rtl8723du_fw", "rtl8723du_fw", "rtl8723du_config", NULL, 0}, /* RTL8723DU */
 	{0xb820, 0x8821, "mp_rtl8821cu_fw", "rtl8821cu_fw", "rtl8821cu_config", NULL, 0 }, /* RTL8821CU */
 	{0xc820, 0x8821, "mp_rtl8821cu_fw", "rtl8821cu_fw", "rtl8821cu_config", NULL, 0 }, /* RTL8821CU */
+
+	{0xc82c, 0x8822, "mp_rtl8822cu_fw", "rtl8822cu_fw", "rtl8822cu_config", NULL, 0 }, /* RTL8822CU */
+	{0xc822, 0x8822, "mp_rtl8822cu_fw", "rtl8822cu_fw", "rtl8822cu_config", NULL, 0 }, /* RTL8822CE */
+
+	{0xb00b, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
+	{0xb822, 0x8822, "mp_rtl8822b_fw", "rtl8822b_fw", "rtl8822b_config", NULL, 0}, /* RTL8822BE */
+
+	{0x8771, 0x8761, "mp_rtl8761bu_fw", "rtl8761bu_fw", "rtl8761bu_config", NULL, 0}, /* RTL8761BU only */
 
 /* NOTE: must append patch entries above the null entry */
 	{0, 0, NULL, NULL, NULL, NULL, 0}
@@ -389,104 +401,94 @@ static inline struct inode *file_inode(const struct file *f)
 }
 #endif
 
-#ifdef EXTRA_CONFIG_OPTION
-static inline int xtalset_supported(patch_info *info)
+static int config_lists_init(void)
 {
-	if (info->chip_type != RTL8822B &&
-	    info->chip_type != RTL8723D &&
-	    info->chip_type != RTL8821C)
-		return 0;
-	return 1;
+	INIT_LIST_HEAD(&list_configs);
+	INIT_LIST_HEAD(&list_extracfgs);
+
+	return 0;
 }
 
-static void line_proc(char *buff, int len)
+static void config_lists_free(void)
+{
+	struct list_head *iter;
+	struct list_head *tmp;
+	struct list_head *head;
+	struct cfg_list_item *n;
+
+	if (!list_empty(&list_extracfgs))
+		list_splice_tail(&list_extracfgs, &list_configs);
+	head = &list_configs;
+	list_for_each_safe(iter, tmp, head) {
+		n = list_entry(iter, struct cfg_list_item, list);
+		if (n) {
+			list_del(&n->list);
+			kfree(n);
+		}
+	}
+
+	INIT_LIST_HEAD(&list_configs);
+	INIT_LIST_HEAD(&list_extracfgs);
+}
+
+static void line_process(char *buf, int len)
 {
 	char *argv[32];
-	int nargs = 0;
+	int argc = 0;
+	unsigned long offset;
+	u8 l;
+	u8 i = 0;
+	char *ptr = buf;
+	char *head = buf;
+	struct cfg_list_item *item;
 
-	while (nargs < 32) {
-		/* skip any white space */
-		while ((*buff == ' ') || (*buff == '\t') ||
-			*buff == ',') {
-			++buff;
-		}
-
-		if (*buff == '\0') {
-			/* end of line, no more args */
-			argv[nargs] = NULL;
+	while ((ptr = strsep(&head, ", \t")) != NULL) {
+		if (!ptr[0])
+			continue;
+		argv[argc++] = ptr;
+		if (argc >= 32) {
+			RTKBT_WARN("%s: Config item is too long", __func__);
 			break;
 		}
-
-		/* begin of argument string */
-		argv[nargs++] = buff;
-
-		/* find end of string */
-		while (*buff && (*buff != ' ') && (*buff != '\t')) {
-			++buff;
-		}
-
-		if (*buff == '\r' || *buff == '\n')
-			++buff;
-
-		if (*buff == '\0') {
-			/* end of line, no more args */
-			argv[nargs] = NULL;
-			break;
-		}
-
-		*buff++ = '\0';	/* terminate current arg */
 	}
 
-	/* valid config */
-	if (nargs >= 4) {
-		unsigned long offset;
-		u8 l;
-		u8 i = 0;
-
-		offset = simple_strtoul(argv[0], NULL, 16);
-		offset = offset | (simple_strtoul(argv[1], NULL, 16) << 8);
-		RTKBT_INFO("extra config offset %04lx", offset);
-		l = simple_strtoul(argv[2], NULL, 16);
-		if (l != (u8)(nargs - 3)) {
-			RTKBT_ERR("invalid len %u", l);
-			return;
-		}
-
-		if (offset == 0x015b && l <= 4) {
-			/* Tx power */
-			for (i = 0; i < l; i++)
-				txpower_cfg[i] = (u8)simple_strtoul(argv[3 + i],
-								    NULL, 16);
-			txpower_len = l;
-			config_flags |= CONFIG_TXPOWER;
-		} else if (offset == 0x01e6) {
-			/* XTAL for 8822B, 8821C 8723D */
-			xtal_cfg = (u8)simple_strtoul(argv[3], NULL, 16);
-			config_flags |= CONFIG_XTAL;
-		} else {
-			RTKBT_ERR("extra config %04lx is not supported", offset);
-		}
+	if (argc < 4) {
+		RTKBT_WARN("%s: Invalid Config item, ignore", __func__);
+		return;
 	}
+
+	offset = simple_strtoul(argv[0], NULL, 16);
+	offset = offset | (simple_strtoul(argv[1], NULL, 16) << 8);
+	RTKBT_INFO("extra config offset %04lx", offset);
+	l = (u8)simple_strtoul(argv[2], NULL, 16);
+	if (l != (u8)(argc - 3)) {
+		RTKBT_ERR("invalid len %u", l);
+		return;
+	}
+
+	item = kzalloc(sizeof(*item) + l, GFP_KERNEL);
+	if (!item) {
+		RTKBT_WARN("%s: Cannot alloc mem for item, %04lx, %u", __func__,
+			   offset, l);
+		return;
+	}
+
+	item->offset = (u16)offset;
+	item->len = l;
+	for (i = 0; i < l; i++)
+		item->data[i] = (u8)simple_strtoul(argv[3 + i], NULL, 16);
+	list_add_tail(&item->list, &list_extracfgs);
 }
 
-static void config_proc(u8 *buff, int len)
+static void config_process(u8 *buff, int len)
 {
-	u8 *head = buff;
-	u8 *ptr = buff;
-	int l;
+	char *head = (void *)buff;
+	char *ptr = (void *)buff;
 
-	while (len > 0) {
-		ptr = strchr(head, '\n');
-		if (!ptr)
-			break;
-		*ptr++ = '\0';
-		while (*head == ' ' || *head == '\t')
-			head++;
-		l = ptr - head;
-		if (l > 0 && *head != '#')
-			line_proc(head, l);
-		head = ptr;
-		len -= l;
+	while ((ptr = strsep(&head, "\n\r")) != NULL) {
+		if (!ptr[0])
+			continue;
+		line_process(ptr, strlen(ptr) + 1);
 	}
 }
 
@@ -523,9 +525,10 @@ static void config_file_proc(const char *path)
 		return;
 	}
 
-	config_proc(tbuf, rc);
+	tbuf[rc++] = '\n';
+	tbuf[rc++] = '\0';
+	config_process(tbuf, rc);
 }
-#endif
 
 int patch_add(struct usb_interface *intf)
 {
@@ -621,8 +624,7 @@ int download_patch(struct usb_interface *intf)
 	uint8_t *fw_buf;
 	int ret_val;
 
-	pr_info("download_patch start\n");
-
+	RTKBT_DBG("download_patch start");
 	dev_entry = dev_data_find(intf);
 	if (NULL == dev_entry) {
 		ret_val = -1;
@@ -657,6 +659,7 @@ int download_patch(struct usb_interface *intf)
 	xdata->fw_len = load_firmware(dev_entry, &xdata->fw_data);
 	if (xdata->fw_len <= 0) {
 		RTKBT_ERR("load firmware failed!");
+		ret_val = -1;
 		goto patch_end;
 	}
 
@@ -664,6 +667,7 @@ int download_patch(struct usb_interface *intf)
 
 	if (xdata->fw_len > PATCH_LENGTH_MAX) {
 		RTKBT_ERR("FW/CONFIG total length larger than allowed!");
+		ret_val = -1;
 		goto patch_fail;
 	}
 
@@ -796,44 +800,37 @@ patch_end:
 }
 #endif
 
-int set_btoff(struct usb_interface *intf)
+int set_scan(struct usb_interface *intf)
 {
 	dev_data *dev_entry;
 	xchange_data *xdata = NULL;
-	int ret_val;
+	int result;
 
-	RTKBT_DBG("set_btoff");
+	RTKBT_DBG("%s", __func__);
 	dev_entry = dev_data_find(intf);
-	if (NULL == dev_entry) {
+	if (!dev_entry)
 		return -1;
-	}
 
 	xdata = kzalloc(sizeof(xchange_data), GFP_KERNEL);
-	if (NULL == xdata) {
-		ret_val = -1;
-		RTKBT_DBG("NULL == xdata");
-		return ret_val;
+	if (!xdata) {
+		RTKBT_ERR("Could not alloc xdata");
+		return -1;
 	}
 
 	init_xdata(xdata, dev_entry);
 
-	xdata->cmd_hdr->opcode = cpu_to_le16(BTOFF_OPCODE);
+	xdata->cmd_hdr->opcode = cpu_to_le16(STARTSCAN_OPCODE);
 	xdata->cmd_hdr->plen = 1;
 	xdata->pkt_len = CMD_HDR_LEN + 1;
 	xdata->send_pkt[CMD_HDR_LEN] = 1;
 
-	ret_val = send_hci_cmd(xdata);
-	if (ret_val < 0) {
-		goto tagEnd;
-	}
+	result = send_hci_cmd(xdata);
+	if (result < 0)
+		goto end;
 
-	ret_val = rcv_hci_evt(xdata);
-	if (ret_val < 0) {
-		goto tagEnd;
-	}
-
-tagEnd:
-	if (xdata != NULL) {
+	result = rcv_hci_evt(xdata);
+end:
+	if (xdata) {
 		if (xdata->send_pkt)
 			kfree(xdata->send_pkt);
 		if (xdata->rcv_pkt)
@@ -841,9 +838,9 @@ tagEnd:
 		kfree(xdata);
 	}
 
-	RTKBT_DBG("set_btoff done");
+	RTKBT_DBG("%s done", __func__);
 
-	return ret_val;
+	return result;
 }
 
 dev_data *dev_data_find(struct usb_interface * intf)
@@ -857,20 +854,27 @@ dev_data *dev_data_find(struct usb_interface * intf)
 				return NULL;
 			switch (patch->prod_id){
 			case 0xb82c:
-				patch->chip_type = RTL8822B;
+				patch->chip_type = RTL8822BU;
 				break;
 			case 0xd723:
-				patch->chip_type = RTL8723D;
+				patch->chip_type = RTL8723DU;
 				break;
 			case 0xb820:
 			case 0xc820:
-				patch->chip_type = RTL8821C;
+				patch->chip_type = RTL8821CU;
+				break;
+			case 0xc82c:
+			case 0xc822:
+				patch->chip_type = RTL8822CU;
+				break;
+			case 0x8771:
+				patch->chip_type = RTL8761BU;
 				break;
 			default:
-				patch->chip_type = RTLPREVI;
+				patch->chip_type = RTLPREVIOUS;
 				break;
 			}
-			RTKBT_INFO("chip type value: %d", patch->chip_type);
+			RTKBT_INFO("chip type value: 0x%02x", patch->chip_type);
 			return dev_entry;
 		}
 	}
@@ -898,6 +902,108 @@ patch_info *get_patch_entry(struct usb_device * udev)
 	return patch_entry;
 }
 
+static int valid_mac(u8 chip_type, u16 offset)
+{
+	int result = 0;
+
+	switch (chip_type) {
+	case RTL8822BU:
+	case RTL8723DU:
+	case RTL8821CU:
+		if (offset == 0x0044)
+			return 1;
+		break;
+	case RTL8822CU:
+	case RTL8761BU:
+		if (offset == 0x0030)
+			return 1;
+		break;
+	case RTLPREVIOUS:
+		if (offset == 0x003c)
+			return 1;
+		break;
+	}
+
+	return result;
+}
+
+static void fill_mac_offset(u8 chip_type, u8 b[2])
+{
+	switch (chip_type) {
+	case RTL8822BU:
+	case RTL8723DU:
+	case RTL8821CU:
+		b[0] = 0x44;
+		b[1] = 0x00;
+		break;
+	case RTL8822CU:
+	case RTL8761BU:
+		b[0] = 0x30;
+		b[1] = 0x00;
+		break;
+	case RTLPREVIOUS:
+		b[0] = 0x3c;
+		b[1] = 0x00;
+		break;
+	}
+}
+
+static void merge_configs(uint8_t *cfg_buf, u16 *plen, int max)
+{
+	struct list_head *iter, *tmp;
+	struct cfg_list_item *item;
+	u8 *buf;
+	u16 tmp_len;
+
+	list_for_each_safe(iter, tmp, &list_extracfgs) {
+		struct list_head *iter2, *tmp2;
+
+		item = list_entry(iter, struct cfg_list_item, list);
+		list_for_each_safe(iter2, tmp2, &list_configs) {
+			struct cfg_list_item *n;
+
+			n = list_entry(iter2, struct cfg_list_item, list);
+			if (item->offset == n->offset) {
+				if (item->len == n->len) {
+					memcpy(n->data, item->data, n->len);
+					list_del(&item->list);
+					kfree(item);
+					break;
+				}
+
+				RTKBT_WARN("item mismatch %04x %u %u",
+					   item->offset, item->len, n->len);
+				list_del(&item->list);
+				kfree(item);
+			}
+		}
+	}
+
+	buf = cfg_buf + *plen;
+	list_for_each_safe(iter, tmp, &list_extracfgs) {
+		item = list_entry(iter, struct cfg_list_item, list);
+		if (item->len + 3 + *plen > max) {
+			RTKBT_WARN("%s: length %u exceeds %d", __func__,
+				   item->len + 3 + *plen, max);
+			goto done;
+		}
+		buf[0] = item->offset & 0xff;
+		buf[1] = (item->offset >> 8) & 0xff;
+		buf[2] = item->len;
+		memcpy(buf + 3, item->data, item->len);
+		buf += (3 + item->len);
+		*plen += (3 + item->len);
+		list_del(&item->list);
+		kfree(item);
+	}
+
+done:
+	tmp_len = *plen - 6;
+
+	cfg_buf[4] = (tmp_len & 0xff);
+	cfg_buf[5] = ((tmp_len >> 8) & 0xff);
+}
+
 int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 			  int filelen, char bt_addr[6])
 {
@@ -909,13 +1015,8 @@ int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 #ifndef USE_CONTROLLER_BDADDR
 	int j = 0;
 #endif
-#ifdef EXTRA_CONFIG_OPTION
-	u32 add_flags = config_flags;
-	u8 *head;
-#endif
-
-#define CFL_SEC_BDADDR	(1 << 0)
-	u32 flags = 0;
+	struct cfg_list_item *item;
+	u32 addr_found = 0;
 
 	if (!config)
 		return 0;
@@ -941,19 +1042,16 @@ int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 		switch (le16_to_cpu(entry->offset)) {
 		case 0x003c:
 		case 0x0044:
+		case 0x0030:
 #ifndef USE_CONTROLLER_BDADDR
 			if (!customer_bdaddr)
 				break;
-			if (pent->chip_type > RTLPREVI &&
-			    le16_to_cpu(entry->offset) != 0x44)
-				break;
-			if (pent->chip_type <= RTLPREVI &&
-			    le16_to_cpu(entry->offset) != 0x3c)
+			if (!valid_mac(pent->chip_type, le16_to_cpu(entry->offset)))
 				break;
 			for (j = 0; j < entry->entry_len && j < 6; j++)
 				entry->entry_data[j] = bt_addr[j];
 #endif
-			flags |= CFL_SEC_BDADDR;
+			addr_found = 1;
 			snprintf(str, sizeof(str),
 				 "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X",
 				 entry->entry_data[5],
@@ -964,32 +1062,22 @@ int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 				 entry->entry_data[0]);
 			RTKBT_DBG("bdaddr sec found, set bdaddr %s", str);
 			break;
-#ifdef EXTRA_CONFIG_OPTION
-		case 0x015b:
-			if (!(add_flags & CONFIG_TXPOWER))
-				break;
-			add_flags &= ~CONFIG_TXPOWER;
-			if (txpower_len != entry->entry_len) {
-				RTKBT_ERR("invalid tx power cfg len %u, %u",
-					  txpower_len, entry->entry_len);
-				break;
-			}
-			memcpy(entry->entry_data, txpower_cfg, txpower_len);
-			RTKBT_INFO("Replace Tx power Cfg %02x %02x %02x %02x",
-				   txpower_cfg[0], txpower_cfg[1], txpower_cfg[2],
-				   txpower_cfg[3]);
-			break;
-		case 0x01e6:
-			if (!(add_flags & CONFIG_XTAL))
-				break;
-			add_flags &= ~CONFIG_XTAL;
-			RTKBT_INFO("Replace XTAL Cfg 0x%02x", xtal_cfg);
-			entry->entry_data[0] = xtal_cfg;
-			break;
-#endif
 		default:
 			break;
 		}
+
+		/* Add config item to list */
+		item = kzalloc(sizeof(*item) + entry->entry_len, GFP_KERNEL);
+		if (item) {
+			item->offset = le16_to_cpu(entry->offset);
+			item->len = entry->entry_len;
+			memcpy(item->data, entry->entry_data, item->len);
+			list_add_tail(&item->list, &list_configs);
+		} else {
+			RTKBT_ERR("Cannot alloc mem for entry %04x, %u",
+				  entry->offset, entry->entry_len);
+		}
+
 		temp = entry->entry_len +
 			sizeof(struct rtk_bt_vendor_config_entry);
 		i += temp;
@@ -999,21 +1087,17 @@ int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 	}
 
 #ifndef USE_CONTROLLER_BDADDR
-	if (!(flags & CFL_SEC_BDADDR) && customer_bdaddr) {
+	if (!addr_found && customer_bdaddr) {
 		u8 *b;
+		u16 ofs;
 
 		if (config_len + BT_CONFIG_HDRLEN + 9 > max) {
 			RTKBT_ERR("%s: length exceeds", __func__);
 		}
 
 		b = config_buf + config_len + BT_CONFIG_HDRLEN;
-		if (pent->chip_type > RTLPREVI) {
-			b[0] = 0x44;
-			b[1] = 0x00;
-		} else {
-			b[0] = 0x3c;
-			b[1] = 0x00;
-		}
+		fill_mac_offset(pent->chip_type, b);
+		ofs = (((u16)b[1] << 8) | b[0]);
 		RTKBT_INFO("add bdaddr sec, offset %02x%02x", b[1], b[0]);
 		b[2] = 6;
 		for (j = 0; j < 6; j++)
@@ -1023,43 +1107,25 @@ int rtk_parse_config_file(patch_info *pent, int max, u8 *config_buf,
 
 		config_buf[4] = config_len & 0xff;
 		config_buf[5] = (config_len >> 8) & 0xff;
+
+		/* Add address item to list */
+		item = kzalloc(sizeof(*item) + 6, GFP_KERNEL);
+		if (item) {
+			item->offset = ofs;
+			item->len = b[2];
+			memcpy(item->data, b + 3, 6);
+			list_add_tail(&item->list, &list_configs);
+		} else {
+			RTKBT_ERR("Cannot alloc mem for entry %04x, %u",
+				  entry->offset, entry->entry_len);
+		}
 	}
 #endif
 
-#ifdef EXTRA_CONFIG_OPTION
-	temp = config_len;
-	if (add_flags & CONFIG_TXPOWER)
-		temp += (2 + 1 + txpower_len);
-	if ((add_flags & CONFIG_XTAL))
-		temp += (2 + 1 + 1);
+	temp = config_len + BT_CONFIG_HDRLEN;
+	merge_configs(config_buf, &temp, max);
 
-	if (add_flags) {
-		RTKBT_INFO("Add extra configs, flags 0x%08x", add_flags);
-		head = config_buf;
-		config_buf[4] = (temp & 0xff);
-		config_buf[5] = ((temp >> 8) & 0xff);
-		config_buf += (config_len + 6);
-		if (add_flags & CONFIG_TXPOWER) {
-			RTKBT_INFO("Add Tx power Cfg");
-			*config_buf++ = 0x5b;
-			*config_buf++ = 0x01;
-			*config_buf++ = txpower_len;
-			memcpy(config_buf, txpower_cfg, txpower_len);
-			config_buf += txpower_len;
-		}
-		if ((add_flags & CONFIG_XTAL)) {
-			RTKBT_INFO("Add XTAL Cfg");
-			*config_buf++ = 0xe6;
-			*config_buf++ = 0x01;
-			*config_buf++ = 1;
-			*config_buf++ = xtal_cfg;
-		}
-		config_buf = head;
-		config_len = temp;
-	}
-#endif
-
-	return (config_len + BT_CONFIG_HDRLEN);;
+	return temp;;
 }
 
 uint8_t rtk_get_fw_project_id(uint8_t * p_buf)
@@ -1243,6 +1309,7 @@ static int load_config(dev_data *dev_entry, u8 **buf, int *length)
 	u8 tmp_buf[32];
 	int file_sz;
 
+	config_lists_init();
 	patch_entry = dev_entry->patch_entry;
 	config_name = patch_entry->config_name;
 	udev = dev_entry->udev;
@@ -1258,15 +1325,16 @@ static int load_config(dev_data *dev_entry, u8 **buf, int *length)
 	len += 9;
 #endif
 
-#ifdef EXTRA_CONFIG_OPTION
 	config_file_proc(EXTRA_CONFIG_FILE);
-	if (!xtalset_supported(patch_entry))
-		config_flags &= ~CONFIG_XTAL;
-	if (config_flags & CONFIG_TXPOWER)
-		len += 7;
-	if (config_flags & CONFIG_XTAL)
-		len += 4;
-#endif
+	if (!list_empty(&list_extracfgs)) {
+		struct cfg_list_item *item;
+		struct list_head *tmp, *iter;
+
+		list_for_each_safe(iter, tmp, &list_extracfgs) {
+			item = list_entry(iter, struct cfg_list_item, list);
+			len += (item->len + 3);
+		}
+	}
 
 	tbuf = kzalloc(len, GFP_KERNEL);
 	if (!tbuf)
@@ -1285,6 +1353,7 @@ static int load_config(dev_data *dev_entry, u8 **buf, int *length)
 	customer_bdaddr = (result < 0) ? false : true;
 #endif
 	len = rtk_parse_config_file(patch_entry, len, tbuf, file_sz, tmp_buf);
+	config_lists_free();
 
 	*buf = tbuf;
 	*length = len;
@@ -1297,6 +1366,7 @@ static int load_config(dev_data *dev_entry, u8 **buf, int *length)
 
 	return 0;
 err1:
+	config_lists_free();
 	release_firmware(fw);
 	return -1;
 
@@ -1599,7 +1669,7 @@ int download_data(xchange_data * xdata)
 			j = i;
 
 		cmd_para->index = j;
-		if (j == (frag_num - 1)) {
+		if (i == (frag_num - 1)) {
 			cmd_para->index |= DATA_END;
 			frag_len = xdata->fw_len % PATCH_SEG_MAX;
 			pkt_len -= (PATCH_SEG_MAX - frag_len);

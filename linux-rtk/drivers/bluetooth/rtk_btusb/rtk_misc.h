@@ -27,6 +27,8 @@
 #include <linux/suspend.h>
 
 /* Download LPS patch when host suspends or power off
+ *   LPS patch name:  lps_rtl8xxx_fw
+ *   LPS config name: lps_rtl8xxx_config
  * Download normal patch when host resume or power on */
 /* #define RTKBT_SWITCH_PATCH */
 
@@ -69,8 +71,17 @@ extern void print_event(struct sk_buff *skb);
 extern void print_command(struct sk_buff *skb);
 extern void print_acl(struct sk_buff *skb, int dataOut);
 #ifdef RTKBT_SWITCH_PATCH
-extern int __rtk_send_hci_cmd(struct usb_device *udev, u8 *buf, u16 size);
-extern int __rtk_recv_hci_evt(struct usb_device *udev, u8 *buf, u8 len,
-			      u16 opcode);
-extern int download_lps_patch(struct usb_interface *intf);
+#define RTLBT_CLOSE	(1 << 0)
+struct api_context {
+	u32			flags;
+	struct completion	done;
+	int			status;
+};
+
+int __rtk_send_hci_cmd(struct usb_device *udev, u8 *buf, u16 size);
+int __rtk_recv_hci_evt(struct usb_device *udev, u8 *buf, u8 len,
+		       u16 opcode);
+int download_lps_patch(struct usb_interface *intf);
+int set_scan(struct usb_interface *intf);
+
 #endif
