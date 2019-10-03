@@ -31,6 +31,9 @@ clean: u-boot-clean kernel-clean
 pack: rtk-pack
 	$(Q)scripts/mk_pack.sh
 
+install:
+	$(Q)scripts/mk_install_sd.sh
+
 u-boot: 
 	$(Q)$(MAKE) -C u-boot-rtk $(UBOOT_CONFIG)
 	$(Q)$(MAKE) -C u-boot-rtk

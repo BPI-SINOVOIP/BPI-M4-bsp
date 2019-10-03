@@ -106,15 +106,16 @@ echo "	3. Build kernel only."
 echo "	4. kernel configure."
 echo "	5. Pack the builds to target download image, this step must execute after u-boot,"
 echo "	   kernel and rootfs build out"
-echo "	6. update files for SD"
-echo "	7. Clean all build."
+echo "	6. Create bsp update packages for BPI SD Images"
+echo "  7. Update local build to SD with BPI Image flashed"
+echo "	8. Clean all build."
 echo "--------------------------------------------------------------------------------"
 
 if [ -z "$MODE" ]; then
 	read -p "Please choose a mode(1-7): " mode
 	echo
 else
-	mode=1
+	mode=$MODE
 fi
 
 if [ -z "$mode" ]; then
@@ -135,7 +136,8 @@ case $mode in
 	4) make kernel-config;;
 	5) make pack;;
 	6) cp_download_files;;
-	7) make clean;;
+	7) make install;;
+	8) make clean;;
 esac
 echo
 
