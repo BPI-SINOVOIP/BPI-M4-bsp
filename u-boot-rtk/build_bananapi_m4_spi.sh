@@ -13,6 +13,10 @@ if [ $# -lt 1 ]; then
         exit 1
 fi
 
+if [ ! -d DVRBOOT_OUT ]; then
+	mkdir -p DVRBOOT_OUT
+fi
+
 dram_size=$1
 chip_type=0001
 hwsetting=RTD1395_hwsetting_BOOT_${dram_size}DDR4_8Gb_s2133

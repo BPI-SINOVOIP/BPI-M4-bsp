@@ -32,10 +32,11 @@ pack: rtk-pack
 	$(Q)scripts/mk_pack.sh
 
 u-boot: 
-	(cd u-boot-rtk ; ./build_bananapi_m4_all.sh)
+	$(Q)$(MAKE) -C u-boot-rtk $(UBOOT_CONFIG)
+	$(Q)$(MAKE) -C u-boot-rtk
 
 u-boot-clean:
-	$(Q)$(MAKE) -C u-boot-rtk CROSS_COMPILE=$(U_CROSS_COMPILE) distclean
+	$(Q)$(MAKE) -C u-boot-rtk distclean
 
 $(K_DOT_CONFIG): linux-rtk
 	$(Q)$(MAKE) -C linux-rtk ARCH=arm64 $(KERNEL_CONFIG)

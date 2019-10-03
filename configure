@@ -12,8 +12,6 @@ TARGET_PRODUCT="bpi-m4"
 BPISOC=rtk
 
 CUR_DIR=$PWD
-#TOOLCHAIN=gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu
-#TOOLCHAIN=asdk64-4.9.4-a53-EL-3.10-g2.19-a64nt-160307
 TOOLCHAIN=gcc-linaro-7.3.1-2018.05-x86_64_aarch64-linux-gnu
 CROSS_COMPILE=$CUR_DIR/toolchains/$TOOLCHAIN/bin
 
@@ -30,8 +28,7 @@ generate_board_mk() {
 	SOC=$SOC
 	MACH=$MACH
 	COMPILE_TOOL=$CROSS_COMPILE
-	#UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
-	UBOOT_CONFIG=rtd1395_qa_defconfig
+	UBOOT_CONFIG=${SOC}_bananapi_defconfig
 	KERNEL_CONFIG=${MACH}_bpi_defconfig
 	TARGET_PLATFORM=${TARGET_PLATFORM}
 	EOT
@@ -46,9 +43,7 @@ generate_board_envsh() {
 	export BOARD=$BOARD
 	export SOC=$SOC
 	export MACH=$MACH
-	export CROSS_COMPILE=aarch64-linux-gnu-
-	#export UBOOT_CONFIG=${SOC}_${TYPE}_bananapi_defconfig
-	export UBOOT_CONFIG=rtd1395_qa_defconfig
+	export UBOOT_CONFIG=${SOC}_bananapi_defconfig
 	export KERNEL_CONFIG=${MACH}_bpi_defconfig
 	export LICHEE_PLATFORM="linux"
 	export GPU_TYPE="mali470"

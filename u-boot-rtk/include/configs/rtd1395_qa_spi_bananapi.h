@@ -13,7 +13,7 @@
  */
 #include <configs/rtd1395_common.h>
 
-//==========================================================
+/*==========================================================*/
 /* Flash type is SPI or NAND or eMMC*/
 #define CONFIG_SYS_RTK_SPI_FLASH
 
@@ -67,7 +67,7 @@
 #define CONFIG_COMPANY_ID 		"0000"
 #define CONFIG_BOARD_ID         "0705"
 #define CONFIG_VERSION          "0000"
-//==========================================================
+/*==========================================================*/
 /*
  * SDRAM Memory Map
  * Even though we use two CS all the memory
