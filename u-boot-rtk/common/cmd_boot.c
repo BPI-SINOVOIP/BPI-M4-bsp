@@ -249,7 +249,7 @@ static unsigned long do_go_audio_fw(void)
 {
 	int magic = SWAPEND32(0x16803001);
 	int offset = SWAPEND32(MIPS_SHARED_MEMORY_ENTRY_ADDR);
-	unsigned long fw_addr = getenv_ulong("audio_loadaddr", 16, 0);
+	unsigned int fw_addr = getenv_ulong("audio_loadaddr", 16, 0);
 
 	if(audio_fw_state) return 0;
 

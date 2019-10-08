@@ -541,12 +541,6 @@ endif
 		@cd install_a/; tar cf ../../../bootloader_lk.tar *
 		#@rm -rf install_a/
 
-		# prepare bootcode
-		@mkdir -p ../../DVRBOOT_OUT
-		@cp install_a/hw_setting.bin ../../DVRBOOT_OUT/hw_setting.bin
-		@cp Bind/emmc.bind.bin ../../DVRBOOT_OUT/recovery.bin
-		@cp dvrboot.exe.bin ../../DVRBOOT_OUT/bootloader.bin
-
 #########################################################################
 
 
