@@ -12,8 +12,10 @@ TARGET_PRODUCT="bpi-m4"
 BPISOC=rtk
 
 CUR_DIR=$PWD
-TOOLCHAIN=gcc-linaro-7.3.1-2018.05-x86_64_aarch64-linux-gnu
-CROSS_COMPILE=$CUR_DIR/toolchains/$TOOLCHAIN/bin
+U_TOOLCHAIN=asdk64-4.9.3-a53-EL-3.10-g2.19-a64nt-150615
+K_TOOLCHAIN=gcc-linaro-7.3.1-2018.05-x86_64_aarch64-linux-gnu
+U_CROSS_COMPILE=$CUR_DIR/toolchains/$U_TOOLCHAIN/bin
+K_CROSS_COMPILE=$CUR_DIR/toolchains/$K_TOOLCHAIN/bin
 
 list_boards() {
 	(cd ${BPIPACK}/${BPISOC}/${TARGET_PRODUCT}/configs ; ls -1d BPI* )
@@ -27,7 +29,8 @@ generate_board_mk() {
 	BOARD=$BOARD
 	SOC=$SOC
 	MACH=$MACH
-	COMPILE_TOOL=$CROSS_COMPILE
+	U_COMPILE_TOOL=$U_CROSS_COMPILE
+	K_COMPILE_TOOL=$K_CROSS_COMPILE
 	UBOOT_CONFIG=${SOC}_bananapi_defconfig
 	KERNEL_CONFIG=${MACH}_bpi_defconfig
 	TARGET_PLATFORM=${TARGET_PLATFORM}

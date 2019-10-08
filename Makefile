@@ -4,15 +4,8 @@
 
 include chosen_board.mk
 
-SUDO=sudo
-CROSS_COMPILE?=arm-linux-gnueabi-
-AARCH64_CROSS_COMPILE?=$(COMPILE_TOOL)/aarch64-linux-gnu-
-U_CROSS_COMPILE=$(AARCH64_CROSS_COMPILE)
-K_CROSS_COMPILE=$(AARCH64_CROSS_COMPILE)
-
-OUTPUT_DIR=$(CURDIR)/linux-rtk/output
-TARGET_KDIR=$(CURDIR)
-RTKDIR=$(TOPDIR)/phoenix/system/src/drivers
+K_CROSS_COMPILE=$(K_COMPILE_TOOL)/aarch64-linux-gnu-
+U_CROSS_COMPILE=$(U_COMPILE_TOOL)/aarch64-linux-
 
 U_O_PATH=u-boot-rtk
 K_O_PATH=linux-rtk
@@ -35,11 +28,11 @@ install:
 	$(Q)scripts/mk_install_sd.sh
 
 u-boot: 
-	$(Q)$(MAKE) -C u-boot-rtk $(UBOOT_CONFIG)
-	$(Q)$(MAKE) -C u-boot-rtk
+	$(Q)$(MAKE) -C u-boot-rtk $(UBOOT_CONFIG) CROSS_COMPILE=$(U_CROSS_COMPILE)
+	$(Q)$(MAKE) -C u-boot-rtk CROSS_COMPILE=$(U_CROSS_COMPILE) BUILD_BOOTCODE_ONLY=true
 
 u-boot-clean:
-	$(Q)$(MAKE) -C u-boot-rtk distclean
+	$(Q)$(MAKE) -C u-boot-rtk CROSS_COMPILE=$(U_CROSS_COMPILE) distclean
 
 $(K_DOT_CONFIG): linux-rtk
 	$(Q)$(MAKE) -C linux-rtk ARCH=arm64 $(KERNEL_CONFIG)

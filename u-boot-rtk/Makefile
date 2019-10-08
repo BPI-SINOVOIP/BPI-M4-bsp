@@ -311,14 +311,14 @@ CROSS_COMPILE ?=
 else
 TOPDIR  := $(shell /bin/pwd)
 ARM_SRC_ROOT := $(TOPDIR)/..
-TOOLCHAIN_PREFIX ?= asdk64-4.9.3-a53-EL-3.10-g2.19-a64nt-150615
-TOOLCHAIN_READY := $(wildcard ../toolchains/$(TOOLCHAIN_PREFIX))
-CROSS_COMPILE_BIN_PREFIX ?= asdk64-linux-
-ifeq ($(strip $(TOOLCHAIN_READY)),)
-    $(warning toolchain is not ready, intalling...)
-    $(shell tar xfj $(ARM_SRC_ROOT)/toolchains/$(TOOLCHAIN_PREFIX).tar.bz2 -C $(ARM_SRC_ROOT)/toolchains)
-endif
-CROSS_COMPILE ?= $(ARM_SRC_ROOT)/toolchains/$(TOOLCHAIN_PREFIX)/bin/$(CROSS_COMPILE_BIN_PREFIX)
+#TOOLCHAIN_PREFIX ?= asdk64-4.9.3-a53-EL-3.10-g2.19-a64nt-150615
+#TOOLCHAIN_READY := $(wildcard ../toolchains/$(TOOLCHAIN_PREFIX))
+#CROSS_COMPILE_BIN_PREFIX ?= asdk64-linux-
+#ifeq ($(strip $(TOOLCHAIN_READY)),)
+#    $(warning toolchain is not ready, intalling...)
+#    $(shell tar xfj $(ARM_SRC_ROOT)/toolchains/$(TOOLCHAIN_PREFIX).tar.bz2 -C $(ARM_SRC_ROOT)/toolchains)
+#endif
+#CROSS_COMPILE ?= $(ARM_SRC_ROOT)/toolchains/$(TOOLCHAIN_PREFIX)/bin/$(CROSS_COMPILE_BIN_PREFIX)
 endif
 
 KCONFIG_CONFIG	?= .config
