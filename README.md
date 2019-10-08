@@ -23,6 +23,13 @@ Build spi-loader, please run
   
  Target binary file in u-boot-rtk/DVRBOOT_OUT/
 
+Build bootcode for spi-loader download, please run
+
+    $ cd u-boot-rtk
+    $ ./build_bananapi_m4_bootcode.sh
+
+Target binary files in u-boot-rtk/DVRBOOT_OUT/, please refer to [BPI-M4 Wiki](http://wiki.banana-pi.org/Getting_Started_with_M4) to get how to download spi-loader.
+
 **Install**
 
 Get the image from [bpi](http://wiki.banana-pi.org/Banana_Pi_BPI-M4#Image_Release) and download it to the SD card. After finish, insert the SD card to PC
