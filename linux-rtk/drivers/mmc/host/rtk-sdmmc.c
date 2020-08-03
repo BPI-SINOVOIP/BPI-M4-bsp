@@ -2946,9 +2946,8 @@ static void rtk_sdmmc_hw_initial(struct rtk_sdmmc_host *rtk_host)
 	rtk_sdmmc_speed(rtk_host, SDMMC_CLOCK_400KHZ);
 
 #if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
-#ifdef BPI
+#ifdef CONFIG_RTD139X_SD_WP
 	gpio_set_debounce(rtk_host->sdmmc_wp_gpio, 1000);
-#else
 #endif
 	gpio_set_debounce(rtk_host->sdmmc_cd_gpio, 1000);
 #endif
@@ -3754,28 +3753,29 @@ static int rtk_sdmmc_probe(struct platform_device *pdev)
 #endif
 
 #if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
-#ifdef BPI
+#ifdef CONFIG_RTD139X_SD_WP
 	rtk_host->sdmmc_wp_gpio = of_get_gpio_flags(sdmmc_node, 1, NULL);
 	if (gpio_is_valid(rtk_host->sdmmc_wp_gpio)) {
-                ret = gpio_request(rtk_host->sdmmc_wp_gpio, "sd_card_wp_gpio");
-                if (ret < 0)
-                        printk(KERN_ERR "%s: can't request gpio 34\n", __func__);
-		else gpio_direction_input(rtk_host->sdmmc_wp_gpio);
-        } else {
-                printk(KERN_ERR "%s: gpio 34 is not valid\n", __func__);
-        }
-#else
-	printk("BPI:%s: skip gpio 34 for sd_card_wp_gpio\n", __func__);
+		ret = gpio_request(rtk_host->sdmmc_wp_gpio, "sd_card_wp_gpio");
+		if (ret < 0)
+			printk(KERN_ERR "%s: can't request gpio 34\n", __func__);
+		else 
+			gpio_direction_input(rtk_host->sdmmc_wp_gpio);
+		}
+	else {
+		printk(KERN_ERR "%s: gpio 34 is not valid\n", __func__);
+    }
 #endif
 	rtk_host->sdmmc_cd_gpio = of_get_gpio_flags(sdmmc_node, 2, NULL);
 	if (gpio_is_valid(rtk_host->sdmmc_cd_gpio)) {
-                ret = gpio_request(rtk_host->sdmmc_cd_gpio, "sd_card_cd_gpio");
-                if (ret < 0)
-                        printk(KERN_ERR "%s: can't request gpio 35\n", __func__);
+		ret = gpio_request(rtk_host->sdmmc_cd_gpio, "sd_card_cd_gpio");
+		if (ret < 0)
+			printk(KERN_ERR "%s: can't request gpio 35\n", __func__);
 		else gpio_direction_input(rtk_host->sdmmc_cd_gpio);
-        } else {
-                printk(KERN_ERR "%s: gpio 35 is not valid\n", __func__);
-        }
+	} 
+	else {
+		printk(KERN_ERR "%s: gpio 35 is not valid\n", __func__);
+	}
 #endif
 
 	reset_control_deassert(rstc_cr);
@@ -3827,19 +3827,20 @@ static int rtk_sdmmc_probe(struct platform_device *pdev)
 		rtk_host->irq = irq;
 	}
 #if defined(CONFIG_ARCH_RTD139x) || defined(CONFIG_ARCH_RTD16xx) || defined(CONFIG_ARCH_RTD13xx)
-	rtk_host->cd_irq = gpio_to_irq(rtk_host->sdmmc_cd_gpio);
-	if(!rtk_host->cd_irq) printk(KERN_ERR "Cannot get the SD CD irq...\n");
-	else printk(KERN_INFO "SD CD irq=%d\n",rtk_host->cd_irq);
-#ifdef CONFIG_RTD139X_SD_WP	
-	rtk_host->wp_irq = gpio_to_irq(rtk_host->sdmmc_wp_gpio);
-        if(!rtk_host->wp_irq) printk(KERN_ERR "Cannot get the SD WP irq...\n");
-	else printk(KERN_INFO "SD WP irq=%d\n",rtk_host->wp_irq);
-#endif	
-	irq_set_irq_type(rtk_host->cd_irq, IRQ_TYPE_EDGE_BOTH);
-	ret = request_irq(rtk_host->cd_irq, rtk_sdmmc_cd_irq, IRQF_SHARED, DRIVER_NAME, rtk_host);
-        if (ret) {
+	if(rtk_host->sdmmc_cd_gpio){
+		rtk_host->cd_irq = gpio_to_irq(rtk_host->sdmmc_cd_gpio);
+		if(!rtk_host->cd_irq) 
+			printk(KERN_ERR "Cannot get the SD CD irq...\n");
+		else{
+			printk(KERN_INFO "SD CD irq=%d\n",rtk_host->cd_irq);
+
+			irq_set_irq_type(rtk_host->cd_irq, IRQ_TYPE_EDGE_BOTH);
+			ret = request_irq(rtk_host->cd_irq, rtk_sdmmc_cd_irq, IRQF_SHARED, DRIVER_NAME, rtk_host);
+        	if (ret) {
                 printk(KERN_ERR "%s: cannot assign irq %d\n", __func__, irq);
-		goto out;
+				goto out;
+			}
+		}
 	}
 #ifdef CONFIG_RTD139X_SD_WP	
 	if(rtk_host->sdmmc_wp_gpio) {
@@ -3848,9 +3849,10 @@ static int rtk_sdmmc_probe(struct platform_device *pdev)
 			printk(KERN_ERR "Cannot get the SD WP irq...\n");
 		else{
 			printk(KERN_INFO "SD WP irq=%d\n",rtk_host->wp_irq);
-	irq_set_irq_type(rtk_host->wp_irq, IRQ_TYPE_EDGE_BOTH);
-	ret = request_irq(rtk_host->wp_irq, rtk_sdmmc_wp_irq, IRQF_SHARED, DRIVER_NAME, rtk_host);
-        if (ret) {
+
+			irq_set_irq_type(rtk_host->wp_irq, IRQ_TYPE_EDGE_BOTH);
+			ret = request_irq(rtk_host->wp_irq, rtk_sdmmc_wp_irq, IRQF_SHARED, DRIVER_NAME, rtk_host);
+        	if (ret) {
                 printk(KERN_ERR "%s: cannot assign irq %d\n", __func__, irq);
                 goto out;
 			}
