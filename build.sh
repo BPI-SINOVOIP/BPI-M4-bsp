@@ -107,7 +107,7 @@ echo "	4. kernel configure."
 echo "	5. Pack the builds to target download image, this step must execute after u-boot,"
 echo "	   kernel and rootfs build out"
 echo "	6. Create bsp update packages for BPI SD Images"
-echo "  7. Update local build to SD with BPI Image flashed"
+echo "	7. Update local build to SD with BPI Image flashed"
 echo "	8. Clean all build."
 echo "--------------------------------------------------------------------------------"
 
