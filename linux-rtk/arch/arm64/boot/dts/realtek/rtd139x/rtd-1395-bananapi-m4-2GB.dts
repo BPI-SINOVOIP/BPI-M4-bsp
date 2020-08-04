@@ -253,6 +253,12 @@
 	spi_0: spi@9801BD00 {
 		compatible = "Realtek,rtk-dw-apb-ssi";
 		status = "disabled";
+
+		spidev@0 {
+			compatible = "Realtek,spidev";
+			reg = <0>;
+			spi-max-frequency = <32000000>;
+		};
 	};
 
 	pwm: pwm@980070D0 {
