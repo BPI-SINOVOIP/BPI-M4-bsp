@@ -56,7 +56,7 @@ static inline u32 get_asic_chip_id(void) {
 //#undef DEBUG_RTL8168_TX
 //#undef DEBUG_RTL8168_RX
 
-//#define DEBUG_RTL8168
+#define DEBUG_RTL8168
 //#define DEBUG_RTL8168_TX
 //#define DEBUG_RTL8168_RX
 
@@ -2777,7 +2777,7 @@ static void rtl8168_hw_start(struct rtl8168_private *tp)
     udelay(10);
 
 #ifdef DEBUG_RTL8168
-    printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+    printf ("%s elapsed time : %ld\n", __FUNCTION__, currticks()-stime);
 #endif
 }
 
@@ -2868,7 +2868,7 @@ rtl8168_init_ring(struct eth_device *dev)
     rtl8168_mark_as_last_descriptor(tp->RxDescArray + NUM_RX_DESC - 1);
 
 #ifdef DEBUG_RTL8168
-    printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+    printf ("%s elapsed time : %ld\n", __FUNCTION__, currticks()-stime);
 #endif
 
     return 0;
@@ -5478,10 +5478,21 @@ static void rtl8168_get_mac_address(struct rtl8168_private *tp)
     phys_addr_t ioaddr = tp->mmio_addr;
     int i;
     uint8_t env_enetaddr[6];
+    char buf_enetaddr[17];
+
+    /* bpi, static mac address
     char *default_enetaddr="00:10:20:30:40:50" ;
 
     if (!eth_getenv_enetaddr("ethaddr", env_enetaddr))
         eth_parse_enetaddr(default_enetaddr, env_enetaddr);
+    */
+
+    /* bpi random mac address */
+    srand(get_ticks());
+    sprintf(buf_enetaddr, "00:10:20:%02x:%02x:%02x", (unsigned int)rand() % 256, (unsigned int)rand() % 256, (unsigned int)rand() % 256);
+    eth_parse_enetaddr(buf_enetaddr, env_enetaddr);
+    if (is_valid_ethaddr(env_enetaddr))
+        eth_setenv_enetaddr("ethaddr", env_enetaddr);
 
    // add valid mac
     RTL_W8(Cfg9346, Cfg9346_Unlock);
@@ -5566,7 +5577,7 @@ static int rtl8168_init(struct eth_device *dev, bd_t *bis)
    // rtl8168_set_speed_xmii(tp, AUTONEG_ENABLE, SPEED_1000, DUPLEX_FULL);
 
 #ifdef DEBUG_RTL8168
-    printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+    printf ("%s elapsed time : %ld\n", __FUNCTION__, currticks()-stime);
 #endif
     return 0;
 }
