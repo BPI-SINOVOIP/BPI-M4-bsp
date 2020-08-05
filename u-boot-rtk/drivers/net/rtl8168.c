@@ -5478,7 +5478,6 @@ static void rtl8168_get_mac_address(struct rtl8168_private *tp)
     phys_addr_t ioaddr = tp->mmio_addr;
     int i;
     uint8_t env_enetaddr[6];
-    char buf_enetaddr[17];
 
     /* bpi, static mac address
     char *default_enetaddr="00:10:20:30:40:50" ;
@@ -5488,9 +5487,7 @@ static void rtl8168_get_mac_address(struct rtl8168_private *tp)
     */
 
     /* bpi random mac address */
-    srand(get_ticks());
-    sprintf(buf_enetaddr, "00:10:20:%02x:%02x:%02x", (unsigned int)rand() % 256, (unsigned int)rand() % 256, (unsigned int)rand() % 256);
-    eth_parse_enetaddr(buf_enetaddr, env_enetaddr);
+    net_random_ethaddr(env_enetaddr);
     if (is_valid_ethaddr(env_enetaddr))
         eth_setenv_enetaddr("ethaddr", env_enetaddr);
 
