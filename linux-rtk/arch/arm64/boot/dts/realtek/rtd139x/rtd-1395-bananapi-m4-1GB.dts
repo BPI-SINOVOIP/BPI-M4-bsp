@@ -175,17 +175,6 @@
 		interrupts = <0 34 4>;
 	};
 	
-	pinctrl@9804E000 {
-
-		m4_uart1_pins: m4_uart1_pins {
-			realtek,pins = "gpio_8",
-			"gpio_9",
-			"gpio_10",
-			"gpio_11";
-			realtek,function = "uart1";
-		};
-	};
-
 	power-management@0 {
 		compatible = "Realtek,power-management";
 		pwms = <&pwm 0 37878>;
@@ -199,12 +188,16 @@
 	uart1: serial1@9801B200 {
 		compatible = "snps,dw-apb-uart";
 		pinctrl-names = "default";
-                pinctrl-0 = <&m4_uart1_pins>;
+		pinctrl-0 = <&uart1_pins>;   /* 2pins */
+		//pinctrl-0 = <&uart1_pins_0>; /* 4pins */
 		status = "okay";
 	};
 
 	uart2: serial2@9801B400 {
 		compatible = "snps,dw-apb-uart";
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart2_pins>;   /* 2pins */
+		//pinctrl-0 = <&uart2_pins_0>; /* 4pins */
 		status = "disabled";
 	};
 
@@ -249,10 +242,10 @@
 		status = "disabled";
 
 		spidev@0 {
-                       compatible = "Realtek,spidev";
-                       reg = <0>;
-                       spi-max-frequency = <32000000>;
-               };
+			compatible = "Realtek,spidev";
+			reg = <0>;
+			spi-max-frequency = <32000000>;
+		};
 	};
 
 	pwm: pwm@980070D0 {

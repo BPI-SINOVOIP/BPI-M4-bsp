@@ -55,6 +55,21 @@
 	        realtek,function = "uart1";
 	};
 
+	uart1_pins_0: m4_uart1_pins {
+		realtek,pins = "gpio_8",
+		"gpio_9",
+		"gpio_10",
+		"gpio_11";
+		realtek,function = "uart1";
+	};
+
+	uart2_pins: uart2_pins {
+		//realtek,pins = "ur2_loc",
+		realtek,pins = "gpio_18",
+		"gpio_19";
+		realtek,function = "uart2_loc0";
+        };
+
 	uart2_pins_0: uart2_pins_0 {
 	        realtek,pins = "ur2_loc",
 		"gpio_18",
