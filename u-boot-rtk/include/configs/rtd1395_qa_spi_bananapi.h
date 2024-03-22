@@ -119,7 +119,7 @@
 /* SD */
 #ifdef CONFIG_RTK_SD_DRIVER
 	#define CONFIG_SD
-	#define CONFIG_SD30
+	//#define CONFIG_SD30
 	#ifndef CONFIG_PARTITIONS
 		#define CONFIG_PARTITIONS
 	#endif

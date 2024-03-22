@@ -15,6 +15,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <soc/realtek/rtk_rstctl.h>
@@ -59,6 +60,10 @@ void rtk_machine_restart(char mode, const char *cmd)
 	} else {
 		setup_restart_action(RESET_ACTION_NO_ACTION);
 	}
+
+	//gpio0 low to disable usb vbus, but cause the pmic reset
+	//pr_err("BPI: pull low gpio0\n");
+	//gpio_direction_output(0, 0);
 
 	if (wdt_oe >= 0)
 		writel(wdt_oe, wdt_base + WDT_OE);
